@@ -1,0 +1,183 @@
+import { useEffect, useState } from 'react';
+import { apiFetch } from '../../services/api.js';
+import { Truck, MapPin, User, Check, X, Clock, Navigation } from 'lucide-react';
+
+const STATUS_STYLES = {
+  confirmed: 'confirmed',
+  on_trip: 'on-trip',
+  completed: 'completed',
+  cancelled: 'cancelled',
+};
+
+const STATUS_LABELS = {
+  confirmed: 'Confirmed',
+  on_trip: 'On Trip',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+
+const Trips = () => {
+  const [data, setData] = useState({ active: [], history: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(null);
+
+  useEffect(() => {
+    apiFetch('trips.php')
+      .then(setData)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const act = async (trip, action, label) => {
+    if (action !== 'accept' && !window.confirm(`${label} trip ${trip.tripCode}?`)) return;
+    setError('');
+    setBusy(`${action}:${trip.id}`);
+    try {
+      await apiFetch('trips.php', {
+        method: 'POST',
+        body: JSON.stringify({ action, id: trip.id })
+      });
+      const fresh = await apiFetch('trips.php');
+      setData(fresh);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const renderActionButtons = (trip) => {
+    const disabled = busy !== null;
+    if (trip.status === 'confirmed') {
+      return (
+        <div className="actions-row">
+          <button className="btn btn-primary sm" onClick={() => act(trip, 'accept', 'Accept')} disabled={disabled}>
+            <Check width={14} height={14} /> Accept
+          </button>
+          <button className="btn btn-danger-ghost sm" onClick={() => act(trip, 'cancel', 'Cancel')} disabled={disabled}>
+            <X width={14} height={14} /> Cancel
+          </button>
+        </div>
+      );
+    }
+    return (
+      <div className="actions-row">
+        <button className="btn btn-primary sm" onClick={() => act(trip, 'done', 'Complete')} disabled={disabled}>
+          <Check width={14} height={14} /> Trip Done
+        </button>
+        <button className="btn btn-danger-ghost sm" onClick={() => act(trip, 'cancel', 'Cancel')} disabled={disabled}>
+          <X width={14} height={14} /> Cancel
+        </button>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="panel">
+        <div className="empty">
+          <Truck width={46} height={46} />
+          <div className="help">Loading trips...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {error && (
+        <div className="error-msg" style={{ marginBottom: 16 }}>{error}</div>
+      )}
+
+      {/* Active trips */}
+      <div className="panel" style={{ marginBottom: 18 }}>
+        <div className="panel-head">
+          <h3>Active Trips <span className="badge count" style={{ marginLeft: 8 }}>{data.active.length}</span></h3>
+          <span className="meta">Accept dispatched trips or mark them done when finished.</span>
+        </div>
+        {data.active.length === 0 ? (
+          <div className="empty">
+            <Truck width={40} height={40} />
+            <div className="help" style={{ marginTop: 6 }}>No active trips. New dispatches from Fleet Management will appear here.</div>
+          </div>
+        ) : (
+          data.active.map((trip) => (
+            <div key={trip.id} className="assign-card">
+              <div className="assign-avatar"><Truck width={18} height={18} /></div>
+              <div className="assign-main">
+                <div className="name" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  {trip.tripCode}
+                  <span className={`status ${STATUS_STYLES[trip.status]}`}>{STATUS_LABELS[trip.status]}</span>
+                </div>
+                <div className="detail" style={{ display: 'grid', gap: 3, marginTop: 6, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <User width={13} height={13} /> {trip.client.name} · {trip.client.contact}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Clock width={13} height={13} /> {trip.schedule}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <MapPin width={13} height={13} /> {trip.destination}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Truck width={13} height={13} /> {trip.vehicle.carCode} · {trip.vehicle.model} · {trip.vehicle.plate}
+                  </span>
+                </div>
+                <div className="cell-sub" style={{ marginTop: 6 }}>
+                  Passengers: {trip.passengers} · Luggage: {trip.lugSize || 'None'} · Purpose: {trip.purpose}
+                </div>
+              </div>
+              <div className="assign-fleet">{renderActionButtons(trip)}</div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Trip history */}
+      <div className="panel">
+        <div className="panel-head">
+          <h3>Trip History <span className="badge count" style={{ marginLeft: 8 }}>{data.history.length}</span></h3>
+          <span className="meta">Completed and cancelled trips.</span>
+        </div>
+        {data.history.length === 0 ? (
+          <div className="empty">
+            <Navigation width={40} height={40} />
+            <div className="help" style={{ marginTop: 6 }}>No completed or cancelled trips yet.</div>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Trip Code</th>
+                  <th>Client</th>
+                  <th>Schedule</th>
+                  <th>Destination</th>
+                  <th>Vehicle</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.history.map((trip) => (
+                  <tr key={trip.id}>
+                    <td className="cell-strong mono">{trip.tripCode}</td>
+                    <td>{trip.client.name}</td>
+                    <td>{trip.schedule}</td>
+                    <td>{trip.destination}</td>
+                    <td>{trip.vehicle.carCode}</td>
+                    <td>
+                      <span className={`status ${STATUS_STYLES[trip.status]}`}>{STATUS_LABELS[trip.status]}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Trips;
