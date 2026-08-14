@@ -10,12 +10,12 @@ import Profile from './pages/Profile.jsx'
 import Security from './pages/Security.jsx'
 import HelpCenter from './pages/HelpCenter.jsx'
 
-function PayrollApp({ user, onLogout }) {
+function PayrollApp({ user, onLogout, onSwitchToAdmin }) {
   return (
     <div className="ro-app payroll-app">
       <Router>
         <Routes>
-          <Route element={<AppLayout user={user} onLogout={onLogout} />}>
+          <Route element={<AppLayout user={user} onLogout={onLogout} onSwitchToAdmin={onSwitchToAdmin} />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/payroll" element={<PayrollManagement />} />

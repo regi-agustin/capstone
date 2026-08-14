@@ -14,12 +14,14 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'GET') {
     require_permission($pdo, $user, 'Accounts', 'View');
 
+    $archivedOnly = (int)($_GET['archived'] ?? 0) === 1;
     $rows = $pdo->query(
         'SELECT u.user_id, u.username, u.fullname, u.email, u.contact_number,
                 u.role, u.status, u.created_at,
                 d.driver_id, d.license_number, d.license_expiry
          FROM users u
          LEFT JOIN drivers d ON d.user_id = u.user_id
+         WHERE u.status ' . ($archivedOnly ? '= "inactive"' : '<> "inactive"') . '
          ORDER BY u.created_at DESC'
     )->fetchAll();
 

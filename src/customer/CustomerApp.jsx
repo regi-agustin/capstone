@@ -11,12 +11,12 @@ import Profile from './pages/Profile.jsx'
 import Security from './pages/Security.jsx'
 import HelpCenter from './pages/HelpCenter.jsx'
 
-function CustomerApp({ user, onLogout }) {
+function CustomerApp({ user, onLogout, onSwitchToAdmin }) {
   return (
     <div className="ro-app customer-app">
       <Router>
         <Routes>
-          <Route element={<AppLayout user={user} onLogout={onLogout} />}>
+          <Route element={<AppLayout user={user} onLogout={onLogout} onSwitchToAdmin={onSwitchToAdmin} />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/browse" element={<BrowseVehicles />} />

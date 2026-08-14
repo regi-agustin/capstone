@@ -31,12 +31,16 @@ const NAV = [
   { key: 'overview', label: 'Overview', icon: Icon.dashboard },
   { key: 'accounts', label: 'Accounts', icon: Icon.users },
   { key: 'pricing', label: 'Pricing', icon: Icon.tag },
+  { key: 'archive', label: 'Archive', icon: Icon.trash },
 ]
 
 const MODULES = [
   { key: 'dmh', label: 'Driver Management Hub', desc: 'Drivers, fleet, assignments', icon: Icon.clipboard },
   { key: 'ro', label: 'Reservation Desk', desc: 'Bookings & vehicle availability', icon: Icon.eye },
   { key: 'billing', label: 'Billing & Payments', desc: 'Invoices, payments, reports', icon: Icon.dashboard },
+  { key: 'payroll', label: 'Payroll Desk', desc: 'Payroll, attendance, driver records', icon: Icon.users },
+  { key: 'customer', label: 'Customer Portal', desc: 'Rentals, reservations, feedback', icon: Icon.car },
+  { key: 'driver', label: 'Driver App', desc: 'Trips, time in/out, payroll view', icon: Icon.user },
 ]
 
 const DEFAULT_MATRIX = {
@@ -65,14 +69,20 @@ export default function AdminApp({ user, onLogout, onSwitchModule }) {
   const [page, setPage] = useState('overview')
   const [me, setMe] = useState(null)
   const [users, setUsers] = useState([])
+  const [archivedUsers, setArchivedUsers] = useState([])
   const [matrix, setMatrix] = useState(DEFAULT_MATRIX)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const loadAll = useCallback(async () => {
-    const [m, u] = await Promise.all([apiFetch('me.php'), apiFetch('users.php')])
+    const [m, u, ar] = await Promise.all([
+      apiFetch('me.php'),
+      apiFetch('users.php'),
+      apiFetch('users.php?archived=1'),
+    ])
     setMe(m)
     setUsers(u.users || [])
+    setArchivedUsers(ar.users || [])
     if (u.matrix) setMatrix(u.matrix)
   }, [])
 
@@ -127,6 +137,7 @@ export default function AdminApp({ user, onLogout, onSwitchModule }) {
     overview: ['Super Admin Console', 'FleetOps / All Dashboards'],
     accounts: ['Accounts', 'FleetOps / Create Account'],
     pricing: ['Pricing Dashboard', 'FleetOps / Dynamic Pricing'],
+    archive: ['Archive Dashboard', 'FleetOps / Archived Records'],
   }
 
   return (
@@ -166,7 +177,7 @@ export default function AdminApp({ user, onLogout, onSwitchModule }) {
         </div>
       ) : (
         <>
-          {page === 'overview' && <Overview users={users} onSwitchModule={onSwitchModule} />}
+          {page === 'overview' && <Overview users={users} archivedCount={archivedUsers.length} onSwitchModule={onSwitchModule} onOpenArchive={() => setPage('archive')} />}
           {page === 'accounts' && (
             <AccountsPage
               users={users}
@@ -180,30 +191,44 @@ export default function AdminApp({ user, onLogout, onSwitchModule }) {
             />
           )}
           {page === 'pricing' && <PricingPage />}
+          {page === 'archive' && (
+            <ArchivesPage
+              users={archivedUsers}
+              onRestore={async (id) => {
+                await apiFetch('users.php', { method: 'PATCH', body: JSON.stringify({ id, status: 'active' }) })
+                await loadAll()
+              }}
+            />
+          )}
         </>
       )}
     </AppShell>
   )
 }
 
-function Overview({ users, onSwitchModule }) {
+function Overview({ users, archivedCount, onSwitchModule, onOpenArchive }) {
   const total = users.length
   const active = users.filter((u) => u.status === 'active').length
-  const archived = users.filter((u) => u.status === 'inactive').length
+  const suspended = users.filter((u) => u.status === 'suspended').length
   const linkedDrivers = users.filter((u) => u.linkedDriver).length
 
   const stats = [
     { label: 'Total Accounts', value: total },
     { label: 'Active Accounts', value: active },
-    { label: 'Archived / Suspended', value: archived },
-    { label: 'Linked Driver Profiles', value: linkedDrivers },
+    { label: 'Suspended', value: suspended },
+    { label: 'Archived', value: archivedCount, onClick: onOpenArchive },
   ]
 
   return (
     <div>
       <div className="stats">
         {stats.map((s) => (
-          <div className="stat" key={s.label}>
+          <div
+            className="stat"
+            key={s.label}
+            style={s.onClick ? { cursor: 'pointer' } : undefined}
+            onClick={s.onClick}
+          >
             <div className="label">{s.label}</div>
             <div className="value">{s.value}</div>
           </div>
@@ -1092,6 +1117,130 @@ function PricingPage() {
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+function ArchivesPage({ users, onRestore }) {
+  const [restoring, setRestoring] = useState(null)
+  const [msg, setMsg] = useState('')
+  const [err, setErr] = useState('')
+
+  async function restore(u) {
+    setErr('')
+    setMsg('')
+    setRestoring(u.id)
+    try {
+      await onRestore(u.id)
+      setMsg(`Account ${u.fullname} (@${u.username}) has been restored.`)
+    } catch (e) {
+      setErr(e.message)
+    } finally {
+      setRestoring(null)
+    }
+  }
+
+  return (
+    <div>
+      <div className="panel">
+        <div className="panel-head">
+          <div>
+            <h3>Archive</h3>
+            <div className="meta">
+              Archived accounts are hidden from the main dashboards and kept here for audit purposes.
+            </div>
+          </div>
+          <span className="vehicle-chip" style={{ background: 'var(--navy-900)' }}>
+            {users.length} archived
+          </span>
+        </div>
+
+        {err && <div className="error-msg" style={{ margin: '0 18px 12px' }}>{err}</div>}
+        {msg && <div style={{ margin: '0 18px 12px', color: 'var(--green)', fontSize: 13 }}>{msg}</div>}
+
+        <div className="table-wrap">
+          <table className="table-dense">
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th>Contact</th>
+                <th>Role</th>
+                <th>Driver Profile</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{u.fullname}</div>
+                    <div className="cell-sub mono">@{u.username}</div>
+                  </td>
+                  <td>
+                    <div className="cell-sub">{u.contactNumber || '—'}</div>
+                    <div
+                      className="cell-sub"
+                      style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}
+                    >
+                      {u.email || '—'}
+                    </div>
+                  </td>
+                  <td>
+                    <span className="vehicle-chip" style={{ background: 'var(--navy-900)' }}>
+                      {roleLabel(u.role)}
+                    </span>
+                  </td>
+                  <td>
+                    {u.linkedDriver ? (
+                      <div className="mono" style={{ fontSize: 11.5 }}>
+                        {u.linkedDriver.id}
+                        {u.linkedDriver.licenseNumber && (
+                          <span className="cell-sub"> · {u.linkedDriver.licenseNumber}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="cell-sub">—</span>
+                    )}
+                  </td>
+                  <td>
+                    <span className="status neutral">{u.status}</span>
+                  </td>
+                  <td className="cell-sub">{u.createdAt?.slice(0, 10)}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button
+                      className="btn btn-primary sm"
+                      disabled={restoring === u.id}
+                      onClick={() => restore(u)}
+                    >
+                      {restoring === u.id ? 'Restoring...' : 'Restore'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="cell-sub" style={{ textAlign: 'center', padding: 24 }}>
+                    No archived records. Archived accounts will appear here.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="panel" style={{ marginTop: 16 }}>
+        <div style={{ padding: '16px 18px' }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>About archiving</div>
+          <div className="help" style={{ marginTop: 6, maxWidth: 680 }}>
+            Archiving an account is a soft delete: the record is never removed, it is moved out of
+            the Accounts dashboard and into the Archive dashboard. Restoring reactivates the account
+            (and its linked driver profile, if any) so it appears in the main dashboards again.
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

@@ -40,15 +40,22 @@ const NAV_ACCOUNT = [
   { to: '/help', label: 'Help Center', icon: HelpCircle },
 ]
 
-export default function AppLayout({ user, onLogout }) {
+export default function AppLayout({ user, onLogout, onSwitchToAdmin }) {
   const location = useLocation()
   const meta = TITLES[location.pathname] || { title: 'Customer Portal', crumb: 'FleetOps' }
+
+  const accountNav = [
+    ...(onSwitchToAdmin
+      ? [{ key: 'admin', label: 'Super Admin Console', icon: ShieldCheck, onClick: onSwitchToAdmin }]
+      : []),
+    ...NAV_ACCOUNT,
+  ]
 
   return (
     <AppShell
       groups={[
         { label: 'Booking', items: NAV_BOOKING },
-        { label: 'Account', items: NAV_ACCOUNT },
+        { label: 'Account', items: accountNav },
       ]}
       role="Customer"
       roleSub="Rent and manage your reservations"

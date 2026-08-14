@@ -37,15 +37,22 @@ const NAV_ACCOUNT = [
   { to: '/help', label: 'Help Center', icon: HelpCircle },
 ]
 
-export default function AppLayout({ user, onLogout }) {
+export default function AppLayout({ user, onLogout, onSwitchToAdmin }) {
   const location = useLocation()
   const meta = TITLES[location.pathname] || { title: 'Payroll Desk', crumb: 'FleetOps' }
+
+  const accountNav = [
+    ...(onSwitchToAdmin
+      ? [{ key: 'admin', label: 'Super Admin Console', icon: ShieldCheck, onClick: onSwitchToAdmin }]
+      : []),
+    ...NAV_ACCOUNT,
+  ]
 
   return (
     <AppShell
       groups={[
         { label: 'Payroll', items: NAV_PAYROLL },
-        { label: 'Account', items: NAV_ACCOUNT },
+        { label: 'Account', items: accountNav },
       ]}
       role="Payroll Officer"
       roleSub="Payroll, drivers, and attendance"

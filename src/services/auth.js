@@ -23,8 +23,8 @@ export async function logout() {
 // Fine-grained permissions can be layered on top once a user_permissions
 // table exists (see CenSys UserPermission pattern).
 const ROLE_MODULES = {
-  superadmin: ['admin', 'dmh', 'driver'],
-  admin: ['admin', 'dmh'],
+  superadmin: ['admin', 'dmh', 'ro', 'billing', 'payroll', 'customer', 'driver'],
+  admin: ['admin', 'dmh', 'ro', 'billing', 'payroll', 'customer', 'driver'],
   driver_management_head: ['dmh'],
   reservation_officer: ['ro'],
   billing_officer: ['billing'],

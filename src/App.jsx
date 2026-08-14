@@ -44,10 +44,25 @@ function DashboardForRole({ session, onLogout, module, onSwitchModule }) {
     )
   }
   if (module === 'payroll') {
-    return <PayrollApp user={{ name: session.name, role: 'Payroll Officer' }} onLogout={onLogout} />
+    return (
+      <PayrollApp
+        user={{ name: session.name, role: 'Payroll Officer' }}
+        onLogout={onLogout}
+        onSwitchToAdmin={canAccessModule(role, 'admin') ? () => onSwitchModule('admin') : null}
+      />
+    )
   }
   if (module === 'customer') {
-    return <CustomerApp user={{ name: session.name, role: 'Customer' }} onLogout={onLogout} />
+    return (
+      <CustomerApp
+        user={{ name: session.name, role: 'Customer' }}
+        onLogout={onLogout}
+        onSwitchToAdmin={canAccessModule(role, 'admin') ? () => onSwitchModule('admin') : null}
+      />
+    )
+  }
+  if (module === 'driver') {
+    return <DriverApp user={session.name} onLogout={onLogout} />
   }
 
   if (role === 'driver' && canAccessModule(role, 'driver')) {

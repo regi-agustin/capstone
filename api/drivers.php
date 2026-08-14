@@ -9,14 +9,16 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'GET') {
     require_role($user, ['superadmin', 'admin', 'driver_management_head', 'payroll_officer']);
     // Assignment status is derived from active reservations, not stored on the driver
+    $archivedOnly = (int)($_GET['archived'] ?? 0) === 1;
     $rows = $pdo->query(
         'SELECT d.driver_id, d.fullname, d.contact_number, d.is_unavailable, d.license_number,
-                d.license_expiry, d.hire_date, d.address,
+                d.license_expiry, d.hire_date, d.address, d.status,
                 EXISTS (
                     SELECT 1 FROM reservations r
                     WHERE r.driver_id = d.driver_id AND r.status IN ("confirmed", "on_trip")
                 ) AS has_active_assignment
          FROM drivers d
+         WHERE d.status ' . ($archivedOnly ? '= "inactive"' : '<> "inactive"') . '
          ORDER BY d.driver_id'
     )->fetchAll();
 
