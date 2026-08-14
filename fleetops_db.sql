@@ -439,6 +439,16 @@ INSERT INTO users (username, password_hash, fullname, role)
 VALUES ('macasinag', 'e007fbdc563042ac6aa9dcdfc979b2a8233938d600c412c2b2ad00a273ddd0d1',
         'Macasinag', 'billing_officer');
 
+-- Demo account: Payroll Officer (password: "payroll2026")
+INSERT INTO users (username, password_hash, fullname, email, contact_number, role)
+VALUES ('maria.santos', 'ae73ed7baa283dcfb004d4b855041c27f8d913bc4bd9ffc9929f176e86343498',
+        'Maria Santos', 'maria.santos@hollydot.com', '0917 555 1234', 'payroll_officer');
+
+-- Demo account: Customer (password: "customer2026")
+INSERT INTO users (username, password_hash, fullname, email, contact_number, role)
+VALUES ('charles.buque', 'a2b629e293f5efea6939928836e8482520a804d68586919fd58d98cee36a4d5b',
+        'Charles John Buque', 'charles.buque@email.com', '0912 345 6789', 'customer');
+
 -- ----------------------------------------------------------------------------
 --  vehicle_pricing - admin-managed pricing rules per vehicle type
 --  (base daily rate + rule-based overrides: weekly discount, weekend surcharge)
@@ -517,8 +527,102 @@ JOIN (
   SELECT 'macasinag', 'Billing', 'Add' UNION ALL
   SELECT 'macasinag', 'Billing', 'Edit' UNION ALL
   SELECT 'macasinag', 'Billing', 'Delete' UNION ALL
-  SELECT 'macasinag', 'Payroll', 'View'
+  SELECT 'macasinag', 'Payroll', 'View' UNION ALL
+  -- Maria Santos (payroll_officer): payroll, attendance, driver records
+  SELECT 'maria.santos', 'Home', 'View' UNION ALL
+  SELECT 'maria.santos', 'Payroll', 'View' UNION ALL
+  SELECT 'maria.santos', 'Payroll', 'Add' UNION ALL
+  SELECT 'maria.santos', 'Payroll', 'Edit' UNION ALL
+  SELECT 'maria.santos', 'Drivers', 'View' UNION ALL
+  SELECT 'maria.santos', 'Attendance', 'View'
 ) p ON u.username = p.username;
+
+-- Demo customer linked to a client record, so the customer portal has a profile.
+INSERT INTO clients (user_id, company_name, contact_person, contact_number, email_address, client_type, registration_date, status)
+SELECT u.user_id, 'Charles John Buque', 'Charles John Buque', '0912 345 6789', 'charles.buque@email.com', 'individual', CURDATE(), 'active'
+FROM users u WHERE u.username = 'charles.buque';
+
+-- ----------------------------------------------------------------------------
+--  Demo data: fleet, drivers, attendance, payroll (for the customer & payroll portals)
+-- ----------------------------------------------------------------------------
+INSERT INTO vehicles (plate_number, model, year, vehicle_type, daily_rate, seats, status, purchase_date) VALUES
+('ABC 1234', 'Toyota Innova',    2021, 'MPV',   2500.00, 7,  'available', '2022-01-15'),
+('BCD 2345', 'Mitsubishi Xpander', 2022, 'MPV', 2300.00, 7,  'available', '2022-06-20'),
+('CDE 3456', 'Toyota Veloz',     2023, 'MPV',   2300.00, 7,  'available', '2023-03-10'),
+('DEF 4567', 'Toyota Fortuner',  2021, 'SUV',   3800.00, 7,  'available', '2021-11-05'),
+('EFG 5678', 'Honda City',       2022, 'Sedan', 1800.00, 5,  'available', '2022-09-01'),
+('FGH 6789', 'Nissan Urban',     2020, 'Van',   4000.00, 15, 'available', '2020-05-15'),
+('GHI 7890', 'Hyundai Starex',   2019, 'Van',   3500.00, 12, 'available', '2019-08-22'),
+('HIJ 8901', 'Toyota Hiace',     2022, 'Van',   4200.00, 15, 'available', '2022-02-14');
+
+-- One pending reservation for the demo customer (picks the first seeded vehicle)
+INSERT INTO reservations (client_id, vehicle_id, start_date, end_date, pickup_time, return_time, trip_purpose, destination, passengers, status, total_amount, trip_code)
+SELECT c.client_id, v.vehicle_id, DATE_ADD(CURDATE(), INTERVAL 3 DAY), DATE_ADD(CURDATE(), INTERVAL 6 DAY), '08:00:00', '17:00:00',
+       'Family trip', 'Clark Freeport Zone, Pampanga', 7, 'pending', 7500.00, 'BK-2026-0001'
+FROM clients c
+JOIN users u ON u.user_id = c.user_id AND u.username = 'charles.buque'
+CROSS JOIN vehicles v
+WHERE v.plate_number = (SELECT plate_number FROM vehicles ORDER BY vehicle_id LIMIT 1);
+
+INSERT INTO drivers (fullname, contact_number, license_number, license_expiry, status, hire_date) VALUES
+('Juan Dela Cruz', '0917 111 2222', 'N01-23-456789', '2027-05-10', 'active', '2022-03-01'),
+('Pedro Santos',   '0918 222 3333', 'N02-23-456790', '2026-11-20', 'active', '2022-07-15'),
+('Ana Cruz',       '0919 333 4444', 'N03-23-456791', '2028-01-30', 'active', '2023-02-01'),
+('Miguel Lopez',   '0920 444 5555', 'N04-23-456792', '2026-09-25', 'active', '2023-06-12'),
+('Rosa Mendoza',   '0921 555 6666', 'N05-23-456793', '2027-12-05', 'active', '2024-01-08');
+
+INSERT INTO attendance (driver_id, vehicle_id, attendance_date, time_in, time_out, verification_status)
+SELECT d.driver_id, v.vehicle_id, CURDATE(), '07:58:00', '17:02:00', 'verified'
+FROM drivers d CROSS JOIN vehicles v
+WHERE d.fullname = 'Juan Dela Cruz' AND v.plate_number = 'ABC 1234';
+
+INSERT INTO attendance (driver_id, vehicle_id, attendance_date, time_in, time_out, verification_status)
+SELECT d.driver_id, v.vehicle_id, CURDATE(), '08:15:00', '17:30:00', 'verified'
+FROM drivers d CROSS JOIN vehicles v
+WHERE d.fullname = 'Pedro Santos' AND v.plate_number = 'BCD 2345';
+
+INSERT INTO attendance (driver_id, vehicle_id, attendance_date, time_in, time_out, verification_status)
+SELECT d.driver_id, v.vehicle_id, CURDATE(), '07:45:00', NULL, 'pending'
+FROM drivers d CROSS JOIN vehicles v
+WHERE d.fullname = 'Ana Cruz' AND v.plate_number = 'CDE 3456';
+
+INSERT INTO attendance (driver_id, vehicle_id, attendance_date, time_in, time_out, verification_status)
+SELECT d.driver_id, v.vehicle_id, DATE_SUB(CURDATE(), INTERVAL 1 DAY), '07:50:00', '17:10:00', 'verified'
+FROM drivers d CROSS JOIN vehicles v
+WHERE d.fullname = 'Juan Dela Cruz' AND v.plate_number = 'ABC 1234';
+
+INSERT INTO attendance (driver_id, vehicle_id, attendance_date, time_in, time_out, verification_status)
+SELECT d.driver_id, v.vehicle_id, DATE_SUB(CURDATE(), INTERVAL 1 DAY), '08:05:00', '17:20:00', 'verified'
+FROM drivers d CROSS JOIN vehicles v
+WHERE d.fullname = 'Pedro Santos' AND v.plate_number = 'BCD 2345';
+
+INSERT INTO payroll (driver_id, payroll_date, basic_salary, allowances, deductions, net_salary, status)
+SELECT d.driver_id, CURDATE(), 12000.00, 1500.00, 1000.00, 12500.00, 'paid'
+FROM drivers d WHERE d.fullname = 'Juan Dela Cruz';
+
+INSERT INTO payroll (driver_id, payroll_date, basic_salary, allowances, deductions, net_salary, status)
+SELECT d.driver_id, CURDATE(), 12000.00, 1500.00, 500.00, 13000.00, 'pending'
+FROM drivers d WHERE d.fullname = 'Pedro Santos';
+
+INSERT INTO payroll (driver_id, payroll_date, basic_salary, allowances, deductions, net_salary, status)
+SELECT d.driver_id, CURDATE(), 12000.00, 1000.00, 500.00, 12500.00, 'pending'
+FROM drivers d WHERE d.fullname = 'Ana Cruz';
+
+INSERT INTO notifications (user_id, type, title, description)
+SELECT u.user_id, 'reservation_confirmed', 'Reservation received', 'Your reservation BK-2026-0001 is awaiting approval.'
+FROM users u WHERE u.username = 'charles.buque';
+
+INSERT INTO notifications (user_id, type, title, description, is_read)
+SELECT u.user_id, 'attendance_verified', 'OCR Attendance Verified', 'Ana Cruz attendance on the current date has been verified.', 1
+FROM users u WHERE u.username = 'maria.santos';
+
+INSERT INTO notifications (user_id, type, title, description, is_read)
+SELECT u.user_id, 'attendance_rejected', 'OCR Attendance Mismatch', 'Pedro Santos plate number mismatch. Entered: DEF 4567 | OCR: DEF 4567', 0
+FROM users u WHERE u.username = 'maria.santos';
+
+INSERT INTO notifications (user_id, type, title, description, is_read)
+SELECT u.user_id, 'payroll_released', 'Payroll Record Updated', 'Juan Dela Cruz payroll record for the current cut-off was marked Completed.', 0
+FROM users u WHERE u.username = 'maria.santos';
 
 -- ============================================================================
 --  GUI EXTENSIONS (columns the web dashboard needs; not in the original ERD)
@@ -551,3 +655,10 @@ ALTER TABLE reservations
   ADD COLUMN special_requests VARCHAR(500) DEFAULT NULL AFTER return_time,
   ADD COLUMN denial_reason    VARCHAR(255) DEFAULT NULL AFTER status,
   ADD COLUMN additional_charges DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER total_amount;
+
+-- Customer portal: link clients to their login account (mirrors drivers.user_id)
+ALTER TABLE clients
+  ADD COLUMN user_id INT UNSIGNED DEFAULT NULL AFTER client_id,
+  ADD KEY idx_clients_user (user_id),
+  ADD CONSTRAINT fk_clients_user FOREIGN KEY (user_id)
+    REFERENCES users (user_id) ON DELETE SET NULL ON UPDATE CASCADE;

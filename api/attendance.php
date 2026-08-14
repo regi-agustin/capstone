@@ -5,12 +5,13 @@ $user = require_login();
 $pdo = db();
 
 // Driver endpoints operate on the driver record linked to the logged-in user.
-// DMH/admin roles may pass ?driver_id= to view a specific driver.
+// DMH/admin/payroll roles may pass ?driver_id= for one driver, or omit it
+// to list attendance across all drivers.
 $driverId = null;
 
-if (in_array($user['role'], ['superadmin', 'admin', 'driver_management_head'], true)) {
+if (in_array($user['role'], ['superadmin', 'admin', 'driver_management_head', 'payroll_officer'], true)) {
     $driverId = (int)($_GET['driver_id'] ?? 0);
-    if ($driverId <= 0) json_error('driver_id is required.', 422);
+    if ($driverId <= 0) $driverId = null;
 } else {
     if ($user['role'] !== 'driver') json_error('Forbidden.', 403);
     $stmt = $pdo->prepare('SELECT driver_id FROM drivers WHERE user_id = ?');
@@ -22,25 +23,32 @@ if (in_array($user['role'], ['superadmin', 'admin', 'driver_management_head'], t
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    $rows = $pdo->prepare(
-        'SELECT a.attendance_id, a.attendance_date, a.time_in, a.time_out, a.verification_status,
-                v.model, v.plate_number
-         FROM attendance a
-         JOIN vehicles v ON v.vehicle_id = a.vehicle_id
-         WHERE a.driver_id = ?
-         ORDER BY a.attendance_date DESC'
-    );
-    $rows->execute([$driverId]);
+    $sql = 'SELECT a.attendance_id, a.attendance_date, a.time_in, a.time_out, a.verification_status,
+                   a.rejection_reason, v.model, v.plate_number, d.fullname AS driver_name
+            FROM attendance a
+            JOIN vehicles v ON v.vehicle_id = a.vehicle_id
+            JOIN drivers d ON d.driver_id = a.driver_id';
+    $params = [];
+    if ($driverId !== null) {
+        $sql .= ' WHERE a.driver_id = ?';
+        $params[] = $driverId;
+    }
+    $sql .= ' ORDER BY a.attendance_date DESC, a.attendance_id DESC';
+
+    $rows = $pdo->prepare($sql);
+    $rows->execute($params);
 
     $out = array_map(function ($a) {
         return [
             'id' => (int)$a['attendance_id'],
             'date' => $a['attendance_date'],
+            'driverName' => $a['driver_name'] ?? '',
             'vehicle' => $a['model'],
             'status' => 'Present',
             'timeIn' => fmt_time($a['time_in']),
             'timeOut' => fmt_time($a['time_out']),
             'verificationStatus' => ucfirst($a['verification_status']),
+            'rejectionReason' => $a['rejection_reason'],
         ];
     }, $rows->fetchAll());
 

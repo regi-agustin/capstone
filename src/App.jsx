@@ -5,6 +5,8 @@ import DriverApp from './driver/DriverApp.jsx'
 import ROApp from './ro/ROApp.jsx'
 import BillingApp from './billing/BillingApp.jsx'
 import AdminApp from './admin/AdminApp.jsx'
+import CustomerApp from './customer/CustomerApp.jsx'
+import PayrollApp from './payroll/PayrollApp.jsx'
 import { Icon } from './components/Icons.jsx'
 import { logout, fetchMe, canAccessModule } from './services/auth.js'
 
@@ -41,6 +43,12 @@ function DashboardForRole({ session, onLogout, module, onSwitchModule }) {
       />
     )
   }
+  if (module === 'payroll') {
+    return <PayrollApp user={{ name: session.name, role: 'Payroll Officer' }} onLogout={onLogout} />
+  }
+  if (module === 'customer') {
+    return <CustomerApp user={{ name: session.name, role: 'Customer' }} onLogout={onLogout} />
+  }
 
   if (role === 'driver' && canAccessModule(role, 'driver')) {
     return <DriverApp user={session.name} onLogout={onLogout} />
@@ -50,6 +58,12 @@ function DashboardForRole({ session, onLogout, module, onSwitchModule }) {
   }
   if (role === 'billing_officer' && canAccessModule(role, 'billing')) {
     return <BillingApp user={{ name: session.name, role: 'Billing Officer', email: '' }} onLogout={onLogout} />
+  }
+  if (role === 'payroll_officer' && canAccessModule(role, 'payroll')) {
+    return <PayrollApp user={{ name: session.name, role: 'Payroll Officer' }} onLogout={onLogout} />
+  }
+  if (role === 'customer' && canAccessModule(role, 'customer')) {
+    return <CustomerApp user={{ name: session.name, role: 'Customer' }} onLogout={onLogout} />
   }
   if (role === 'superadmin' && canAccessModule(role, 'admin')) {
     return <AdminApp user={session.name} onLogout={onLogout} onSwitchModule={onSwitchModule} />

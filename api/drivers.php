@@ -2,15 +2,16 @@
 require_once __DIR__ . '/helpers.php';
 
 $user = require_login();
-require_role($user, ['superadmin', 'admin', 'driver_management_head']);
 
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
+    require_role($user, ['superadmin', 'admin', 'driver_management_head', 'payroll_officer']);
     // Assignment status is derived from active reservations, not stored on the driver
     $rows = $pdo->query(
-        'SELECT d.driver_id, d.fullname, d.contact_number, d.is_unavailable,
+        'SELECT d.driver_id, d.fullname, d.contact_number, d.is_unavailable, d.license_number,
+                d.license_expiry, d.hire_date, d.address,
                 EXISTS (
                     SELECT 1 FROM reservations r
                     WHERE r.driver_id = d.driver_id AND r.status IN ("confirmed", "on_trip")
@@ -24,6 +25,10 @@ if ($method === 'GET') {
             'id' => (int)$d['driver_id'],
             'name' => $d['fullname'],
             'contact' => $d['contact_number'],
+            'licenseNumber' => $d['license_number'],
+            'licenseExpiry' => $d['license_expiry'],
+            'hireDate' => $d['hire_date'],
+            'address' => $d['address'],
             'status' => (int)$d['is_unavailable'] === 1
                 ? 'Unavailable'
                 : ((int)$d['has_active_assignment'] === 1 ? 'Assigned' : 'Unassigned'),

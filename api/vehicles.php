@@ -2,12 +2,12 @@
 require_once __DIR__ . '/helpers.php';
 
 $user = require_login();
-require_role($user, ['superadmin', 'admin', 'driver_management_head', 'reservation_officer']);
 
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
+    require_role($user, ['superadmin', 'admin', 'driver_management_head', 'reservation_officer', 'customer']);
     $rows = $pdo->query(
         'SELECT v.vehicle_id, v.plate_number, v.model, v.year, v.vehicle_type, v.owner_id, v.status,
                 v.daily_rate, v.seats

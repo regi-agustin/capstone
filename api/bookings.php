@@ -2,10 +2,11 @@
 require_once __DIR__ . '/helpers.php';
 
 $user = require_login();
-require_role($user, ['superadmin', 'admin', 'reservation_officer']);
 
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
+
+$isCustomer = $user['role'] === 'customer';
 
 function booking_shape(array $r): array
 {
@@ -82,11 +83,24 @@ function find_booking(PDO $pdo, int $id): ?array
 }
 
 if ($method === 'GET') {
-    $rows = $pdo->query(
-        booking_select() . '
-        ORDER BY FIELD(r.status, "pending", "denied", "confirmed", "on_trip", "completed", "cancelled"),
-                 r.start_date DESC, r.reservation_id DESC'
-    )->fetchAll();
+    if ($isCustomer) {
+        require_role($user, ['superadmin', 'admin', 'reservation_officer', 'customer']);
+        $stmt = $pdo->prepare(
+            booking_select() . '
+            WHERE c.user_id = ?
+            ORDER BY FIELD(r.status, "pending", "denied", "confirmed", "on_trip", "completed", "cancelled"),
+                     r.start_date DESC, r.reservation_id DESC'
+        );
+        $stmt->execute([$user['user_id']]);
+        $rows = $stmt->fetchAll();
+    } else {
+        require_role($user, ['superadmin', 'admin', 'reservation_officer']);
+        $rows = $pdo->query(
+            booking_select() . '
+            ORDER BY FIELD(r.status, "pending", "denied", "confirmed", "on_trip", "completed", "cancelled"),
+                     r.start_date DESC, r.reservation_id DESC'
+        )->fetchAll();
+    }
 
     json_out(array_map('booking_shape', $rows));
 }
@@ -96,7 +110,10 @@ if ($method === 'POST') {
     $action = trim((string)($data['action'] ?? ''));
 
     if ($action === 'create') {
-        require_permission($pdo, $user, 'Reservations', 'Add');
+        require_role($user, ['superadmin', 'admin', 'reservation_officer', 'customer']);
+        if (!$isCustomer) {
+            require_permission($pdo, $user, 'Reservations', 'Add');
+        }
 
         $client = $data['client'] ?? [];
         $trip = $data['trip'] ?? [];
@@ -108,6 +125,17 @@ if ($method === 'POST') {
         $contact = trim((string)($client['contact'] ?? ''));
         $email = trim((string)($client['email'] ?? ''));
         $company = trim((string)($client['company'] ?? ''));
+
+        // Customers book under their own account; profile fields come from the session.
+        if ($isCustomer) {
+            $clientName = $user['fullname'];
+            $stmt = $pdo->prepare('SELECT email, contact_number FROM users WHERE user_id = ?');
+            $stmt->execute([$user['user_id']]);
+            $acc = $stmt->fetch();
+            $email = $acc && $acc['email'] ? $acc['email'] : ($email !== '' ? $email : $clientName . '@email.com');
+            $contact = $contact !== '' ? $contact : ($acc['contact_number'] ?? '');
+            $company = $clientName;
+        }
         $destination = trim((string)($trip['destination'] ?? ''));
         $pickupDate = trim((string)($trip['pickupDate'] ?? ''));
         $returnDate = trim((string)($trip['returnDate'] ?? ''));
@@ -134,21 +162,33 @@ if ($method === 'POST') {
 
         $companyName = $company !== '' ? $company : $clientName;
 
-        $clientStmt = $pdo->prepare('SELECT client_id FROM clients WHERE company_name = ?');
-        $clientStmt->execute([$companyName]);
-        $clientId = $clientStmt->fetchColumn();
+        $clientId = null;
+        if ($isCustomer) {
+            $stmt = $pdo->prepare('SELECT client_id FROM clients WHERE user_id = ?');
+            $stmt->execute([$user['user_id']]);
+            $clientId = (int)$stmt->fetchColumn() ?: null;
+        }
+        if (!$clientId) {
+            $clientStmt = $pdo->prepare('SELECT client_id FROM clients WHERE company_name = ?');
+            $clientStmt->execute([$companyName]);
+            $clientId = (int)$clientStmt->fetchColumn() ?: null;
+        }
         if (!$clientId) {
             $ins = $pdo->prepare(
-                'INSERT INTO clients (company_name, contact_person, contact_number, email_address, client_type, registration_date, status)
-                 VALUES (?, ?, ?, ?, "corporate", CURDATE(), "active")'
+                'INSERT INTO clients (user_id, company_name, contact_person, contact_number, email_address, client_type, registration_date, status)
+                 VALUES (?, ?, ?, ?, ?, ?, CURDATE(), "active")'
             );
-            $ins->execute([$companyName, $clientName, $contact, $email]);
+            $ins->execute([
+                $isCustomer ? $user['user_id'] : null,
+                $companyName, $clientName, $contact, $email,
+                $isCustomer ? 'individual' : 'corporate',
+            ]);
             $clientId = (int)$pdo->lastInsertId();
         } else {
             $upd = $pdo->prepare(
-                'UPDATE clients SET contact_person = ?, contact_number = ?, email_address = ? WHERE client_id = ?'
+                'UPDATE clients SET user_id = COALESCE(user_id, ?), contact_person = ?, contact_number = ?, email_address = ? WHERE client_id = ?'
             );
-            $upd->execute([$clientName, $contact, $email, $clientId]);
+            $upd->execute([$isCustomer ? $user['user_id'] : null, $clientName, $contact, $email, $clientId]);
         }
 
         $passengers = isset($trip['passengers']) ? max(0, (int)$trip['passengers']) : 0;

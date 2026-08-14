@@ -28,6 +28,8 @@ const ROLE_MODULES = {
   driver_management_head: ['dmh'],
   reservation_officer: ['ro'],
   billing_officer: ['billing'],
+  payroll_officer: ['payroll'],
+  customer: ['customer'],
   driver: ['driver']
 }
 

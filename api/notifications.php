@@ -4,6 +4,17 @@ require_once __DIR__ . '/helpers.php';
 $user = require_login();
 $pdo = db();
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data = body_json();
+    $action = (string)($data['action'] ?? '');
+    if ($action !== 'mark_read') {
+        json_error('Unknown notification action.', 422);
+    }
+    $pdo->prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?')
+        ->execute([$user['user_id']]);
+    json_out(['ok' => true]);
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     json_error('Method not allowed.', 405);
 }

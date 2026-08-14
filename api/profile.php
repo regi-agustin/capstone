@@ -4,7 +4,24 @@ require_once __DIR__ . '/helpers.php';
 $user = require_login();
 $pdo = db();
 
-if ($user['role'] !== 'driver') json_error('Forbidden.', 403);
+// Non-driver roles get their basic account profile.
+if ($user['role'] !== 'driver') {
+    $stmt = $pdo->prepare('SELECT username, fullname, email, contact_number, role, created_at FROM users WHERE user_id = ?');
+    $stmt->execute([$user['user_id']]);
+    $u = $stmt->fetch();
+    if (!$u) json_error('Account not found.', 404);
+
+    json_out([
+        'role' => $u['role'],
+        'account' => [
+            'name' => $u['fullname'],
+            'username' => $u['username'],
+            'email' => $u['email'] ?? '',
+            'contactNumber' => $u['contact_number'] ?? '',
+            'memberSince' => $u['created_at'] ? substr($u['created_at'], 0, 10) : '',
+        ],
+    ]);
+}
 
 $stmt = $pdo->prepare('SELECT * FROM drivers WHERE user_id = ?');
 $stmt->execute([$user['user_id']]);
@@ -58,9 +75,17 @@ $latestPayroll = $pdo->prepare('SELECT status FROM payroll WHERE driver_id = ? O
 $latestPayroll->execute([$driverId]);
 $payrollStatus = ucfirst((string)$latestPayroll->fetchColumn());
 
+// Currently clocked in (today's record without a time out)
+$clocked = $pdo->prepare(
+    'SELECT attendance_id FROM attendance
+     WHERE driver_id = ? AND attendance_date = CURDATE() AND time_out IS NULL'
+);
+$clocked->execute([$driverId]);
+
 $presentDays = (int)($m['total'] ?? 0);
 
 json_out([
+    'clockedIn' => (bool)$clocked->fetchColumn(),
     'driver' => [
         'id' => 'DRV-' . str_pad((string)$driverId, 3, '0', STR_PAD_LEFT),
         'name' => $driver['fullname'],
@@ -78,7 +103,7 @@ json_out([
         'totalAttendanceThisMonth' => $presentDays,
         'presentDays' => $presentDays,
         'absentDays' => 0,
-        'latestPayrollStatus' => $payrollStatus ?: '—',
+        'latestPayrollStatus' => $payrollStatus ?: 'None',
         'totalHoursThisMonth' => (int)$hours,
         'averageRating' => round($rating, 1),
         'onTimeAttendance' => $totalCount > 0 ? round($onTimeCount / $totalCount * 100) . '%' : '0%',
