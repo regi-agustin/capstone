@@ -47,11 +47,11 @@ const DEFAULT_MATRIX = {
   Accounts: ['View', 'Add', 'Edit', 'Delete'],
   Drivers: ['View', 'Add', 'Edit', 'Delete'],
   Fleet: ['View', 'Add', 'Edit', 'Delete'],
-  Assignments: ['View', 'Add', 'Delete'],
+  Assignments: ['View', 'Add', 'Edit', 'Delete'],
   Reservations: ['View', 'Add', 'Edit', 'Delete'],
   Billing: ['View', 'Add', 'Edit', 'Delete'],
-  Payroll: ['View'],
-  Pricing: ['View', 'Edit'],
+  Payroll: ['View', 'Add', 'Edit', 'Delete'],
+  Pricing: ['View', 'Add', 'Edit', 'Delete'],
 }
 
 const PASSWORD_RULE = /^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};:'",.\/<>?]).{8,}$/
