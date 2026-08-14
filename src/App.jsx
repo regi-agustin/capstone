@@ -61,9 +61,6 @@ function DashboardForRole({ session, onLogout, module, onSwitchModule }) {
       />
     )
   }
-  if (module === 'driver') {
-    return <DriverApp user={session.name} onLogout={onLogout} />
-  }
 
   if (role === 'driver' && canAccessModule(role, 'driver')) {
     return <DriverApp user={session.name} onLogout={onLogout} />

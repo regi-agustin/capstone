@@ -40,7 +40,6 @@ const MODULES = [
   { key: 'billing', label: 'Billing & Payments', desc: 'Invoices, payments, reports', icon: Icon.dashboard },
   { key: 'payroll', label: 'Payroll Desk', desc: 'Payroll, attendance, driver records', icon: Icon.users },
   { key: 'customer', label: 'Customer Portal', desc: 'Rentals, reservations, feedback', icon: Icon.car },
-  { key: 'driver', label: 'Driver App', desc: 'Trips, time in/out, payroll view', icon: Icon.user },
 ]
 
 const DEFAULT_MATRIX = {
