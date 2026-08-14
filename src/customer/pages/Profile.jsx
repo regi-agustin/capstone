@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react'
 import { FiCalendar, FiClock, FiBell, FiShield } from 'react-icons/fi'
 import { Link } from 'react-router-dom'
 import { fetchProfile } from '../services/customerService.js'
+import StatusBadge from '../../ro/components/StatusBadge.jsx'
+
+const Detail = ({ label, value }) => (
+  <div>
+    <div className="detail-item__label">{label}</div>
+    <div className="detail-item__value">{value || '—'}</div>
+  </div>
+)
 
 export default function Profile({ user }) {
   const [profile, setProfile] = useState(null)
@@ -27,87 +35,103 @@ export default function Profile({ user }) {
     .join('')
     .toUpperCase()
 
+  const quickLinks = [
+    { to: '/reservations', icon: FiCalendar, label: 'My Reservations' },
+    { to: '/history', icon: FiClock, label: 'Rental History' },
+    { to: '/notifications', icon: FiBell, label: 'Notifications' },
+    { to: '/security', icon: FiShield, label: 'Security' },
+  ]
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-2">My Profile</h1>
-      <p className="text-gray-500 mb-6">Manage your personal information and account settings.</p>
+      <div className="page-head">
+        <div>
+          <h1>My Profile</h1>
+          <p className="page-head__sub">Manage your personal information and account settings.</p>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold">
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 22, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gap: 16 }}>
+          <section className="card">
+            <div className="card__body">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: '50%',
+                    background: 'var(--navy)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 28,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
                   {initials}
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800">{account.name}</h2>
-                  <p className="text-gray-500">
+                  <h2 style={{ fontSize: 20 }}>{account.name}</h2>
+                  <p className="muted" style={{ fontSize: 13 }}>
                     Member since {account.memberSince ? new Date(account.memberSince).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
                   </p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Verified</span>
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">Customer Account</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                    {profile?.isVerified ? <StatusBadge status="Verified" /> : <StatusBadge status="Pending" />}
+                    <span className="badge badge--neutral">Customer Account</span>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="font-semibold text-gray-800 mb-4">Account Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">Full Name</p>
-                <p className="font-medium text-gray-800">{account.name}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Username</p>
-                <p className="font-medium text-gray-800">{account.username || '—'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Email Address</p>
-                <p className="font-medium text-gray-800">{account.email || '—'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Phone Number</p>
-                <p className="font-medium text-gray-800">{account.contactNumber || '—'}</p>
-              </div>
+          <section className="card">
+            <div className="card__header">
+              <div className="card__title">Account Information</div>
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <p className="text-sm text-gray-500">Keep your account information up to date to ensure a smooth rental experience.</p>
+            <div className="card__body">
+              <div className="detail-grid">
+                <Detail label="Full Name" value={account.name} />
+                <Detail label="Username" value={account.username || '—'} />
+                <Detail label="Email Address" value={account.email || '—'} />
+                <Detail label="Phone Number" value={account.contactNumber || '—'} />
+              </div>
+              <p className="muted" style={{ fontSize: 13, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+                Keep your account information up to date to ensure a smooth rental experience.
+              </p>
             </div>
-          </div>
+          </section>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <h3 className="font-semibold text-gray-800 mb-3">Quick Links</h3>
-            <div className="space-y-2">
-              <Link to="/reservations" className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-600 flex items-center space-x-2">
-                <FiCalendar className="h-4 w-4" />
-                <span>My Reservations</span>
-              </Link>
-              <Link to="/history" className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-600 flex items-center space-x-2">
-                <FiClock className="h-4 w-4" />
-                <span>Rental History</span>
-              </Link>
-              <Link to="/notifications" className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-600 flex items-center space-x-2">
-                <FiBell className="h-4 w-4" />
-                <span>Notifications</span>
-              </Link>
-              <Link to="/security" className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-600 flex items-center space-x-2">
-                <FiShield className="h-4 w-4" />
-                <span>Security</span>
-              </Link>
+        <div style={{ display: 'grid', gap: 16 }}>
+          <section className="card">
+            <div className="card__header">
+              <div className="card__title">Quick Links</div>
             </div>
-          </div>
+            <div className="card__body" style={{ display: 'grid', gap: 8 }}>
+              {quickLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className="btn btn--secondary btn--block"
+                  style={{ justifyContent: 'flex-start', paddingLeft: 14 }}
+                >
+                  <link.icon size={16} />
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </section>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <h3 className="font-semibold text-gray-800 mb-2">Need Help?</h3>
-            <p className="text-sm text-gray-600">We're here to help you! If you need any assistance with your account.</p>
-            <p className="mt-3 text-sm font-medium text-blue-700">📞 0912 345 6789 · support@hollydot.com</p>
-          </div>
+          <section className="card">
+            <div className="card__body">
+              <h3 style={{ marginBottom: 4 }}>Need Help?</h3>
+              <p className="muted" style={{ fontSize: 13 }}>We're here to help you! If you need any assistance with your account.</p>
+              <p style={{ marginTop: 12, fontSize: 13, fontWeight: 600, color: 'var(--warning)' }}>📞 0912 345 6789 · support@hollydot.com</p>
+            </div>
+          </section>
         </div>
       </div>
     </div>

@@ -6,10 +6,19 @@ const COLORS = {
   'In Use': 'badge--in-use',
   'In Maintenance': 'badge--in-maintenance',
   Paid: 'badge--available',
+  Unpaid: 'badge--denied',
   Partial: 'badge--in-use',
   Draft: 'badge--neutral',
   Sent: 'badge--confirmed',
   Cancelled: 'badge--denied',
+  Completed: 'badge--confirmed',
+  'On trip': 'badge--in-use',
+  Unavailable: 'badge--denied',
+  Assigned: 'badge--in-use',
+  Unassigned: 'badge--available',
+  Verified: 'badge--confirmed',
+  Rejected: 'badge--denied',
+  'For Review': 'badge--pending',
 };
 
 export default function StatusBadge({ status, dot }) {

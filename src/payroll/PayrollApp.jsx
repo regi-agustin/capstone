@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import '../ro/styles/main.css'
 import AppLayout from './components/AppLayout.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import PayrollManagement from './pages/PayrollManagement.jsx'
@@ -11,22 +12,24 @@ import HelpCenter from './pages/HelpCenter.jsx'
 
 function PayrollApp({ user, onLogout }) {
   return (
-    <Router>
-      <Routes>
-        <Route element={<AppLayout user={user} onLogout={onLogout} />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/payroll" element={<PayrollManagement />} />
-          <Route path="/drivers" element={<DriverRecords />} />
-          <Route path="/attendance" element={<Attendance />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/security" element={<Security />} />
-          <Route path="/help" element={<HelpCenter />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </Router>
+    <div className="ro-app payroll-app">
+      <Router>
+        <Routes>
+          <Route element={<AppLayout user={user} onLogout={onLogout} />}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/payroll" element={<PayrollManagement />} />
+            <Route path="/drivers" element={<DriverRecords />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/security" element={<Security />} />
+            <Route path="/help" element={<HelpCenter />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
+    </div>
   )
 }
 

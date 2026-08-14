@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { FiSearch, FiBook, FiMapPin, FiFileText, FiShield, FiMail, FiPhone, FiCheckSquare } from 'react-icons/fi'
+import { FiBook, FiMapPin, FiFileText, FiShield, FiMail, FiPhone, FiCheckSquare } from 'react-icons/fi'
+import SearchBar from '../../ro/components/SearchBar.jsx'
 
 const helpTopics = [
-  { id: 1, title: 'Reservations', description: 'Find answers about booking, modifying, and cancelling your reservations.', icon: FiBook, color: 'text-blue-600' },
-  { id: 2, title: 'Pickup & Return', description: 'Learn about pickup locations, return process, and late returns.', icon: FiMapPin, color: 'text-green-600' },
-  { id: 3, title: 'Requirements', description: 'Check driver requirements, documents, and rental policies.', icon: FiFileText, color: 'text-purple-600' },
-  { id: 4, title: 'Policies & Terms', description: 'Read our rental policies, terms, and important information.', icon: FiBook, color: 'text-orange-600' },
-  { id: 5, title: 'Account & Security', description: 'Manage your account, security settings, and face recognition.', icon: FiShield, color: 'text-red-600' },
+  { id: 1, title: 'Reservations', description: 'Find answers about booking, modifying, and cancelling your reservations.', icon: FiBook, color: 'var(--primary-dark)' },
+  { id: 2, title: 'Pickup & Return', description: 'Learn about pickup locations, return process, and late returns.', icon: FiMapPin, color: 'var(--success)' },
+  { id: 3, title: 'Requirements', description: 'Check driver requirements, documents, and rental policies.', icon: FiFileText, color: 'var(--info)' },
+  { id: 4, title: 'Policies & Terms', description: 'Read our rental policies, terms, and important information.', icon: FiBook, color: 'var(--warning)' },
+  { id: 5, title: 'Account & Security', description: 'Manage your account, security settings, and face recognition.', icon: FiShield, color: 'var(--danger)' },
 ]
 
 const popularArticles = [
@@ -26,116 +27,132 @@ export default function HelpCenter() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-2">Help Center</h1>
-      <p className="text-gray-500 mb-6">Find answers to common questions or get in touch with our support team.</p>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-        <h3 className="font-semibold text-gray-800 mb-3">How can we help you?</h3>
-        <div className="relative">
-          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <input
-            type="text"
-            placeholder="Search for help articles..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      <div className="page-head">
+        <div>
+          <h1>Help Center</h1>
+          <p className="page-head__sub">Find answers to common questions or get in touch with our support team.</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Browse Help Topics</h3>
+      <section className="card" style={{ marginBottom: 22 }}>
+        <div className="card__header">
+          <div className="card__title">How can we help you?</div>
+        </div>
+        <div className="card__body">
+          <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Search for help articles…" />
+        </div>
+      </section>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 22, alignItems: 'start' }}>
+        <div>
+          <h3 style={{ fontSize: 16, marginBottom: 14 }}>Browse Help Topics</h3>
           {filteredTopics.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center">
-              <p className="text-gray-500">No help topics match your search.</p>
+            <div className="empty-state">
+              <FiBook size={36} />
+              <div className="empty-state__title">No help topics match your search</div>
+              <div className="empty-state__sub">Try different keywords or browse all topics.</div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
               {filteredTopics.map((topic) => (
-                <div key={topic.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
-                  <div className="flex items-start space-x-3">
-                    <div className={`p-2 bg-gray-50 rounded-lg ${topic.color}`}>
-                      <topic.icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-800">{topic.title}</h4>
-                      <p className="text-sm text-gray-500 mt-1">{topic.description}</p>
+                <section key={topic.id} className="card">
+                  <div className="card__body">
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <div
+                        className="stat-card__icon"
+                        style={{ width: 42, height: 42, background: 'var(--surface-2)', color: topic.color }}
+                      >
+                        <topic.icon size={20} />
+                      </div>
+                      <div>
+                        <h4 style={{ fontSize: 14 }}>{topic.title}</h4>
+                        <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>{topic.description}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </section>
               ))}
             </div>
           )}
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mt-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Popular Articles</h3>
-            <div className="space-y-3">
+          <section className="card" style={{ marginTop: 16 }}>
+            <div className="card__header">
+              <div className="card__title">Popular Articles</div>
+            </div>
+            <div className="card__body" style={{ display: 'grid', gap: 8 }}>
               {popularArticles.map((article, idx) => (
-                <div key={idx} className="w-full text-left flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition">
-                  <span className="text-sm text-gray-700">{article}</span>
-                  <span className="text-blue-600 text-sm">→</span>
+                <div
+                  key={idx}
+                  className="btn btn--secondary btn--block"
+                  style={{ justifyContent: 'space-between', textAlign: 'left' }}
+                >
+                  <span>{article}</span>
+                  <span style={{ color: 'var(--primary-dark)' }}>→</span>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <h3 className="font-semibold text-gray-800 mb-3">Need More Help?</h3>
-            <p className="text-sm text-gray-600 mb-4">Our support team is here to assist you.</p>
-
-            <div className="space-y-3">
-              <div className="flex items-start space-x-3">
-                <FiPhone className="h-5 w-5 text-blue-600 mt-0.5" />
+        <div style={{ display: 'grid', gap: 16 }}>
+          <section className="card">
+            <div className="card__header">
+              <div className="card__title">Need More Help?</div>
+            </div>
+            <div className="card__body" style={{ display: 'grid', gap: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <FiPhone size={18} style={{ color: 'var(--primary-dark)', marginTop: 2 }} />
                 <div>
-                  <p className="font-medium text-gray-800">Call Us</p>
-                  <p className="text-sm text-gray-600">0912 345 6789</p>
-                  <p className="text-xs text-gray-500">Mon - Sat: 8:00 AM - 6:00 PM</p>
+                  <p style={{ fontWeight: 600, color: 'var(--ink)' }}>Call Us</p>
+                  <p className="muted" style={{ fontSize: 13 }}>0912 345 6789</p>
+                  <p className="faint" style={{ fontSize: 12 }}>Mon - Sat: 8:00 AM - 6:00 PM</p>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <FiMail className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <FiMail size={18} style={{ color: 'var(--primary-dark)', marginTop: 2 }} />
                 <div>
-                  <p className="font-medium text-gray-800">Email Us</p>
-                  <p className="text-sm text-gray-600">support@hollydot.com</p>
-                  <p className="text-xs text-gray-500">We usually reply within 24 hours</p>
+                  <p style={{ fontWeight: 600, color: 'var(--ink)' }}>Email Us</p>
+                  <p className="muted" style={{ fontSize: 13 }}>support@hollydot.com</p>
+                  <p className="faint" style={{ fontSize: 12 }}>We usually reply within 24 hours</p>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <FiMapPin className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <FiMapPin size={18} style={{ color: 'var(--primary-dark)', marginTop: 2 }} />
                 <div>
-                  <p className="font-medium text-gray-800">Visit Our Office</p>
-                  <p className="text-sm text-gray-600">Clark Freeport Zone, Pampanga</p>
-                  <p className="text-xs text-gray-500">Mon - Sat: 8:00 AM - 6:00 PM</p>
+                  <p style={{ fontWeight: 600, color: 'var(--ink)' }}>Visit Our Office</p>
+                  <p className="muted" style={{ fontSize: 13 }}>Clark Freeport Zone, Pampanga</p>
+                  <p className="faint" style={{ fontSize: 12 }}>Mon - Sat: 8:00 AM - 6:00 PM</p>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="bg-blue-50 rounded-xl p-5 border border-blue-200">
-            <h3 className="font-semibold text-gray-800 mb-3">Before You Contact Us</h3>
-            <p className="text-sm text-gray-600 mb-3">Please have the following information ready so we can assist you faster.</p>
-            <div className="space-y-2">
-              <label className="flex items-center space-x-2 text-sm text-gray-700">
-                <FiCheckSquare className="h-4 w-4 text-blue-600" />
-                <span>Reservation ID (if applicable)</span>
-              </label>
-              <label className="flex items-center space-x-2 text-sm text-gray-700">
-                <FiCheckSquare className="h-4 w-4 text-blue-600" />
-                <span>Full name on the reservation</span>
-              </label>
-              <label className="flex items-center space-x-2 text-sm text-gray-700">
-                <FiCheckSquare className="h-4 w-4 text-blue-600" />
-                <span>Phone number or email address</span>
-              </label>
-              <label className="flex items-center space-x-2 text-sm text-gray-700">
-                <FiCheckSquare className="h-4 w-4 text-blue-600" />
-                <span>Details of your concern</span>
-              </label>
+          <section className="card" style={{ background: 'var(--warning-soft)', borderColor: 'var(--warning)' }}>
+            <div className="card__body">
+              <h3 style={{ marginBottom: 4 }}>Before You Contact Us</h3>
+              <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+                Please have the following information ready so we can assist you faster.
+              </p>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <label className="toggle-wrap" style={{ gap: 10, fontSize: 13 }}>
+                  <FiCheckSquare size={16} style={{ color: 'var(--primary-dark)' }} />
+                  <span>Reservation ID (if applicable)</span>
+                </label>
+                <label className="toggle-wrap" style={{ gap: 10, fontSize: 13 }}>
+                  <FiCheckSquare size={16} style={{ color: 'var(--primary-dark)' }} />
+                  <span>Full name on the reservation</span>
+                </label>
+                <label className="toggle-wrap" style={{ gap: 10, fontSize: 13 }}>
+                  <FiCheckSquare size={16} style={{ color: 'var(--primary-dark)' }} />
+                  <span>Phone number or email address</span>
+                </label>
+                <label className="toggle-wrap" style={{ gap: 10, fontSize: 13 }}>
+                  <FiCheckSquare size={16} style={{ color: 'var(--primary-dark)' }} />
+                  <span>Details of your concern</span>
+                </label>
+              </div>
             </div>
-          </div>
+          </section>
         </div>
       </div>
     </div>

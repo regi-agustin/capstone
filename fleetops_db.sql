@@ -337,7 +337,8 @@ CREATE TABLE notifications (
   user_id         INT UNSIGNED NOT NULL,
   type            ENUM('attendance_verified','attendance_rejected',
                        'payroll_released','reservation_confirmed',
-                       'vehicle_updated','maintenance_due','system_alert')
+                       'vehicle_updated','maintenance_due','system_alert',
+                       'system_announcement')
                   NOT NULL DEFAULT 'system_alert',
   title           VARCHAR(150) NOT NULL,
   description     TEXT DEFAULT NULL,
@@ -662,3 +663,106 @@ ALTER TABLE clients
   ADD KEY idx_clients_user (user_id),
   ADD CONSTRAINT fk_clients_user FOREIGN KEY (user_id)
     REFERENCES users (user_id) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- ============================================================================
+--  GUI EXTENSIONS (part 2): security settings, login sessions, preferences
+--  Backs the data shown on the customer + payroll dashboards.
+-- ============================================================================
+ALTER TABLE users
+  ADD COLUMN is_verified TINYINT(1) NOT NULL DEFAULT 1 AFTER status;
+
+CREATE TABLE security_settings (
+  user_id                    INT UNSIGNED NOT NULL,
+  face_recognition_enabled   TINYINT(1)   NOT NULL DEFAULT 0,
+  two_factor_enabled         TINYINT(1)   NOT NULL DEFAULT 0,
+  two_factor_method          VARCHAR(40)  NOT NULL DEFAULT 'Authenticator App (TOTP)',
+  login_notifications_enabled TINYINT(1)  NOT NULL DEFAULT 1,
+  backup_codes_total         INT          NOT NULL DEFAULT 10,
+  backup_codes_used          INT          NOT NULL DEFAULT 0,
+  password_strength          VARCHAR(15)  NOT NULL DEFAULT 'Strong',
+  last_security_check        DATE         DEFAULT NULL,
+  updated_at                 TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id),
+  CONSTRAINT fk_security_settings_user FOREIGN KEY (user_id)
+    REFERENCES users (user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE login_sessions (
+  session_id   INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id      INT UNSIGNED NOT NULL,
+  device       VARCHAR(120) NOT NULL,
+  location     VARCHAR(120) NOT NULL,
+  ip_address   VARCHAR(45)  DEFAULT NULL,
+  status       ENUM('current','active','ended') NOT NULL DEFAULT 'active',
+  logged_in_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (session_id),
+  KEY idx_login_sessions_user (user_id),
+  CONSTRAINT fk_login_sessions_user FOREIGN KEY (user_id)
+    REFERENCES users (user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE user_preferences (
+  user_id     INT UNSIGNED NOT NULL,
+  language    VARCHAR(30)  NOT NULL DEFAULT 'English',
+  date_format VARCHAR(30)  NOT NULL DEFAULT 'MMM D, YYYY',
+  time_format VARCHAR(30)  NOT NULL DEFAULT '12-hour (AM/PM)',
+  timezone    VARCHAR(60)  NOT NULL DEFAULT '(GMT+08:00) Asia/Manila',
+  PRIMARY KEY (user_id),
+  CONSTRAINT fk_user_preferences_user FOREIGN KEY (user_id)
+    REFERENCES users (user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Default security settings + preferences for every account
+INSERT INTO security_settings (user_id, face_recognition_enabled, two_factor_enabled,
+                               login_notifications_enabled, backup_codes_used, last_security_check)
+SELECT user_id,
+       CASE WHEN role = 'customer' THEN 1 ELSE 0 END,
+       1,
+       1,
+       2,
+       CURDATE()
+FROM users;
+
+INSERT INTO user_preferences (user_id)
+SELECT user_id FROM users;
+
+-- Sample login activity for the demo accounts
+INSERT INTO login_sessions (user_id, device, location, ip_address, status, logged_in_at)
+SELECT u.user_id, 'Windows · Chrome', 'Pampanga, Philippines', '192.168.1.10', 'current', NOW()
+FROM users u WHERE u.username = 'maria.santos';
+
+INSERT INTO login_sessions (user_id, device, location, ip_address, status, logged_in_at)
+SELECT u.user_id, 'Android · Chrome', 'Pampanga, Philippines', '192.168.1.11', 'active', NOW() - INTERVAL 2 HOUR
+FROM users u WHERE u.username = 'maria.santos';
+
+INSERT INTO login_sessions (user_id, device, location, ip_address, status, logged_in_at)
+SELECT u.user_id, 'Windows · Edge', 'Pampanga, Philippines', '192.168.1.12', 'active', NOW() - INTERVAL 1 DAY
+FROM users u WHERE u.username = 'maria.santos';
+
+INSERT INTO login_sessions (user_id, device, location, ip_address, status, logged_in_at)
+SELECT u.user_id, 'Windows · Chrome', 'Pampanga, Philippines', '192.168.1.20', 'current', NOW()
+FROM users u WHERE u.username = 'charles.buque';
+
+INSERT INTO login_sessions (user_id, device, location, ip_address, status, logged_in_at)
+SELECT u.user_id, 'Android · Chrome', 'Pampanga, Philippines', '192.168.1.21', 'active', NOW() - INTERVAL 3 HOUR
+FROM users u WHERE u.username = 'charles.buque';
+
+INSERT INTO login_sessions (user_id, device, location, ip_address, status, logged_in_at)
+SELECT u.user_id, 'Windows · Edge', 'Pampanga, Philippines', '192.168.1.22', 'active', NOW() - INTERVAL 2 DAY
+FROM users u WHERE u.username = 'charles.buque';
+
+-- System announcements (drives the payroll/customer dashboards)
+INSERT INTO notifications (user_id, type, title, description)
+SELECT u.user_id, 'system_announcement', 'System Maintenance Schedule',
+       'Scheduled system maintenance is set for this weekend. Payroll features will be temporarily unavailable during the window.'
+FROM users u WHERE u.username = 'maria.santos';
+
+INSERT INTO notifications (user_id, type, title, description, is_read)
+SELECT u.user_id, 'system_announcement', 'New Feature Update',
+       'Payroll and attendance enhancements are now live. Review the Help Center for details.', 1
+FROM users u WHERE u.username = 'maria.santos';
+
+INSERT INTO notifications (user_id, type, title, description)
+SELECT u.user_id, 'system_announcement', 'System Maintenance Schedule',
+       'Scheduled system maintenance is set for this weekend. Booking features will be temporarily unavailable.'
+FROM users u WHERE u.username = 'charles.buque';

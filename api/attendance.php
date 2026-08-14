@@ -24,7 +24,8 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
     $sql = 'SELECT a.attendance_id, a.attendance_date, a.time_in, a.time_out, a.verification_status,
-                   a.rejection_reason, v.model, v.plate_number, d.fullname AS driver_name
+                   a.rejection_reason, a.time_in > "08:00:00" AS is_late,
+                   v.model, v.plate_number, d.fullname AS driver_name
             FROM attendance a
             JOIN vehicles v ON v.vehicle_id = a.vehicle_id
             JOIN drivers d ON d.driver_id = a.driver_id';
@@ -45,6 +46,7 @@ if ($method === 'GET') {
             'driverName' => $a['driver_name'] ?? '',
             'vehicle' => $a['model'],
             'status' => 'Present',
+            'isLate' => (int)($a['is_late'] ?? 0) === 1,
             'timeIn' => fmt_time($a['time_in']),
             'timeOut' => fmt_time($a['time_out']),
             'verificationStatus' => ucfirst($a['verification_status']),

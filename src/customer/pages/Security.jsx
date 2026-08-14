@@ -1,15 +1,35 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FiShield, FiLock, FiUser, FiClock, FiCheckCircle, FiAlertCircle } from 'react-icons/fi'
+import { fetchSecurity } from '../services/customerService.js'
+
+function timeAgo(ts) {
+  if (!ts) return ''
+  const d = new Date(ts.replace(' ', 'T'))
+  if (isNaN(d.getTime())) return ts
+  const diff = Date.now() - d.getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Now'
+  if (mins < 60) return `${mins} minute${mins > 1 ? 's' : ''} ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days > 1 ? 's' : ''} ago`
+}
 
 export default function Security() {
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' })
   const [notice, setNotice] = useState('')
+  const [security, setSecurity] = useState(null)
+  const [error, setError] = useState('')
 
-  const loginActivity = [
-    { id: 1, device: 'Windows · Chrome', location: 'Pampanga, Philippines', status: 'Current Session', time: 'Now' },
-    { id: 2, device: 'Android · Chrome', location: 'Pampanga, Philippines', status: 'Active', time: '2 hours ago' },
-    { id: 3, device: 'Windows · Edge', location: 'Pampanga, Philippines', status: 'Active', time: '1 day ago' },
-  ]
+  useEffect(() => {
+    fetchSecurity()
+      .then(setSecurity)
+      .catch((e) => setError(e.message))
+  }, [])
+
+  const settings = security?.settings || {}
+  const sessions = security?.sessions || []
 
   function handleUpdate(e) {
     e.preventDefault()
@@ -24,144 +44,208 @@ export default function Security() {
     setNotice('Password change is handled by the administrator. Please contact support.')
   }
 
+  const noticeIsError = notice && (notice.includes('do not match') || notice.includes('at least 8'))
+  const faceEnabled = Boolean(settings.faceRecognitionEnabled)
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-2">Security</h1>
-      <p className="text-gray-500 mb-6">Manage your account security and authentication settings.</p>
+      <div className="page-head">
+        <div>
+          <h1>Security</h1>
+          <p className="page-head__sub">Manage your account security and authentication settings.</p>
+        </div>
+      </div>
 
+      {error && <div className="error-banner" style={{ marginBottom: 16 }}>{error}</div>}
       {notice && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl text-sm">{notice}</div>
+        noticeIsError ? (
+          <div className="error-banner" style={{ marginBottom: 16 }}>{notice}</div>
+        ) : (
+          <div className="success-banner" style={{ marginBottom: 16 }}>{notice}</div>
+        )
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="font-semibold text-gray-800 mb-4">Face Recognition Authentication</h3>
-            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <FiShield className="h-6 w-6 text-green-600" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 22, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gap: 16 }}>
+          <section className="card">
+            <div className="card__header">
+              <div className="card__title">Face Recognition Authentication</div>
+            </div>
+            <div className="card__body">
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 14,
+                  padding: 14,
+                  background: faceEnabled ? 'var(--success-soft)' : 'var(--surface-2)',
+                  borderRadius: 'var(--r-sm)',
+                  border: `1px solid ${faceEnabled ? 'var(--success)' : 'var(--border)'}`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="stat-card__icon" style={{ background: faceEnabled ? 'var(--success-soft)' : 'var(--surface-2)', color: faceEnabled ? 'var(--success)' : 'var(--text-2)' }}>
+                    <FiShield size={24} />
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 600, color: 'var(--ink)' }}>{faceEnabled ? 'Enabled' : 'Disabled'}</p>
+                    <p className="muted" style={{ fontSize: 13 }}>Face recognition is used to securely verify your identity when logging in.</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-gray-800">Enabled</p>
-                  <p className="text-sm text-gray-600">Face recognition is used to securely verify your identity when logging in.</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="px-2 py-1 bg-green-200 text-green-700 text-xs rounded-full">Active</span>
+                <span className={faceEnabled ? 'badge badge--confirmed' : 'badge badge--neutral'}>
+                  {faceEnabled ? 'Active' : 'Inactive'}
+                </span>
               </div>
             </div>
-          </div>
+          </section>
 
-          <form onSubmit={handleUpdate} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="font-semibold text-gray-800 mb-4">Change Password</h3>
-            <p className="text-sm text-gray-500 mb-4">Update your password regularly to keep your account secure.</p>
-
-            <div className="space-y-4">
+          <form onSubmit={handleUpdate} className="card">
+            <div className="card__header">
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Current Password</label>
+                <div className="card__title">Change Password</div>
+                <div className="card__sub">Update your password regularly to keep your account secure.</div>
+              </div>
+            </div>
+            <div className="card__body" style={{ display: 'grid', gap: 14 }}>
+              <div className="form-group">
+                <label className="form-label" htmlFor="pw-current">Current Password</label>
                 <input
+                  id="pw-current"
                   type="password"
                   value={passwords.current}
                   onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="form-input"
                   placeholder="Enter current password"
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">New Password</label>
+              <div className="form-group">
+                <label className="form-label" htmlFor="pw-new">New Password</label>
                 <input
+                  id="pw-new"
                   type="password"
                   value={passwords.new}
                   onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="form-input"
                   placeholder="Enter new password"
                 />
-                <p className="text-xs text-gray-500 mt-1">Use at least 8 characters with a mix of letters, numbers, and symbols.</p>
+                <div className="form-hint">Use at least 8 characters with a mix of letters, numbers, and symbols.</div>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Confirm New Password</label>
+              <div className="form-group">
+                <label className="form-label" htmlFor="pw-confirm">Confirm New Password</label>
                 <input
+                  id="pw-confirm"
                   type="password"
                   value={passwords.confirm}
                   onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="form-input"
                   placeholder="Confirm new password"
                 />
               </div>
-              <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+              <button type="submit" className="btn btn--primary" style={{ justifySelf: 'start' }}>
                 Update Password
               </button>
             </div>
           </form>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="font-semibold text-gray-800 mb-4">Login Activity</h3>
-            <p className="text-sm text-gray-500 mb-4">Review your recent account activity.</p>
-
-            <div className="space-y-3">
-              {loginActivity.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${activity.status === 'Current Session' ? 'bg-blue-100' : 'bg-gray-200'}`}>
-                      <FiUser className={`h-4 w-4 ${activity.status === 'Current Session' ? 'text-blue-600' : 'text-gray-500'}`} />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-800">{activity.device}</p>
-                      <p className="text-sm text-gray-500">{activity.location}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {activity.status === 'Current Session' ? (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Current Session</span>
-                    ) : (
-                      <span className="text-xs text-gray-500">{activity.status} • {activity.time}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <div className="flex items-center space-x-3 mb-3">
-              <FiCheckCircle className="h-6 w-6 text-green-500" />
+          <section className="card">
+            <div className="card__header">
               <div>
-                <h3 className="font-semibold text-gray-800">Account Protection</h3>
-                <p className="text-sm text-green-600">Your account is protected</p>
+                <div className="card__title">Login Activity</div>
+                <div className="card__sub">Review your recent account activity.</div>
               </div>
             </div>
-            <div className="border-t border-gray-100 pt-3">
-              <p className="text-sm text-gray-500">Last security check:</p>
-              <p className="font-medium text-gray-800">Today</p>
+            <div className="card__body" style={{ display: 'grid' }}>
+              {sessions.length === 0 ? (
+                <p className="muted">No login activity recorded yet.</p>
+              ) : (
+                sessions.map((activity, i) => (
+                  <div
+                    key={activity.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      padding: '12px 0',
+                      borderBottom: i < sessions.length - 1 ? '1px solid var(--border)' : 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div
+                        className="stat-card__icon"
+                        style={{
+                          width: 38,
+                          height: 38,
+                          background: activity.status === 'current' ? 'var(--warning-soft)' : 'var(--surface-2)',
+                          color: activity.status === 'current' ? 'var(--warning)' : 'var(--text-2)',
+                        }}
+                      >
+                        <FiUser size={17} />
+                      </div>
+                      <div>
+                        <p style={{ fontWeight: 600, color: 'var(--ink)' }}>{activity.device}</p>
+                        <p className="muted" style={{ fontSize: 13 }}>{activity.location}</p>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      {activity.status === 'current' ? (
+                        <span className="badge badge--pending">Current Session</span>
+                      ) : (
+                        <span className="faint" style={{ fontSize: 13 }}>{timeAgo(activity.time)}</span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-          </div>
+          </section>
+        </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <h3 className="font-semibold text-gray-800 mb-3">Security Tips</h3>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-start space-x-2">
-                <FiLock className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                <span>Keep your password strong and unique.</span>
-              </li>
-              <li className="flex items-start space-x-2">
-                <FiAlertCircle className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                <span>Do not share your account information with anyone.</span>
-              </li>
-              <li className="flex items-start space-x-2">
-                <FiClock className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                <span>Always log out after using a public or shared device.</span>
-              </li>
-            </ul>
-          </div>
+        <div style={{ display: 'grid', gap: 16 }}>
+          <section className="card">
+            <div className="card__body">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <FiCheckCircle size={26} style={{ color: 'var(--success)' }} />
+                <div>
+                  <h3>Account Protection</h3>
+                  <p style={{ fontSize: 13, color: 'var(--success)' }}>Your account is protected</p>
+                </div>
+              </div>
+              <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                <div className="detail-item__label">Last security check:</div>
+                <div className="detail-item__value">{settings.lastSecurityCheck || '—'}</div>
+              </div>
+            </div>
+          </section>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <h3 className="font-semibold text-gray-800 mb-2">Need Help?</h3>
-            <p className="text-sm text-gray-600">We're here to help you keep your account secure.</p>
-            <p className="mt-3 text-sm font-medium text-blue-700">📞 0912 345 6789 · support@hollydot.com</p>
-          </div>
+          <section className="card">
+            <div className="card__header">
+              <div className="card__title">Security Tips</div>
+            </div>
+            <div className="card__body" style={{ display: 'grid', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <FiLock size={16} className="faint" style={{ marginTop: 2 }} />
+                <span className="muted" style={{ fontSize: 13 }}>Keep your password strong and unique.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <FiAlertCircle size={16} className="faint" style={{ marginTop: 2 }} />
+                <span className="muted" style={{ fontSize: 13 }}>Do not share your account information with anyone.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <FiClock size={16} className="faint" style={{ marginTop: 2 }} />
+                <span className="muted" style={{ fontSize: 13 }}>Always log out after using a public or shared device.</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="card__body">
+              <h3 style={{ marginBottom: 4 }}>Need Help?</h3>
+              <p className="muted" style={{ fontSize: 13 }}>We're here to help you keep your account secure.</p>
+              <p style={{ marginTop: 12, fontSize: 13, fontWeight: 600, color: 'var(--warning)' }}>📞 0912 345 6789 · support@hollydot.com</p>
+            </div>
+          </section>
         </div>
       </div>
     </div>

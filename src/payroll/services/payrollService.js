@@ -10,6 +10,8 @@ export const fetchNotifications = () => apiFetch('notifications.php')
 
 export const fetchProfile = () => apiFetch('profile.php')
 
+export const fetchSecurity = () => apiFetch('security.php')
+
 export const markAllNotificationsRead = () =>
   apiFetch('notifications.php', {
     method: 'POST',
@@ -63,10 +65,10 @@ export function statusLabel(status) {
 export function statusStyle(status) {
   switch (status) {
     case 'Paid':
-      return 'bg-blue-100 text-blue-700'
+      return 'bg-green-100 text-green-600'
     case 'Unpaid':
-      return 'bg-red-100 text-red-700'
+      return 'bg-red-100 text-red-600'
     default:
-      return 'bg-yellow-100 text-yellow-700'
+      return 'bg-amber-100 text-amber-600'
   }
 }

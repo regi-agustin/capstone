@@ -22,6 +22,8 @@ export const submitFeedback = (payload) =>
 
 export const fetchProfile = () => apiFetch('profile.php')
 
+export const fetchSecurity = () => apiFetch('security.php')
+
 export function formatDate(iso) {
   if (!iso) return ''
   const [y, m, d] = String(iso).slice(0, 10).split('-')

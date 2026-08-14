@@ -42,121 +42,154 @@ export default function Feedback() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-2">Feedback</h1>
-      <p className="text-gray-500 mb-6">We value your feedback! Share your experience and help us improve our services.</p>
-
-      {error && <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>}
-      {success && <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm">{success}</div>}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">My Feedback</h2>
-          <p className="text-sm text-gray-500 mb-4">View the feedback you've submitted.</p>
-
-          {feedbackList.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center">
-              <p className="text-gray-500">No feedback submitted yet.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {feedbackList.map((feedback) => (
-                <div key={feedback.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                  <div className="flex items-center space-x-1 mt-1">
-                    {[...Array(5)].map((_, i) => (
-                      <FiStar key={i} className={`h-4 w-4 ${i < feedback.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                    ))}
-                    <span className="text-sm text-gray-500 ml-1">{feedback.rating}.0</span>
-                  </div>
-
-                  <p className="text-sm text-gray-600 mt-2">{feedback.comment}</p>
-
-                  <div className="flex items-center space-x-4 mt-3 pt-3 border-t border-gray-100 text-sm text-gray-500">
-                    <span className="flex items-center">
-                      <FiCalendar className="h-3 w-3 mr-1" /> {feedback.date}
-                    </span>
-                    {feedback.reservationId && (
-                      <span className="flex items-center">
-                        <FiMessageSquare className="h-3 w-3 mr-1" /> RES-{String(feedback.reservationId).padStart(4, '0')}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      <div className="page-head">
+        <div>
+          <h1>Feedback</h1>
+          <p className="page-head__sub">We value your feedback! Share your experience and help us improve our services.</p>
         </div>
+      </div>
 
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <h3 className="font-semibold text-gray-800 mb-3">Feedback Summary</h3>
-            <div className="space-y-2">
-              {[5, 4, 3, 2, 1].map((star) => (
-                <div key={star} className="flex items-center space-x-2">
-                  <div className="flex items-center space-x-1 w-16">
-                    <span className="text-sm text-gray-600">{star} ⭐</span>
-                  </div>
-                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-yellow-400 rounded-full"
-                      style={{ width: `${total > 0 ? (ratingCounts[star] / total) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-500 w-8">({ratingCounts[star]})</span>
-                </div>
-              ))}
-              <div className="mt-2 pt-2 border-t border-gray-100">
-                <p className="text-sm font-medium text-gray-800">Total Feedback: {total}</p>
-              </div>
+      {error && <div className="error-banner" style={{ marginBottom: 16 }}>{error}</div>}
+      {success && <div className="success-banner" style={{ marginBottom: 16 }}>{success}</div>}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 22, alignItems: 'start' }}>
+        <section className="card">
+          <div className="card__header">
+            <div>
+              <div className="card__title">My Feedback</div>
+              <div className="card__sub">View the feedback you've submitted.</div>
             </div>
           </div>
+          <div className="card__body">
+            {feedbackList.length === 0 ? (
+              <div className="empty-state">
+                <FiMessageSquare size={36} />
+                <div className="empty-state__title">No feedback submitted yet</div>
+                <div className="empty-state__sub">Your submitted feedback will appear here.</div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 14 }}>
+                {feedbackList.map((feedback) => (
+                  <div key={feedback.id} style={{ paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2 }}>
+                      {[...Array(5)].map((_, i) => (
+                        <FiStar
+                          key={i}
+                          size={16}
+                          style={{ color: i < feedback.rating ? 'var(--warning)' : 'var(--text-faint)', fill: i < feedback.rating ? 'var(--warning)' : 'transparent' }}
+                        />
+                      ))}
+                      <span className="muted" style={{ fontSize: 13, marginLeft: 4 }}>{feedback.rating}.0</span>
+                    </div>
 
-          <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <h3 className="font-semibold text-gray-800 mb-3">Submit New Feedback</h3>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Rating:</span>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, rating: star })}
-                    className="focus:outline-none"
-                  >
-                    <FiStar className={`h-5 w-5 ${star <= formData.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                  </button>
+                    <p style={{ marginTop: 8 }}>{feedback.comment}</p>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                      <span className="faint" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                        <FiCalendar size={14} /> {feedback.date}
+                      </span>
+                      {feedback.reservationId && (
+                        <span className="faint" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                          <FiMessageSquare size={14} /> RES-{String(feedback.reservationId).padStart(4, '0')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
-              <textarea
-                required
-                placeholder="Share your experience..."
-                rows="3"
-                value={formData.comment}
-                onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Reservation ID (e.g., BK-2026-0001) — optional"
-                value={formData.reservation}
-                onChange={(e) => setFormData({ ...formData, reservation: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center space-x-2 disabled:opacity-50"
-              >
-                <FiSend className="h-4 w-4" />
-                <span>{submitting ? 'Submitting...' : 'Submit Feedback'}</span>
+            )}
+          </div>
+        </section>
+
+        <div style={{ display: 'grid', gap: 16 }}>
+          <section className="card">
+            <div className="card__header">
+              <div className="card__title">Feedback Summary</div>
+            </div>
+            <div className="card__body" style={{ display: 'grid', gap: 8 }}>
+              {[5, 4, 3, 2, 1].map((star) => (
+                <div key={star} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className="muted" style={{ width: 58, fontSize: 13 }}>{star} ⭐</span>
+                  <div style={{ flex: 1, height: 8, background: 'var(--surface-2)', borderRadius: 999, overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        background: 'var(--warning)',
+                        borderRadius: 999,
+                        width: `${total > 0 ? (ratingCounts[star] / total) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="faint" style={{ fontSize: 12, width: 36, textAlign: 'right' }}>({ratingCounts[star]})</span>
+                </div>
+              ))}
+              <div style={{ marginTop: 6, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                <p style={{ fontWeight: 700 }}>Total Feedback: {total}</p>
+              </div>
+            </div>
+          </section>
+
+          <form onSubmit={handleSubmit} className="card">
+            <div className="card__header">
+              <div className="card__title">Submit New Feedback</div>
+            </div>
+            <div className="card__body" style={{ display: 'grid', gap: 12 }}>
+              <div className="form-group">
+                <span className="form-label">Rating:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, rating: star })}
+                      style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer' }}
+                      aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                    >
+                      <FiStar
+                        size={22}
+                        style={{ color: star <= formData.rating ? 'var(--warning)' : 'var(--text-faint)', fill: star <= formData.rating ? 'var(--warning)' : 'transparent' }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="fb-comment">Comment</label>
+                <textarea
+                  id="fb-comment"
+                  required
+                  placeholder="Share your experience..."
+                  rows="3"
+                  value={formData.comment}
+                  onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+                  className="form-textarea"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="fb-reservation">Reservation ID (optional)</label>
+                <input
+                  id="fb-reservation"
+                  type="text"
+                  placeholder="e.g., BK-2026-0001"
+                  value={formData.reservation}
+                  onChange={(e) => setFormData({ ...formData, reservation: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+              <button type="submit" disabled={submitting} className="btn btn--primary btn--block">
+                <FiSend size={16} />
+                {submitting ? 'Submitting…' : 'Submit Feedback'}
               </button>
             </div>
           </form>
 
-          <div className="bg-blue-50 rounded-xl p-5 border border-blue-200">
-            <h3 className="font-semibold text-gray-800 mb-2">We're Here to Help</h3>
-            <p className="text-sm text-gray-600">Have an issue that needs immediate attention?</p>
-            <p className="mt-3 text-sm font-medium text-blue-700">📞 0912 345 6789 · support@hollydot.com</p>
-          </div>
+          <section className="card" style={{ background: 'var(--warning-soft)', borderColor: 'var(--warning)' }}>
+            <div className="card__body">
+              <h3 style={{ marginBottom: 4 }}>We're Here to Help</h3>
+              <p className="muted" style={{ fontSize: 13 }}>Have an issue that needs immediate attention?</p>
+              <p style={{ marginTop: 12, fontSize: 13, fontWeight: 600, color: 'var(--warning)' }}>📞 0912 345 6789 · support@hollydot.com</p>
+            </div>
+          </section>
         </div>
       </div>
     </div>

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { FiCheckCircle, FiClock, FiXCircle, FiInfo } from 'react-icons/fi'
+import { FiCheckCircle, FiClock, FiXCircle, FiInfo, FiBell } from 'react-icons/fi'
 import { fetchNotifications } from '../services/customerService.js'
+import SummaryCard from '../../ro/components/SummaryCard.jsx'
 
 const typeMeta = {
-  reservation_confirmed: { icon: FiCheckCircle, color: 'text-green-500', type: 'reservation' },
-  maintenance_due: { icon: FiClock, color: 'text-yellow-500', type: 'system' },
-  attendance_rejected: { icon: FiXCircle, color: 'text-red-500', type: 'system' },
-  system_alert: { icon: FiInfo, color: 'text-orange-500', type: 'system' },
+  reservation_confirmed: { icon: FiCheckCircle, color: 'var(--success)', type: 'reservation' },
+  maintenance_due: { icon: FiClock, color: 'var(--warning)', type: 'system' },
+  attendance_rejected: { icon: FiXCircle, color: 'var(--danger)', type: 'system' },
+  system_alert: { icon: FiInfo, color: 'var(--info)', type: 'system' },
 }
 
 export default function Notifications() {
@@ -44,100 +45,123 @@ export default function Notifications() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-2">Notifications</h1>
-      <p className="text-gray-500 mb-6">Stay updated with the latest announcements and important updates.</p>
+      <div className="page-head">
+        <div>
+          <h1>Notifications</h1>
+          <p className="page-head__sub">Stay updated with the latest announcements and important updates.</p>
+        </div>
+      </div>
 
-      {error && <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>}
+      {error && <div className="error-banner" style={{ marginBottom: 16 }}>{error}</div>}
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              activeTab === tab.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="toolbar" style={{ marginBottom: 18 }}>
+        <div className="filter-tabs" role="tablist" aria-label="Filter notifications">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={`filter-tab${activeTab === tab.id ? ' filter-tab--active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {activeTab === 'all' && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h3 className="font-semibold text-blue-800">Unread Notifications ({summary.unread})</h3>
-          <p className="text-sm text-blue-600">These are the latest notifications you haven't read yet.</p>
+        <div className="ai-banner" style={{ marginBottom: 18 }}>
+          <FiBell size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <strong>Unread Notifications ({summary.unread})</strong>
+            <div style={{ fontSize: 13, marginTop: 2 }}>These are the latest notifications you haven't read yet.</div>
+          </div>
         </div>
       )}
 
       {display.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center">
-          <p className="text-gray-500">No notifications found.</p>
+        <div className="empty-state">
+          <FiBell size={36} />
+          <div className="empty-state__title">No notifications found</div>
+          <div className="empty-state__sub">New updates about your reservations and account will appear here.</div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div style={{ display: 'grid', gap: 12 }}>
           {display.map((notif) => {
-            const meta = typeMeta[notif.type] || { icon: FiInfo, color: 'text-blue-500', type: 'system' }
+            const meta = typeMeta[notif.type] || { icon: FiInfo, color: 'var(--warning)', type: 'system' }
             const Icon = meta.icon
             return (
-              <div
+              <section
                 key={notif.id}
-                className={`bg-white rounded-xl shadow-sm border p-4 ${!notif.isRead ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100'}`}
+                className="card"
+                style={!notif.isRead ? { borderColor: 'var(--warning)', background: 'var(--warning-soft)' } : undefined}
               >
-                <div className="flex items-start space-x-3">
-                  <div className={`p-2 rounded-lg ${notif.isRead ? 'bg-gray-100' : 'bg-blue-100'} flex-shrink-0`}>
-                    <Icon className={`h-5 w-5 ${meta.color}`} />
+                <div className="card__body" style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                  <div
+                    className="stat-card__icon"
+                    style={{
+                      width: 40,
+                      height: 40,
+                      background: notif.isRead ? 'var(--surface-2)' : 'var(--primary-soft)',
+                      color: notif.isRead ? 'var(--text-2)' : meta.color,
+                    }}
+                  >
+                    <Icon size={20} style={{ color: notif.isRead ? undefined : meta.color }} />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className={`font-semibold ${!notif.isRead ? 'text-gray-800' : 'text-gray-600'}`}>{notif.title}</h4>
-                      {!notif.isRead && <span className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full">NEW</span>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                      <div style={{ fontWeight: 700, color: 'var(--ink)' }}>{notif.title}</div>
+                      {!notif.isRead && <span className="badge badge--pending">NEW</span>}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{notif.description}</p>
-                    <p className="text-xs text-gray-400 mt-2">{notif.timestamp}</p>
+                    <p style={{ marginTop: 4 }}>{notif.description}</p>
+                    <p className="faint" style={{ fontSize: 12, marginTop: 6 }}>{notif.timestamp}</p>
                   </div>
                 </div>
-              </div>
+              </section>
             )
           })}
         </div>
       )}
 
       {filtered.length > 5 && (
-        <button onClick={() => setShowAll(!showAll)} className="mt-4 text-blue-600 hover:text-blue-700 font-medium text-sm">
+        <button onClick={() => setShowAll(!showAll)} className="btn btn--secondary btn--sm" style={{ marginTop: 14 }}>
           {showAll ? 'Show less' : `View all ${filtered.length} notifications`}
         </button>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-        <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-          <p className="text-sm text-gray-500">Total Notifications</p>
-          <p className="text-2xl font-bold text-gray-800">{summary.total}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-          <p className="text-sm text-gray-500">Unread</p>
-          <p className="text-2xl font-bold text-yellow-600">{summary.unread}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-          <p className="text-sm text-gray-500">Reservations</p>
-          <p className="text-2xl font-bold text-blue-600">{summary.reservations}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-          <p className="text-sm text-gray-500">System</p>
-          <p className="text-2xl font-bold text-purple-600">{summary.system}</p>
-        </div>
+      <div className="stats-grid" style={{ marginTop: 22 }}>
+        <SummaryCard icon={<FiBell size={22} />} label="Total Notifications" value={summary.total} tone="primary" />
+        <SummaryCard icon={<FiBell size={22} />} label="Unread" value={summary.unread} tone="pending" />
+        <SummaryCard icon={<FiBell size={22} />} label="Reservations" value={summary.reservations} tone="confirmed" />
+        <SummaryCard icon={<FiBell size={22} />} label="System" value={summary.system} tone="in-use" />
       </div>
 
-      <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-800 mb-2">Need Assistance?</h3>
-        <p className="text-sm text-gray-600">We're here to help you.</p>
-        <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-          <div>📞 0912 345 6789</div>
-          <div>✉️ support@hollydot.com</div>
-          <div>🕐 Mon - Sat: 8:00 AM - 6:00 PM</div>
-          <div>📍 Clark Freeport Zone, Pampanga</div>
+      <section className="card" style={{ marginTop: 22 }}>
+        <div className="card__body">
+          <h3 style={{ marginBottom: 8 }}>Need Assistance?</h3>
+          <p className="muted" style={{ fontSize: 13 }}>We're here to help you.</p>
+          <div className="detail-grid" style={{ marginTop: 12 }}>
+            <div>
+              <div className="detail-item__label">Phone</div>
+              <div className="detail-item__value">0912 345 6789</div>
+            </div>
+            <div>
+              <div className="detail-item__label">Email</div>
+              <div className="detail-item__value">support@hollydot.com</div>
+            </div>
+            <div>
+              <div className="detail-item__label">Hours</div>
+              <div className="detail-item__value">Mon - Sat: 8:00 AM - 6:00 PM</div>
+            </div>
+            <div>
+              <div className="detail-item__label">Office</div>
+              <div className="detail-item__value">Clark Freeport Zone, Pampanga</div>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   )
 }

@@ -218,3 +218,86 @@ function cancel_reservation(PDO $pdo, int $reservationId): void
 
     $pdo->prepare('UPDATE vehicles SET status = "available" WHERE vehicle_id = ?')->execute([$res['vehicle_id']]);
 }
+
+// ----------------------------------------------------------------------------
+//  Security / sessions / preferences (customer + payroll dashboards)
+// ----------------------------------------------------------------------------
+
+function security_settings_for(PDO $pdo, int $userId): array
+{
+    $row = $pdo->prepare(
+        'SELECT face_recognition_enabled, two_factor_enabled, two_factor_method,
+                login_notifications_enabled, backup_codes_total, backup_codes_used,
+                password_strength, last_security_check
+         FROM security_settings WHERE user_id = ?'
+    );
+    $row->execute([$userId]);
+    $r = $row->fetch() ?: [];
+
+    return [
+        'faceRecognitionEnabled' => (bool)($r['face_recognition_enabled'] ?? 0),
+        'twoFactorEnabled' => (bool)($r['two_factor_enabled'] ?? 0),
+        'twoFactorMethod' => $r['two_factor_method'] ?? 'Authenticator App (TOTP)',
+        'loginNotifications' => (bool)($r['login_notifications_enabled'] ?? 1),
+        'backupCodesTotal' => (int)($r['backup_codes_total'] ?? 10),
+        'backupCodesUsed' => (int)($r['backup_codes_used'] ?? 0),
+        'passwordStrength' => $r['password_strength'] ?? 'Strong',
+        'lastSecurityCheck' => $r['last_security_check'] ? substr($r['last_security_check'], 0, 10) : null,
+    ];
+}
+
+function login_sessions_for(PDO $pdo, int $userId): array
+{
+    $rows = $pdo->prepare(
+        'SELECT session_id, device, location, status, logged_in_at
+         FROM login_sessions WHERE user_id = ?
+         ORDER BY logged_in_at DESC LIMIT 20'
+    );
+    $rows->execute([$userId]);
+
+    return array_map(function ($s) {
+        return [
+            'id' => (int)$s['session_id'],
+            'device' => $s['device'],
+            'location' => $s['location'],
+            'status' => $s['status'],
+            'time' => date('Y-m-d h:i A', strtotime($s['logged_in_at'])),
+        ];
+    }, $rows->fetchAll());
+}
+
+function user_activity_for(PDO $pdo, int $userId): array
+{
+    $rows = $pdo->prepare(
+        'SELECT "login" AS kind, "" AS label, logged_in_at AS at
+         FROM login_sessions WHERE user_id = ?
+         UNION ALL
+         SELECT "action", action, created_at FROM action_logs WHERE user_id = ?
+         ORDER BY at DESC LIMIT 10'
+    );
+    $rows->execute([$userId, $userId]);
+
+    return array_map(function ($a) {
+        return [
+            'kind' => $a['kind'],
+            'label' => $a['kind'] === 'login' ? 'Logged in' : ($a['label'] ?? 'Action'),
+            'time' => date('Y-m-d h:i A', strtotime($a['at'])),
+        ];
+    }, $rows->fetchAll());
+}
+
+function preferences_for(PDO $pdo, int $userId): array
+{
+    $row = $pdo->prepare(
+        'SELECT language, date_format, time_format, timezone FROM user_preferences WHERE user_id = ?'
+    );
+    $row->execute([$userId]);
+    $r = $row->fetch() ?: [];
+
+    return [
+        'language' => $r['language'] ?? 'English',
+        'dateFormat' => $r['date_format'] ?? 'MMM D, YYYY',
+        'timeFormat' => $r['time_format'] ?? '12-hour (AM/PM)',
+        'timezone' => $r['timezone'] ?? '(GMT+08:00) Asia/Manila',
+    ];
+}

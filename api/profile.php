@@ -6,19 +6,28 @@ $pdo = db();
 
 // Non-driver roles get their basic account profile.
 if ($user['role'] !== 'driver') {
-    $stmt = $pdo->prepare('SELECT username, fullname, email, contact_number, role, created_at FROM users WHERE user_id = ?');
+    $stmt = $pdo->prepare('SELECT username, fullname, email, contact_number, role, status, is_verified, created_at FROM users WHERE user_id = ?');
     $stmt->execute([$user['user_id']]);
     $u = $stmt->fetch();
     if (!$u) json_error('Account not found.', 404);
 
+    $userId = (int)$user['user_id'];
+
     json_out([
         'role' => $u['role'],
+        'isVerified' => (bool)($u['is_verified'] ?? 1),
         'account' => [
             'name' => $u['fullname'],
             'username' => $u['username'],
             'email' => $u['email'] ?? '',
             'contactNumber' => $u['contact_number'] ?? '',
             'memberSince' => $u['created_at'] ? substr($u['created_at'], 0, 10) : '',
+            'status' => ucfirst($u['status'] ?? 'active'),
+        ],
+        'preferences' => preferences_for($pdo, $userId),
+        'security' => [
+            'settings' => security_settings_for($pdo, $userId),
+            'activity' => user_activity_for($pdo, $userId),
         ],
     ]);
 }

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Bell, Mail, AlertCircle, Calendar, CheckCircle, XCircle, FileText, Users, Settings, Truck, DollarSign, Filter, ChevronDown, ChevronRight, Eye } from 'lucide-react'
+import { Bell, Mail, AlertCircle, Calendar, CheckCircle, XCircle, FileText, Users, Settings, Truck, DollarSign, Filter, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { fetchNotifications, markAllNotificationsRead } from '../services/payrollService.js'
+import SearchBar from '../../ro/components/SearchBar.jsx'
+import SummaryCard from '../../ro/components/SummaryCard.jsx'
 
 const TYPE_LABELS = {
   attendance_verified: 'Driver Attendance',
@@ -11,17 +13,17 @@ const TYPE_LABELS = {
 }
 
 const TYPE_ICONS = {
-  CheckCircle: [CheckCircle, 'text-green-500'],
-  XCircle: [XCircle, 'text-red-500'],
-  DollarSign: [DollarSign, 'text-blue-500'],
-  Truck: [Truck, 'text-orange-500'],
-  default: [Bell, 'text-gray-500'],
+  CheckCircle,
+  XCircle,
+  DollarSign,
+  Truck,
+  default: Bell,
 }
 
 function priorityOf(type) {
-  if (type === 'attendance_rejected') return { label: 'High', cls: 'bg-red-100 text-red-700' }
-  if (type === 'attendance_verified' || type === 'vehicle_updated') return { label: 'Medium', cls: 'bg-yellow-100 text-yellow-700' }
-  return { label: 'Low', cls: 'bg-green-100 text-green-700' }
+  if (type === 'attendance_rejected') return { label: 'High', cls: 'badge--denied' }
+  if (type === 'attendance_verified' || type === 'vehicle_updated') return { label: 'Medium', cls: 'badge--pending' }
+  return { label: 'Low', cls: 'badge--confirmed' }
 }
 
 function isThisWeek(ts) {
@@ -74,140 +76,191 @@ export default function Notifications() {
   }
 
   return (
-    <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] pr-2 pb-10">
-      <h2 className="text-xl font-bold text-gray-800">Notifications</h2>
-      <p className="text-sm text-gray-500 -mt-4">View and manage system notifications and alerts.</p>
-
-      {msg && <div className="text-sm px-4 py-2.5 rounded-lg bg-green-50 text-green-700 border border-green-200">{msg}</div>}
-      {error && <div className="text-sm px-4 py-2.5 rounded-lg bg-red-50 text-red-700 border border-red-200">{error}</div>}
-
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-3 px-6 rounded-xl border border-gray-200 shadow-sm">
-        <div className="flex items-center gap-6">
-          {[
-            { key: 'all', label: 'All', count: notifs.length, cls: 'bg-blue-500 text-white' },
-            { key: 'unread', label: 'Unread', count: unreadCount, cls: 'bg-red-500 text-white' },
-            { key: 'read', label: 'Read', count: notifs.length - unreadCount, cls: 'bg-gray-300 text-gray-700' },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2 font-medium text-sm pb-3 -mb-3.5 border-b-2 transition-colors ${
-                tab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'
-              }`}
-            >
-              {t.label} <span className={`text-[10px] px-2 py-0.5 rounded-full ml-1 ${t.cls}`}>{t.count}</span>
-            </button>
-          ))}
+    <div>
+      <div className="page-head">
+        <div>
+          <h1>Notifications</h1>
+          <p className="page-head__sub">View and manage system notifications and alerts.</p>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search notifications..."
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+      </div>
+
+      {msg && <div className="success-banner" style={{ marginBottom: 16 }}>{msg}</div>}
+      {error && <div className="error-banner" style={{ marginBottom: 16 }}>{error}</div>}
+
+      <section className="card" style={{ marginBottom: 18 }}>
+        <div className="card__body">
+          <div className="toolbar" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <div className="filter-tabs" role="tablist" aria-label="Filter by read status">
+              {[
+                { key: 'all', label: 'All', count: notifs.length, cls: 'badge--neutral' },
+                { key: 'unread', label: 'Unread', count: unreadCount, cls: 'badge--denied' },
+                { key: 'read', label: 'Read', count: notifs.length - unreadCount, cls: 'badge--neutral' },
+              ].map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.key}
+                  onClick={() => setTab(t.key)}
+                  className={`filter-tab${tab === t.key ? ' filter-tab--active' : ''}`}
+                >
+                  {t.label} <span className={`badge ${t.cls}`} style={{ fontSize: 10, padding: '1px 7px', marginLeft: 6 }}>{t.count}</span>
+                </button>
+              ))}
+            </div>
+            <div className="toolbar">
+              <SearchBar value={search} onChange={setSearch} placeholder="Search notifications..." />
+              <button onClick={handleMarkAll} className="btn btn--secondary btn--sm nowrap">
+                <CheckCircle size={14} /> Mark all as read
+              </button>
+              <button className="btn btn--secondary btn--sm nowrap">
+                <Filter size={14} /> Filter <ChevronDown size={14} />
+              </button>
+            </div>
           </div>
-          <button onClick={handleMarkAll} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 flex items-center gap-2 whitespace-nowrap">
-            <CheckCircle size={16} /> Mark all as read
-          </button>
-          <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 flex items-center gap-2">
-            <Filter size={16} /> Filter <ChevronDown size={14} />
-          </button>
         </div>
+      </section>
+
+      <div className="stats-grid">
+        <SummaryCard icon={<Bell size={22} />} label="Total Notifications" value={notifs.length} note="All time" tone="primary" />
+        <SummaryCard icon={<Mail size={22} />} label="Unread" value={unreadCount} note="Requires your attention" tone="pending" />
+        <SummaryCard icon={<AlertCircle size={22} />} label="High Priority" value={highCount} note="Needs immediate action" tone="denied" />
+        <SummaryCard icon={<Calendar size={22} />} label="This Week" value={weekCount} note="Last 7 days" tone="in-use" />
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center gap-3">
-          <div className="w-12 h-12 bg-white rounded-lg border border-blue-200 flex items-center justify-center text-blue-500 shadow-sm"><Bell size={24} /></div>
-          <div><div className="text-sm font-bold text-gray-800">Total Notifications</div><div className="text-2xl font-bold text-blue-600">{notifs.length}</div><div className="text-xs text-gray-500">All time</div></div>
+      <section className="card">
+        <div className="card__header">
+          <div>
+            <div className="card__title">
+              Notification List
+              <span className="badge badge--neutral">{filtered.length}</span>
+            </div>
+            <div className="card__sub">All system alerts and messages</div>
+          </div>
         </div>
-        <div className="bg-green-50 p-4 rounded-xl border border-green-100 flex items-center gap-3">
-          <div className="w-12 h-12 bg-white rounded-lg border border-green-200 flex items-center justify-center text-green-500 shadow-sm"><Mail size={24} /></div>
-          <div><div className="text-sm font-bold text-gray-800">Unread</div><div className="text-2xl font-bold text-green-600">{unreadCount}</div><div className="text-xs text-gray-500">Requires your attention</div></div>
-        </div>
-        <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 flex items-center gap-3">
-          <div className="w-12 h-12 bg-white rounded-lg border border-orange-200 flex items-center justify-center text-orange-500 shadow-sm"><AlertCircle size={24} /></div>
-          <div><div className="text-sm font-bold text-gray-800">High Priority</div><div className="text-2xl font-bold text-orange-600">{highCount}</div><div className="text-xs text-gray-500">Needs immediate action</div></div>
-        </div>
-        <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 flex items-center gap-3">
-          <div className="w-12 h-12 bg-white rounded-lg border border-purple-200 flex items-center justify-center text-purple-500 shadow-sm"><Calendar size={24} /></div>
-          <div><div className="text-sm font-bold text-gray-800">This Week</div><div className="text-2xl font-bold text-purple-600">{weekCount}</div><div className="text-xs text-gray-500">Last 7 days</div></div>
-        </div>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-center w-8">#</th>
-                <th className="px-6 py-3 w-32">Type</th>
-                <th className="px-6 py-3">Title</th>
-                <th className="px-6 py-3">Message</th>
-                <th className="px-6 py-3 whitespace-nowrap">Date &amp; Time</th>
-                <th className="px-6 py-3 text-center">Priority</th>
-                <th className="px-6 py-3 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-6 py-8 text-center text-gray-400 text-sm">No notifications found.</td></tr>
-              )}
-              {filtered.map((n, idx) => {
-                const iconKey = n.icon || 'default'
-                const [IconComp, iconColor] = TYPE_ICONS[iconKey] || TYPE_ICONS.default
-                const pri = priorityOf(n.type)
-                return (
-                  <tr key={n.id} className="hover:bg-blue-50/30">
-                    <td className="px-6 py-4 text-gray-600 text-center">{idx + 1}</td>
-                    <td className="px-6 py-4 flex items-center gap-2 text-xs font-medium text-gray-700">
-                      <IconComp size={16} className={iconColor} />
-                      {TYPE_LABELS[n.type] || TYPE_LABELS.default}
-                    </td>
-                    <td className="px-6 py-4 font-medium text-gray-800 text-sm">{n.title}</td>
-                    <td className="px-6 py-4 text-gray-500 text-xs max-w-xs leading-relaxed">{n.description}</td>
-                    <td className="px-6 py-4 text-gray-500 text-xs whitespace-nowrap">{n.timestamp}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-medium ${pri.cls}`}>{pri.label}</span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-medium ${n.isRead ? 'bg-gray-100 text-gray-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {n.isRead ? 'Read' : 'Unread'}
-                      </span>
-                    </td>
+        <div className="card__body">
+          {filtered.length === 0 ? (
+            <div className="empty-state">
+              <Bell size={36} />
+              <div className="empty-state__title">No notifications found.</div>
+              <div className="empty-state__sub">Try adjusting your filters or search.</div>
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'center' }}>#</th>
+                    <th>Type</th>
+                    <th>Title</th>
+                    <th>Message</th>
+                    <th className="nowrap">Date &amp; Time</th>
+                    <th style={{ textAlign: 'center' }}>Priority</th>
+                    <th style={{ textAlign: 'center' }}>Status</th>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center text-xs text-gray-500 bg-white">
-          <span>Showing {filtered.length} of {notifs.length} notifications</span>
-          <div className="flex items-center gap-1">
-            <button className="p-1 border rounded hover:bg-gray-50 text-gray-400"><ChevronRight size={14} className="rotate-180" /></button>
-            <button className="px-3 py-1 border rounded bg-blue-600 text-white text-[10px] font-medium">1</button>
-            <button className="p-1 border rounded hover:bg-gray-50"><ChevronRight size={14} /></button>
+                </thead>
+                <tbody>
+                  {filtered.map((n, idx) => {
+                    const iconKey = n.icon || 'default'
+                    const IconComp = TYPE_ICONS[iconKey] || TYPE_ICONS.default
+                    const pri = priorityOf(n.type)
+                    return (
+                      <tr key={n.id}>
+                        <td className="cell-muted" style={{ textAlign: 'center' }}>{idx + 1}</td>
+                        <td>
+                          <div className="cell-main" style={{ gap: 8 }}>
+                            <IconComp size={16} />
+                            {TYPE_LABELS[n.type] || TYPE_LABELS.default}
+                          </div>
+                        </td>
+                        <td className="cell-main">{n.title}</td>
+                        <td className="cell-muted">{n.description}</td>
+                        <td className="cell-muted nowrap">{n.timestamp}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className={`badge ${pri.cls}`}>{pri.label}</span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className={`badge ${n.isRead ? 'badge--neutral' : 'badge--pending'}`}>
+                            {n.isRead ? 'Read' : 'Unread'}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="toolbar" style={{ justifyContent: 'space-between', marginTop: 16 }}>
+            <span className="cell-sub">Showing {filtered.length} of {notifs.length} notifications</span>
+            <div className="toolbar">
+              <button className="btn btn--secondary btn--icon btn--sm" disabled title="Previous page">
+                <ChevronLeft size={16} />
+              </button>
+              <button className="btn btn--primary btn--sm">1</button>
+              <button className="btn btn--secondary btn--icon btn--sm" disabled title="Next page">
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-blue-50/30 p-5 rounded-xl border border-blue-100 shadow-sm">
-          <h4 className="text-xs font-bold text-gray-700 mb-3">Notification Types</h4>
-          <div className="grid grid-cols-2 gap-y-3 gap-x-6 text-[11px]">
-            <div className="flex items-center gap-3"><div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center text-green-600"><CheckCircle size={14} /></div><div><span className="font-medium text-gray-700 block">Driver Attendance</span><span className="text-gray-500">OCR verification, mismatches</span></div></div>
-            <div className="flex items-center gap-3"><div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center text-blue-600"><DollarSign size={14} /></div><div><span className="font-medium text-gray-700 block">Payroll</span><span className="text-gray-500">Cut-off reminders, updates</span></div></div>
-            <div className="flex items-center gap-3"><div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center text-white"><Users size={14} /></div><div><span className="font-medium text-gray-700 block">Driver Records</span><span className="text-gray-500">Driver information updates</span></div></div>
-            <div className="flex items-center gap-3"><div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center text-orange-600"><Truck size={14} /></div><div><span className="font-medium text-gray-700 block">Vehicle</span><span className="text-gray-500">Vehicle / fleet updates</span></div></div>
-            <div className="flex items-center gap-3"><div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center text-gray-600"><Settings size={14} /></div><div><span className="font-medium text-gray-700 block">System</span><span className="text-gray-500">System announcements</span></div></div>
+      <div className="form-grid" style={{ marginTop: 22 }}>
+        <div className="form-section" style={{ marginBottom: 0 }}>
+          <div className="form-section__title">Notification Types</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 24px', marginTop: 12 }}>
+            <div className="toolbar" style={{ gap: 12 }}>
+              <div style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--success-soft)', color: 'var(--success)', display: 'grid', placeItems: 'center' }}>
+                <CheckCircle size={14} />
+              </div>
+              <div>
+                <span className="cell-main">Driver Attendance</span>
+                <span className="cell-sub" style={{ display: 'block' }}>OCR verification, mismatches</span>
+              </div>
+            </div>
+            <div className="toolbar" style={{ gap: 12 }}>
+              <div style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--primary-soft)', color: 'var(--primary-dark)', display: 'grid', placeItems: 'center' }}>
+                <DollarSign size={14} />
+              </div>
+              <div>
+                <span className="cell-main">Payroll</span>
+                <span className="cell-sub" style={{ display: 'block' }}>Cut-off reminders, updates</span>
+              </div>
+            </div>
+            <div className="toolbar" style={{ gap: 12 }}>
+              <div style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--success)', color: '#fff', display: 'grid', placeItems: 'center' }}>
+                <Users size={14} />
+              </div>
+              <div>
+                <span className="cell-main">Driver Records</span>
+                <span className="cell-sub" style={{ display: 'block' }}>Driver information updates</span>
+              </div>
+            </div>
+            <div className="toolbar" style={{ gap: 12 }}>
+              <div style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--warning-soft)', color: 'var(--warning)', display: 'grid', placeItems: 'center' }}>
+                <Truck size={14} />
+              </div>
+              <div>
+                <span className="cell-main">Vehicle</span>
+                <span className="cell-sub" style={{ display: 'block' }}>Vehicle / fleet updates</span>
+              </div>
+            </div>
+            <div className="toolbar" style={{ gap: 12 }}>
+              <div style={{ width: 24, height: 24, borderRadius: 6, background: '#eef1f5', color: 'var(--text-soft)', display: 'grid', placeItems: 'center' }}>
+                <Settings size={14} />
+              </div>
+              <div>
+                <span className="cell-main">System</span>
+                <span className="cell-sub" style={{ display: 'block' }}>System announcements</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="bg-blue-50/30 p-5 rounded-xl border border-blue-100 shadow-sm">
-          <h4 className="text-xs font-bold text-gray-700 mb-3">Notes:</h4>
-          <ul className="text-[11px] text-gray-600 list-disc pl-4 space-y-1">
+        <div className="form-section" style={{ marginBottom: 0 }}>
+          <div className="form-section__title">Notes:</div>
+          <ul className="cell-sub" style={{ listStyle: 'disc', paddingLeft: 18, display: 'grid', gap: 6, marginTop: 10 }}>
             <li>Unread notifications remain in your list until you mark them as read.</li>
             <li>High priority notifications require immediate attention.</li>
             <li>All dates and times are based on system time.</li>

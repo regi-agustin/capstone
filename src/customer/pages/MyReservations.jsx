@@ -1,15 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { FiMapPin } from 'react-icons/fi'
 import { fetchMyBookings, formatDate, formatTime, formatPeso } from '../services/customerService.js'
-
-const statusMeta = {
-  Pending: 'bg-yellow-100 text-yellow-700',
-  Denied: 'bg-red-100 text-red-700',
-  Confirmed: 'bg-green-100 text-green-700',
-  'On trip': 'bg-blue-100 text-blue-700',
-  Completed: 'bg-gray-100 text-gray-600',
-  Cancelled: 'bg-red-100 text-red-700',
-}
+import StatusBadge from '../../ro/components/StatusBadge.jsx'
 
 const tabs = [
   { id: 'pending', label: 'Pending', statuses: ['Pending'] },
@@ -18,6 +10,13 @@ const tabs = [
   { id: 'completed', label: 'Completed', statuses: ['Completed'] },
   { id: 'cancelled', label: 'Cancelled', statuses: ['Cancelled', 'Denied'] },
 ]
+
+const Detail = ({ label, value }) => (
+  <div>
+    <div className="detail-item__label">{label}</div>
+    <div className="detail-item__value">{value || '—'}</div>
+  </div>
+)
 
 export default function MyReservations() {
   const [bookings, setBookings] = useState([])
@@ -39,149 +38,144 @@ export default function MyReservations() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-2">My Reservations</h1>
-      <p className="text-gray-500 mb-6">Manage and track all your vehicle reservations.</p>
+      <div className="page-head">
+        <div>
+          <h1>My Reservations</h1>
+          <p className="page-head__sub">Manage and track all your vehicle reservations.</p>
+        </div>
+      </div>
 
-      {error && <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>}
+      {error && <div className="error-banner" style={{ marginBottom: 16 }}>{error}</div>}
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              activeTab === tab.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {tab.label} ({grouped[tab.id].length})
-          </button>
-        ))}
+      <div className="toolbar" style={{ marginBottom: 18 }}>
+        <div className="filter-tabs" role="tablist" aria-label="Filter by status">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={`filter-tab${activeTab === tab.id ? ' filter-tab--active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label} ({grouped[tab.id].length})
+            </button>
+          ))}
+        </div>
       </div>
 
       {grouped[activeTab].length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-          <p className="text-gray-500">No reservations in this category</p>
+        <div className="empty-state">
+          <FiMapPin size={36} />
+          <div className="empty-state__title">No reservations in this category</div>
+          <div className="empty-state__sub">Reservations will appear here once you book a vehicle.</div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div style={{ display: 'grid', gap: 14 }}>
           {grouped[activeTab].map((res) => (
-            <div key={res.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">{res.id}</p>
-                  <h3 className="font-semibold text-gray-800">{res.vehicleLabel?.model || 'Vehicle to be assigned'}</h3>
-                </div>
-                <span className={`px-3 py-1 text-xs rounded-full ${statusMeta[res.status] || 'bg-gray-100 text-gray-600'}`}>
-                  {res.status}
-                </span>
-              </div>
-
-              {res.status === 'Denied' && res.denialReason && (
-                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                  <strong>Reason:</strong> {res.denialReason}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4 mt-3">
-                <div>
-                  <p className="text-xs text-gray-500">Pickup Date & Time</p>
-                  <p className="text-sm font-medium">
-                    {formatDate(res.trip.pickupDate)} · {formatTime(res.trip.pickupTime)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Return Date & Time</p>
-                  <p className="text-sm font-medium">
-                    {formatDate(res.trip.returnDate)} · {formatTime(res.trip.returnTime)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                <div>
-                  <p className="text-xs text-gray-500">Destination</p>
-                  <p className="text-sm font-medium flex items-center">
-                    <FiMapPin className="h-3 w-3 mr-1" /> {res.trip.destination || '—'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Estimated Price</p>
-                  <p className="text-sm font-bold text-blue-600">{formatPeso(res.preBilling.estimatedTotal)}</p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setExpanded(expanded === res.id ? null : res.id)}
-                className="mt-3 w-full py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
-              >
-                {expanded === res.id ? 'Hide Details' : 'View Details'}
-              </button>
-
-              {expanded === res.id && (
-                <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-4 text-sm">
+            <section key={res.id} className="card">
+              <div className="card__body">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                   <div>
-                    <p className="text-xs text-gray-500">Duration</p>
-                    <p className="font-medium">{res.trip.durationLabel}</p>
+                    <div className="cell-muted">{res.id}</div>
+                    <h3 style={{ fontSize: 16, marginTop: 2 }}>{res.vehicleLabel?.model || 'Vehicle to be assigned'}</h3>
                   </div>
+                  <StatusBadge status={res.status} />
+                </div>
+
+                {res.status === 'Denied' && res.denialReason && (
+                  <div className="error-banner" style={{ marginTop: 12 }}>
+                    <strong>Reason:</strong> {res.denialReason}
+                  </div>
+                )}
+
+                <div className="detail-grid" style={{ marginTop: 16 }}>
+                  <Detail label="Pickup Date & Time" value={`${formatDate(res.trip.pickupDate)} · ${formatTime(res.trip.pickupTime)}`} />
+                  <Detail label="Return Date & Time" value={`${formatDate(res.trip.returnDate)} · ${formatTime(res.trip.returnTime)}`} />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
                   <div>
-                    <p className="text-xs text-gray-500">Passengers</p>
-                    <p className="font-medium">{res.trip.passengers || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Vehicle Type</p>
-                    <p className="font-medium">{res.vehicleLabel?.type || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Base Rate</p>
-                    <p className="font-medium">{formatPeso(res.preBilling.baseRate)}/day</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-xs text-gray-500">Special Requests</p>
-                    <p className="font-medium">{res.trip.specialRequests || 'None'}</p>
-                  </div>
-                  {res.driver && (
-                    <div className="col-span-2">
-                      <p className="text-xs text-gray-500">Assigned Driver</p>
-                      <p className="font-medium">{res.driver.name}</p>
+                    <div className="detail-item__label">Destination</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <FiMapPin size={14} className="faint" />
+                      <span style={{ fontWeight: 500 }}>{res.trip.destination || '—'}</span>
                     </div>
-                  )}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="detail-item__label">Estimated Price</div>
+                    <div style={{ fontWeight: 700, color: 'var(--primary-dark)' }}>{formatPeso(res.preBilling.estimatedTotal)}</div>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                <button
+                  onClick={() => setExpanded(expanded === res.id ? null : res.id)}
+                  className="btn btn--secondary btn--block"
+                  style={{ marginTop: 14, borderColor: 'var(--primary)', color: 'var(--primary-dark)' }}
+                >
+                  {expanded === res.id ? 'Hide Details' : 'View Details'}
+                </button>
+
+                {expanded === res.id && (
+                  <div className="detail-grid" style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+                    <Detail label="Duration" value={res.trip.durationLabel} />
+                    <Detail label="Passengers" value={res.trip.passengers || '—'} />
+                    <Detail label="Vehicle Type" value={res.vehicleLabel?.type || '—'} />
+                    <Detail label="Base Rate" value={`${formatPeso(res.preBilling.baseRate)}/day`} />
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <div className="detail-item__label">Special Requests</div>
+                      <div className="detail-item__value">{res.trip.specialRequests || 'None'}</div>
+                    </div>
+                    {res.driver && (
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <div className="detail-item__label">Assigned Driver</div>
+                        <div className="detail-item__value">{res.driver.name}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
           ))}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <div className="bg-blue-50 rounded-xl p-5 border border-blue-200">
-          <h3 className="font-semibold text-gray-800 mb-2">Reservation Tips</h3>
-          <ul className="space-y-1 text-sm text-gray-600">
-            <li>• Reservations are subject to administrator approval.</li>
-            <li>• You will receive a notification once your reservation status changes.</li>
-            <li>• Ensure your contact information is up to date.</li>
-          </ul>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginTop: 22 }}>
+        <section className="card" style={{ background: 'var(--warning-soft)', borderColor: 'var(--warning)' }}>
+          <div className="card__body">
+            <h3 style={{ marginBottom: 8 }}>Reservation Tips</h3>
+            <ul className="muted" style={{ fontSize: 13, margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+              <li>Reservations are subject to administrator approval.</li>
+              <li>You will receive a notification once your reservation status changes.</li>
+              <li>Ensure your contact information is up to date.</li>
+            </ul>
+          </div>
+        </section>
 
-        <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-          <h3 className="font-semibold text-gray-800 mb-2">Rental Requirements</h3>
-          <ul className="space-y-1 text-sm text-gray-600">
-            <li>• Valid driver's license</li>
-            <li>• Valid government-issued ID</li>
-            <li>• Additional documents may be required</li>
-          </ul>
-        </div>
+        <section className="card">
+          <div className="card__body">
+            <h3 style={{ marginBottom: 8 }}>Rental Requirements</h3>
+            <ul className="muted" style={{ fontSize: 13, margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+              <li>Valid driver's license</li>
+              <li>Valid government-issued ID</li>
+              <li>Additional documents may be required</li>
+            </ul>
+          </div>
+        </section>
       </div>
 
-      <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-800 mb-2">Need Assistance?</h3>
-        <p className="text-sm text-gray-600">We're here to help you.</p>
-        <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-          <div>📞 0912 345 6789</div>
-          <div>✉️ support@hollydot.com</div>
-          <div>🕐 Mon - Sat: 8:00 AM - 6:00 PM</div>
-          <div>📍 Clark Freeport Zone, Pampanga</div>
+      <section className="card" style={{ marginTop: 16 }}>
+        <div className="card__body">
+          <h3 style={{ marginBottom: 8 }}>Need Assistance?</h3>
+          <p className="muted" style={{ fontSize: 13 }}>We're here to help you.</p>
+          <div className="detail-grid" style={{ marginTop: 12 }}>
+            <Detail label="Phone" value="0912 345 6789" />
+            <Detail label="Email" value="support@hollydot.com" />
+            <Detail label="Hours" value="Mon - Sat: 8:00 AM - 6:00 PM" />
+            <Detail label="Office" value="Clark Freeport Zone, Pampanga" />
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   )
 }
