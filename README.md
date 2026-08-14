@@ -18,6 +18,11 @@ An AI-Driven Fleet Operations System for Hollydot Car Rental — React + Vite fr
 
 ## Setup (do all steps)
 
+> **Quick start after `git clone`:** install XAMPP (Apache + MySQL + PHP) and Node.js, then
+> double-click `setup.bat` from the repo root. It copies `api/` into `C:\xampp\htdocs\fleetops\api\`,
+> imports `fleetops_db.sql`, and runs `npm install`. Then start Apache + MySQL in XAMPP and run
+> `npm run dev`. (Manual steps below if you prefer to do it yourself.)
+
 ### 1. Database
 
 Open phpMyAdmin (`http://localhost/phpmyadmin`) → **Import** → choose `fleetops_db.sql` → Go.
