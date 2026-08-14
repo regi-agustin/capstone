@@ -12,6 +12,24 @@ export const createBooking = (payload) =>
 
 export const fetchNotifications = () => apiFetch('notifications.php')
 
+export const markAllNotificationsRead = () =>
+  apiFetch('notifications.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'mark_read' }),
+  })
+
+export const cancelBooking = (id) =>
+  apiFetch('bookings.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'cancel', id }),
+  })
+
+export const changePassword = (payload) =>
+  apiFetch('profile.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'change_password', ...payload }),
+  })
+
 export const fetchMyFeedback = () => apiFetch('feedback.php')
 
 export const submitFeedback = (payload) =>

@@ -1,33 +1,101 @@
 import { useEffect, useState } from 'react'
-import { Download, Plus, Camera, ChevronLeft, ChevronRight, Calendar, FileText, Shield } from 'lucide-react'
-import { fetchAttendance, fetchDrivers, formatDate } from '../services/payrollService.js'
+import { Download, Plus, Camera, Calendar, FileText, Shield, Image as ImageIcon, UserPlus } from 'lucide-react'
+import { fetchAttendance, fetchDrivers, addAttendance, formatDate } from '../services/payrollService.js'
 import SearchBar from '../../ro/components/SearchBar.jsx'
 import StatusBadge from '../../ro/components/StatusBadge.jsx'
 import SummaryCard from '../../ro/components/SummaryCard.jsx'
+import Pagination from '../../ro/components/Pagination.jsx'
+import Modal from '../../ro/components/Modal.jsx'
+import { downloadCsv } from '../../ro/utils/csv.js'
+
+const emptyAddForm = {
+  driverId: '',
+  date: new Date().toISOString().slice(0, 10),
+  timeIn: '08:00',
+  timeOut: '',
+  verificationStatus: 'Verified',
+  rejectionReason: '',
+}
 
 export default function Attendance() {
   const [attendance, setAttendance] = useState([])
   const [drivers, setDrivers] = useState([])
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+  const [showAdd, setShowAdd] = useState(false)
+  const [addForm, setAddForm] = useState(emptyAddForm)
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState('')
+  const [msg, setMsg] = useState('')
+  const [photoView, setPhotoView] = useState(null)
+  const PAGE_SIZE = 10
 
-  useEffect(() => {
+  const load = () =>
     Promise.all([fetchAttendance(), fetchDrivers()])
       .then(([a, d]) => {
         setAttendance(a)
         setDrivers(d)
       })
       .catch((e) => setError(e.message))
+
+  useEffect(() => {
+    load()
   }, [])
 
   const filtered = attendance.filter((r) =>
     !search || String(r.driverName || '').toLowerCase().includes(search.toLowerCase())
   )
 
+  const pageCount = Math.ceil(filtered.length / PAGE_SIZE)
+  const safePage = Math.min(page, Math.max(1, pageCount))
+  const pageData = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
   const present = attendance.length
   const late = attendance.filter((r) => r.isLate).length
   const total = drivers.length
   const pct = (c) => (total > 0 ? ((c / total) * 100).toFixed(2) : '0.00')
+
+  function handleExport() {
+    if (filtered.length === 0) return
+    downloadCsv(
+      'attendance-records.csv',
+      ['Date', 'Driver Name', 'Vehicle', 'Time In', 'Time Out', 'Late', 'Verification Status', 'Remarks'],
+      filtered.map((r) => [
+        r.date, r.driverName, r.vehicle, r.timeIn, r.timeOut || '',
+        r.isLate ? 'Yes' : 'No', r.verificationStatus, r.rejectionReason || '',
+      ])
+    )
+  }
+
+  async function handleAddAttendance(e) {
+    e.preventDefault()
+    setAddError('')
+    if (!addForm.driverId || !addForm.date || !addForm.timeIn) {
+      setAddError('Driver, date, and time-in are required.')
+      return
+    }
+    setAdding(true)
+    try {
+      await addAttendance({
+        driverId: Number(addForm.driverId),
+        date: addForm.date,
+        timeIn: addForm.timeIn,
+        timeOut: addForm.timeOut || '',
+        verificationStatus: addForm.verificationStatus,
+        rejectionReason: addForm.rejectionReason,
+      })
+      setShowAdd(false)
+      setAddForm(emptyAddForm)
+      setMsg(`Attendance recorded for ${formatDate(addForm.date)}.`)
+      setTimeout(() => setMsg(''), 4000)
+      await load()
+    } catch (e) {
+      setAddError(e.message)
+    } finally {
+      setAdding(false)
+    }
+  }
 
   if (error) {
     return <div className="error-banner">{error}</div>
@@ -42,6 +110,9 @@ export default function Attendance() {
         </div>
       </div>
 
+      {error && <div className="error-banner" style={{ marginBottom: 16 }}>{error}</div>}
+      {msg && <div className="success-banner" style={{ marginBottom: 16 }}>{msg}</div>}
+
       <section className="card" style={{ marginBottom: 18 }}>
         <div className="card__body">
           <div className="toolbar" style={{ justifyContent: 'space-between' }}>
@@ -49,13 +120,13 @@ export default function Attendance() {
               <span className="badge badge--neutral">
                 <Calendar size={13} /> Current month
               </span>
-              <SearchBar value={search} onChange={setSearch} placeholder="Search driver..." />
+              <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1) }} placeholder="Search driver..." />
             </div>
             <div className="toolbar">
-              <button className="btn btn--secondary btn--sm">
+              <button onClick={handleExport} className="btn btn--secondary btn--sm">
                 <Download size={14} /> Export
               </button>
-              <button className="btn btn--primary btn--sm" title="Attendance upload happens through the driver app">
+              <button onClick={() => setShowAdd(true)} className="btn btn--primary btn--sm">
                 <Plus size={14} /> Add Attendance
               </button>
             </div>
@@ -132,12 +203,13 @@ export default function Attendance() {
                     <th style={{ textAlign: 'center' }}>Time Out</th>
                     <th>Verification Status</th>
                     <th>Remarks</th>
+                    <th style={{ textAlign: 'center' }}>Plate Photo</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((r, idx) => (
+                  {pageData.map((r, idx) => (
                     <tr key={r.id}>
-                      <td className="cell-muted" style={{ textAlign: 'center' }}>{idx + 1}</td>
+                      <td className="cell-muted" style={{ textAlign: 'center' }}>{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
                       <td className="nowrap">{formatDate(r.date)}</td>
                       <td className="cell-main nowrap">{r.driverName}</td>
                       <td>{r.vehicle}</td>
@@ -147,24 +219,28 @@ export default function Attendance() {
                         <StatusBadge status={r.verificationStatus} />
                       </td>
                       <td className="cell-muted">{r.rejectionReason || (r.verificationStatus === 'Pending' ? 'Awaiting verification' : '-')}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        {r.hasPhoto ? (
+                          <button className="btn btn--icon" title="View plate photo" onClick={() => setPhotoView(r)}>
+                            <ImageIcon size={16} />
+                          </button>
+                        ) : (
+                          <span className="faint">—</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-          <div className="toolbar" style={{ justifyContent: 'space-between', marginTop: 16 }}>
-            <span className="cell-sub">Showing {filtered.length} of {attendance.length} records</span>
-            <div className="toolbar">
-              <button className="btn btn--secondary btn--icon btn--sm" disabled title="Previous page">
-                <ChevronLeft size={16} />
-              </button>
-              <button className="btn btn--primary btn--sm">1</button>
-              <button className="btn btn--secondary btn--icon btn--sm" disabled title="Next page">
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+          <Pagination
+            page={safePage}
+            pageCount={pageCount}
+            onPage={setPage}
+            total={filtered.length}
+            label={`Showing ${pageData.length} of ${filtered.length} records`}
+          />
         </div>
       </section>
 
@@ -231,6 +307,131 @@ export default function Attendance() {
           </div>
         </div>
       </div>
+
+      <Modal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="Add Attendance"
+        subtitle="Manually record or correct a driver's attendance for a given date"
+        size="sm"
+        footer={
+          <>
+            <button type="button" className="btn btn--secondary" onClick={() => setShowAdd(false)}>
+              Cancel
+            </button>
+            <button type="submit" form="add-attendance-form" className="btn btn--primary" disabled={adding}>
+              <UserPlus size={16} /> {adding ? 'Saving...' : 'Save Record'}
+            </button>
+          </>
+        }
+      >
+        <form id="add-attendance-form" onSubmit={handleAddAttendance} style={{ display: 'grid', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="aa-driver">Driver <span className="req">*</span></label>
+            <select
+              id="aa-driver"
+              className="form-select"
+              value={addForm.driverId}
+              onChange={(e) => setAddForm({ ...addForm, driverId: e.target.value })}
+            >
+              <option value="">Select driver...</option>
+              {drivers.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="aa-date">Date <span className="req">*</span></label>
+            <input
+              id="aa-date"
+              type="date"
+              className="form-input"
+              value={addForm.date}
+              onChange={(e) => setAddForm({ ...addForm, date: e.target.value })}
+            />
+          </div>
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label" htmlFor="aa-in">Time In <span className="req">*</span></label>
+              <input
+                id="aa-in"
+                type="time"
+                className="form-input"
+                value={addForm.timeIn}
+                onChange={(e) => setAddForm({ ...addForm, timeIn: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="aa-out">Time Out</label>
+              <input
+                id="aa-out"
+                type="time"
+                className="form-input"
+                value={addForm.timeOut}
+                onChange={(e) => setAddForm({ ...addForm, timeOut: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="aa-status">Verification Status</label>
+            <select
+              id="aa-status"
+              className="form-select"
+              value={addForm.verificationStatus}
+              onChange={(e) => setAddForm({ ...addForm, verificationStatus: e.target.value })}
+            >
+              <option>Verified</option>
+              <option>Pending</option>
+              <option>Rejected</option>
+            </select>
+          </div>
+          {addForm.verificationStatus === 'Rejected' && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="aa-reason">Rejection Reason <span className="req">*</span></label>
+              <input
+                id="aa-reason"
+                className="form-input"
+                placeholder="e.g. No photo, wrong vehicle"
+                value={addForm.rejectionReason}
+                onChange={(e) => setAddForm({ ...addForm, rejectionReason: e.target.value })}
+              />
+            </div>
+          )}
+          {addError && <div className="error-banner">{addError}</div>}
+        </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(photoView)}
+        onClose={() => setPhotoView(null)}
+        title="Plate Photo"
+        subtitle={photoView ? `${photoView.driverName} · ${formatDate(photoView.date)}` : ''}
+        size="sm"
+      >
+        {photoView && (
+          <div style={{ display: 'grid', gap: 12 }}>
+            <img
+              src={photoView.photoUrl}
+              alt={`Vehicle plate photo for ${photoView.driverName}`}
+              style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-2)' }}
+            />
+            <div className="detail-grid">
+              <div className="detail-item">
+                <div className="detail-item__label">Vehicle</div>
+                <div className="detail-item__value">{photoView.vehicle}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-item__label">Time In</div>
+                <div className="detail-item__value">{photoView.timeIn}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-item__label">Verification</div>
+                <StatusBadge status={photoView.verificationStatus} />
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

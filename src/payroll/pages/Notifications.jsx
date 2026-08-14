@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bell, Mail, AlertCircle, Calendar, CheckCircle, XCircle, FileText, Users, Settings, Truck, DollarSign, Filter, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Bell, Mail, AlertCircle, Calendar, CheckCircle, XCircle, FileText, Users, Settings, Truck, DollarSign, Download } from 'lucide-react'
 import { fetchNotifications, markAllNotificationsRead } from '../services/payrollService.js'
 import SearchBar from '../../ro/components/SearchBar.jsx'
 import SummaryCard from '../../ro/components/SummaryCard.jsx'
+import Pagination from '../../ro/components/Pagination.jsx'
+import { downloadCsv } from '../../ro/utils/csv.js'
 
 const TYPE_LABELS = {
   attendance_verified: 'Driver Attendance',
@@ -38,6 +40,8 @@ export default function Notifications() {
   const [search, setSearch] = useState('')
   const [msg, setMsg] = useState(null)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 10
 
   const load = () =>
     fetchNotifications()
@@ -63,6 +67,22 @@ export default function Notifications() {
       }),
     [notifs, tab, search]
   )
+
+  const pageCount = Math.ceil(filtered.length / PAGE_SIZE)
+  const safePage = Math.min(page, Math.max(1, pageCount))
+  const pageData = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  function handleExport() {
+    if (filtered.length === 0) return
+    downloadCsv(
+      'notifications.csv',
+      ['Type', 'Title', 'Message', 'Timestamp', 'Priority', 'Status'],
+      filtered.map((n) => [
+        TYPE_LABELS[n.type] || TYPE_LABELS.default, n.title, n.description,
+        n.timestamp, priorityOf(n.type).label, n.isRead ? 'Read' : 'Unread',
+      ])
+    )
+  }
 
   async function handleMarkAll() {
     try {
@@ -109,12 +129,12 @@ export default function Notifications() {
               ))}
             </div>
             <div className="toolbar">
-              <SearchBar value={search} onChange={setSearch} placeholder="Search notifications..." />
+              <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1) }} placeholder="Search notifications..." />
               <button onClick={handleMarkAll} className="btn btn--secondary btn--sm nowrap">
                 <CheckCircle size={14} /> Mark all as read
               </button>
-              <button className="btn btn--secondary btn--sm nowrap">
-                <Filter size={14} /> Filter <ChevronDown size={14} />
+              <button onClick={handleExport} className="btn btn--secondary btn--sm nowrap">
+                <Download size={14} /> Export
               </button>
             </div>
           </div>
@@ -160,13 +180,13 @@ export default function Notifications() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((n, idx) => {
+                  {pageData.map((n, idx) => {
                     const iconKey = n.icon || 'default'
                     const IconComp = TYPE_ICONS[iconKey] || TYPE_ICONS.default
                     const pri = priorityOf(n.type)
                     return (
                       <tr key={n.id}>
-                        <td className="cell-muted" style={{ textAlign: 'center' }}>{idx + 1}</td>
+                        <td className="cell-muted" style={{ textAlign: 'center' }}>{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
                         <td>
                           <div className="cell-main" style={{ gap: 8 }}>
                             <IconComp size={16} />
@@ -191,18 +211,13 @@ export default function Notifications() {
               </table>
             </div>
           )}
-          <div className="toolbar" style={{ justifyContent: 'space-between', marginTop: 16 }}>
-            <span className="cell-sub">Showing {filtered.length} of {notifs.length} notifications</span>
-            <div className="toolbar">
-              <button className="btn btn--secondary btn--icon btn--sm" disabled title="Previous page">
-                <ChevronLeft size={16} />
-              </button>
-              <button className="btn btn--primary btn--sm">1</button>
-              <button className="btn btn--secondary btn--icon btn--sm" disabled title="Next page">
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+          <Pagination
+            page={safePage}
+            pageCount={pageCount}
+            onPage={setPage}
+            total={filtered.length}
+            label={`Showing ${pageData.length} of ${filtered.length} notifications`}
+          />
         </div>
       </section>
 

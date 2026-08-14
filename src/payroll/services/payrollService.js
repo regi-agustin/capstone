@@ -12,10 +12,42 @@ export const fetchProfile = () => apiFetch('profile.php')
 
 export const fetchSecurity = () => apiFetch('security.php')
 
+export const fetchTripLogs = () => apiFetch('trip_logs.php')
+
 export const markAllNotificationsRead = () =>
   apiFetch('notifications.php', {
     method: 'POST',
     body: JSON.stringify({ action: 'mark_read' }),
+  })
+
+export const addDriver = (payload) =>
+  apiFetch('drivers.php', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+export const addAttendance = (payload) =>
+  apiFetch('attendance.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'manual', ...payload }),
+  })
+
+export const updateProfile = (payload) =>
+  apiFetch('profile.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'update_profile', ...payload }),
+  })
+
+export const changePassword = (payload) =>
+  apiFetch('profile.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'change_password', ...payload }),
+  })
+
+export const securityAction = (action, payload = {}) =>
+  apiFetch('security.php', {
+    method: 'POST',
+    body: JSON.stringify({ action, ...payload }),
   })
 
 export const createPayrollRecord = (payload) =>
@@ -60,15 +92,4 @@ export const PAYROLL_STATUS_LABELS = {
 
 export function statusLabel(status) {
   return PAYROLL_STATUS_LABELS[status] || status
-}
-
-export function statusStyle(status) {
-  switch (status) {
-    case 'Paid':
-      return 'bg-green-100 text-green-600'
-    case 'Unpaid':
-      return 'bg-red-100 text-red-600'
-    default:
-      return 'bg-amber-100 text-amber-600'
-  }
 }

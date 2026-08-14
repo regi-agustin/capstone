@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Mail, Phone, Pencil, User, Shield, Settings, Lock, Clock, ChevronRight } from 'lucide-react'
-import { fetchProfile, formatDate } from '../services/payrollService.js'
+import { fetchProfile, updateProfile, changePassword, formatDate } from '../services/payrollService.js'
+import Modal from '../../ro/components/Modal.jsx'
 
 function initials(name) {
   return (name || '')
@@ -26,12 +27,70 @@ const ROLE_LABELS = {
 export default function Profile() {
   const [profile, setProfile] = useState(null)
   const [error, setError] = useState('')
+  const [msg, setMsg] = useState(null)
+  const [showEdit, setShowEdit] = useState(false)
+  const [editForm, setEditForm] = useState({ email: '', contactNumber: '' })
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editError, setEditError] = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [pwForm, setPwForm] = useState({ current: '', new: '', confirm: '' })
+  const [savingPw, setSavingPw] = useState(false)
+  const [pwError, setPwError] = useState('')
+  const [showAllActivity, setShowAllActivity] = useState(false)
 
-  useEffect(() => {
+  const load = () =>
     fetchProfile()
       .then(setProfile)
       .catch((e) => setError(e.message))
+
+  useEffect(() => {
+    load()
   }, [])
+
+  function showMsg(text, ok = true) {
+    setMsg({ text, ok })
+    setTimeout(() => setMsg(null), 4000)
+  }
+
+  function openEdit() {
+    setEditForm({ email: profile?.account?.email || '', contactNumber: profile?.account?.contactNumber || '' })
+    setEditError('')
+    setShowEdit(true)
+  }
+
+  async function handleSaveEdit(e) {
+    e.preventDefault()
+    setEditError('')
+    setSavingEdit(true)
+    try {
+      await updateProfile({ email: editForm.email, contactNumber: editForm.contactNumber })
+      setShowEdit(false)
+      showMsg('Profile updated successfully.')
+      await load()
+    } catch (e) {
+      setEditError(e.message)
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  async function handleSavePw(e) {
+    e.preventDefault()
+    setPwError('')
+    if (pwForm.new !== pwForm.confirm) return setPwError('New password and confirmation do not match.')
+    if (pwForm.new.length < 8) return setPwError('Password must be at least 8 characters.')
+    setSavingPw(true)
+    try {
+      await changePassword({ currentPassword: pwForm.current, newPassword: pwForm.new, confirmPassword: pwForm.confirm })
+      setShowPw(false)
+      setPwForm({ current: '', new: '', confirm: '' })
+      showMsg('Password updated successfully.')
+    } catch (e) {
+      setPwError(e.message)
+    } finally {
+      setSavingPw(false)
+    }
+  }
 
   if (error) {
     return <div className="error-banner">{error}</div>
@@ -64,6 +123,12 @@ export default function Profile() {
           <p className="page-head__sub">View and manage your personal information and account settings.</p>
         </div>
       </div>
+
+      {msg && (
+        <div className={msg.ok ? 'success-banner' : 'error-banner'} style={{ marginBottom: 16 }}>
+          {msg.text}
+        </div>
+      )}
 
       <section className="card">
         <div className="card__body">
@@ -141,7 +206,7 @@ export default function Profile() {
                 <div className="form-section__title">
                   <User size={16} /> Personal Information
                 </div>
-                <button className="btn btn--secondary btn--sm" title="Editing is managed by the admin">
+                <button onClick={openEdit} className="btn btn--secondary btn--sm">
                   <Pencil size={12} /> Edit
                 </button>
               </div>
@@ -218,7 +283,7 @@ export default function Profile() {
                 <div className="form-section__title">
                   <Lock size={16} /> Security
                 </div>
-                <button className="btn btn--secondary btn--sm">
+                <button onClick={() => { setPwForm({ current: '', new: '', confirm: '' }); setPwError(''); setShowPw(true) }} className="btn btn--secondary btn--sm">
                   <Lock size={12} /> Change Password
                 </button>
               </div>
@@ -247,8 +312,8 @@ export default function Profile() {
                 <div className="form-section__title">
                   <Clock size={16} /> Recent Account Activity
                 </div>
-                <button className="btn btn--ghost btn--sm">
-                  View All Activity <ChevronRight size={12} />
+                <button onClick={() => setShowAllActivity((v) => !v)} className="btn btn--ghost btn--sm">
+                  {showAllActivity ? 'Show Less' : 'View All Activity'} <ChevronRight size={12} />
                 </button>
               </div>
               <div className="detail-grid">
@@ -258,7 +323,7 @@ export default function Profile() {
                     <div className="detail-item__value">No activity recorded yet</div>
                   </div>
                 ) : (
-                  activity.map((a, i) => (
+                  (showAllActivity ? activity : activity.slice(0, 4)).map((a, i) => (
                     <div className="detail-item" key={i}>
                       <div className="detail-item__label">{dayLabel(a.time)}</div>
                       <div className="detail-item__value">{a.label}</div>
@@ -270,6 +335,106 @@ export default function Profile() {
           </div>
         </div>
       </section>
+
+      <Modal
+        open={showEdit}
+        onClose={() => setShowEdit(false)}
+        title="Edit Profile"
+        subtitle="Update your contact details"
+        size="sm"
+        footer={
+          <>
+            <button type="button" className="btn btn--secondary" onClick={() => setShowEdit(false)}>
+              Cancel
+            </button>
+            <button type="submit" form="edit-profile-form" className="btn btn--primary" disabled={savingEdit}>
+              {savingEdit ? 'Saving...' : 'Save Changes'}
+            </button>
+          </>
+        }
+      >
+        <form id="edit-profile-form" onSubmit={handleSaveEdit} style={{ display: 'grid', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ep-name">Full Name</label>
+            <input id="ep-name" className="form-input" value={name} disabled />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ep-email">Email Address</label>
+            <input
+              id="ep-email"
+              type="email"
+              className="form-input"
+              value={editForm.email}
+              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ep-contact">Phone Number</label>
+            <input
+              id="ep-contact"
+              className="form-input"
+              value={editForm.contactNumber}
+              onChange={(e) => setEditForm({ ...editForm, contactNumber: e.target.value })}
+            />
+          </div>
+          {editError && <div className="error-banner">{editError}</div>}
+        </form>
+      </Modal>
+
+      <Modal
+        open={showPw}
+        onClose={() => setShowPw(false)}
+        title="Change Password"
+        subtitle="Update the password for your account"
+        size="sm"
+        footer={
+          <>
+            <button type="button" className="btn btn--secondary" onClick={() => setShowPw(false)}>
+              Cancel
+            </button>
+            <button type="submit" form="change-pw-form" className="btn btn--primary" disabled={savingPw}>
+              {savingPw ? 'Updating...' : 'Update Password'}
+            </button>
+          </>
+        }
+      >
+        <form id="change-pw-form" onSubmit={handleSavePw} style={{ display: 'grid', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="cp-current">Current Password</label>
+            <input
+              id="cp-current"
+              type="password"
+              className="form-input"
+              value={pwForm.current}
+              onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })}
+              placeholder="Enter current password"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="cp-new">New Password</label>
+            <input
+              id="cp-new"
+              type="password"
+              className="form-input"
+              value={pwForm.new}
+              onChange={(e) => setPwForm({ ...pwForm, new: e.target.value })}
+              placeholder="Enter new password"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="cp-confirm">Confirm New Password</label>
+            <input
+              id="cp-confirm"
+              type="password"
+              className="form-input"
+              value={pwForm.confirm}
+              onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+              placeholder="Confirm new password"
+            />
+          </div>
+          {pwError && <div className="error-banner">{pwError}</div>}
+        </form>
+      </Modal>
     </div>
   )
 }

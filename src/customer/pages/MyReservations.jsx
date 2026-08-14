@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { FiMapPin } from 'react-icons/fi'
-import { fetchMyBookings, formatDate, formatTime, formatPeso } from '../services/customerService.js'
+import { fetchMyBookings, cancelBooking, formatDate, formatTime, formatPeso } from '../services/customerService.js'
 import StatusBadge from '../../ro/components/StatusBadge.jsx'
 
 const tabs = [
@@ -22,6 +22,9 @@ export default function MyReservations() {
   const [bookings, setBookings] = useState([])
   const [activeTab, setActiveTab] = useState('pending')
   const [error, setError] = useState('')
+  const [msg, setMsg] = useState('')
+  const [msgError, setMsgError] = useState(false)
+  const [cancelling, setCancelling] = useState(null)
   const [expanded, setExpanded] = useState(null)
 
   useEffect(() => {
@@ -36,6 +39,24 @@ export default function MyReservations() {
     return map
   }, [bookings])
 
+  function handleCancel(res) {
+    if (!window.confirm(`Cancel reservation ${res.id}? This cannot be undone.`)) return
+    setCancelling(res.id)
+    setMsg('')
+    setMsgError(false)
+    cancelBooking(res.id)
+      .then(() => fetchMyBookings())
+      .then((updated) => {
+        setBookings(updated)
+        setMsg(`Reservation ${res.id} has been cancelled.`)
+      })
+      .catch((e) => {
+        setMsg(e.message)
+        setMsgError(true)
+      })
+      .finally(() => setCancelling(null))
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -46,6 +67,13 @@ export default function MyReservations() {
       </div>
 
       {error && <div className="error-banner" style={{ marginBottom: 16 }}>{error}</div>}
+      {msg && (
+        msgError ? (
+          <div className="error-banner" style={{ marginBottom: 16 }}>{msg}</div>
+        ) : (
+          <div className="success-banner" style={{ marginBottom: 16 }}>{msg}</div>
+        )
+      )}
 
       <div className="toolbar" style={{ marginBottom: 18 }}>
         <div className="filter-tabs" role="tablist" aria-label="Filter by status">
@@ -108,13 +136,26 @@ export default function MyReservations() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setExpanded(expanded === res.id ? null : res.id)}
-                  className="btn btn--secondary btn--block"
-                  style={{ marginTop: 14, borderColor: 'var(--primary)', color: 'var(--primary-dark)' }}
-                >
-                  {expanded === res.id ? 'Hide Details' : 'View Details'}
-                </button>
+                <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                  {(res.status === 'Pending' || res.status === 'Confirmed') && (
+                    <button
+                      type="button"
+                      onClick={() => handleCancel(res)}
+                      disabled={cancelling === res.id}
+                      className="btn btn--secondary"
+                      style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                    >
+                      {cancelling === res.id ? 'Cancelling…' : 'Cancel Reservation'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setExpanded(expanded === res.id ? null : res.id)}
+                    className="btn btn--secondary btn--block"
+                    style={{ borderColor: 'var(--primary)', color: 'var(--primary-dark)' }}
+                  >
+                    {expanded === res.id ? 'Hide Details' : 'View Details'}
+                  </button>
+                </div>
 
                 {expanded === res.id && (
                   <div className="detail-grid" style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>

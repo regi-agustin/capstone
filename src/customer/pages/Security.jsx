@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { FiShield, FiLock, FiUser, FiClock, FiCheckCircle, FiAlertCircle } from 'react-icons/fi'
-import { fetchSecurity } from '../services/customerService.js'
+import { fetchSecurity, changePassword } from '../services/customerService.js'
 
 function timeAgo(ts) {
   if (!ts) return ''
@@ -19,6 +19,8 @@ function timeAgo(ts) {
 export default function Security() {
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' })
   const [notice, setNotice] = useState('')
+  const [noticeIsError, setNoticeIsError] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [security, setSecurity] = useState(null)
   const [error, setError] = useState('')
 
@@ -34,17 +36,34 @@ export default function Security() {
   function handleUpdate(e) {
     e.preventDefault()
     if (passwords.new !== passwords.confirm) {
+      setNoticeIsError(true)
       setNotice('New password and confirmation do not match.')
       return
     }
     if (passwords.new.length < 8) {
+      setNoticeIsError(true)
       setNotice('Password must be at least 8 characters.')
       return
     }
-    setNotice('Password change is handled by the administrator. Please contact support.')
+    setSubmitting(true)
+    setNotice('')
+    changePassword({
+      currentPassword: passwords.current,
+      newPassword: passwords.new,
+      confirmPassword: passwords.confirm,
+    })
+      .then(() => {
+        setNoticeIsError(false)
+        setNotice('Password updated successfully.')
+        setPasswords({ current: '', new: '', confirm: '' })
+      })
+      .catch((err) => {
+        setNoticeIsError(true)
+        setNotice(err.message)
+      })
+      .finally(() => setSubmitting(false))
   }
 
-  const noticeIsError = notice && (notice.includes('do not match') || notice.includes('at least 8'))
   const faceEnabled = Boolean(settings.faceRecognitionEnabled)
 
   return (
@@ -142,8 +161,8 @@ export default function Security() {
                   placeholder="Confirm new password"
                 />
               </div>
-              <button type="submit" className="btn btn--primary" style={{ justifySelf: 'start' }}>
-                Update Password
+              <button type="submit" className="btn btn--primary" style={{ justifySelf: 'start' }} disabled={submitting}>
+                {submitting ? 'Updating…' : 'Update Password'}
               </button>
             </div>
           </form>

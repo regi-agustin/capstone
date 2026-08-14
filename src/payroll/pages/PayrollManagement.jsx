@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Download, Plus, Trash2, ChevronLeft, ChevronRight, FileText, CheckCircle, Save } from 'lucide-react'
+import { Download, Plus, Trash2, FileText, Save } from 'lucide-react'
 import {
   fetchPayrollRecords,
   fetchDrivers,
+  fetchTripLogs,
   createPayrollRecord,
   updatePayrollStatus,
   deletePayrollRecord,
@@ -12,6 +13,8 @@ import {
 } from '../services/payrollService.js'
 import SearchBar from '../../ro/components/SearchBar.jsx'
 import StatusBadge from '../../ro/components/StatusBadge.jsx'
+import Pagination from '../../ro/components/Pagination.jsx'
+import { downloadCsv } from '../../ro/utils/csv.js'
 
 const EARNINGS = [
   { key: 'carRental', label: '1 Car Rental Payment' },
@@ -37,11 +40,7 @@ const DEDUCTIONS = [
   { key: 'coopLoan', label: '18 Coop Loan' },
 ]
 
-const TRIPS = [
-  { n: 1, date: 'Aug 01, 2026', code: 'CAR-001', rate: '1,800.00', req: '8:00 AM', out: '5:30 PM', hrs: '9.50', km: '20', gas: '200.00', night: '0.00', otH: '1.50', otR: '150.00', dime: '100.00', hazard: '100.00', toll: '60.00', parking: '50.00', adv: '1,000.00', total: '3,460.00' },
-  { n: 2, date: 'Aug 02, 2026', code: 'CAR-014', rate: '1,800.00', req: '8:30 AM', out: '6:00 PM', hrs: '9.50', km: '30', gas: '240.00', night: '0.00', otH: '2.00', otR: '150.00', dime: '100.00', hazard: '100.00', toll: '80.00', parking: '60.00', adv: '1,000.00', total: '3,680.00' },
-  { n: 3, date: 'Aug 03, 2026', code: 'CAR-014', rate: '1,800.00', req: '7:00 PM', out: '7:00 AM', hrs: '12.00', km: '40', gas: '300.00', night: '800.00', otH: '2.50', otR: '150.00', dime: '100.00', hazard: '100.00', toll: '100.00', parking: '70.00', adv: '1,000.00', total: '4,720.00' },
-]
+const TRIP_HEADERS = ['#', 'Date', 'Car Code', 'Driver', 'Requested Time', 'Time Out', 'Work Hours', 'Distance (km)', 'Start Location', 'End Location', 'Expenses (₱)', 'Remarks']
 
 const emptyForm = {
   driverId: '',
@@ -53,18 +52,22 @@ const emptyForm = {
 export default function PayrollManagement() {
   const [records, setRecords] = useState([])
   const [drivers, setDrivers] = useState([])
+  const [tripLogs, setTripLogs] = useState([])
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
   const [msg, setMsg] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState(0)
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 20
 
   const load = () =>
-    Promise.all([fetchPayrollRecords(), fetchDrivers()])
-      .then(([p, d]) => {
+    Promise.all([fetchPayrollRecords(), fetchDrivers(), fetchTripLogs()])
+      .then(([p, d, t]) => {
         setRecords(p)
         setDrivers(d)
+        setTripLogs(t)
       })
       .catch((e) => setError(e.message))
 
@@ -86,6 +89,41 @@ export default function PayrollManagement() {
   const filtered = records.filter((r) =>
     !search || String(r.driverName || '').toLowerCase().includes(search.toLowerCase())
   )
+
+  const pageCount = Math.ceil(filtered.length / PAGE_SIZE)
+  const safePage = Math.min(page, Math.max(1, pageCount))
+  const pageData = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  const selectedDriverId = form.driverId ? Number(form.driverId) : null
+  const trips = useMemo(
+    () => tripLogs.filter((t) => !selectedDriverId || t.driverId === selectedDriverId),
+    [tripLogs, selectedDriverId]
+  )
+
+  function handleExport() {
+    if (filtered.length === 0) return
+    downloadCsv(
+      'payroll-records.csv',
+      ['Driver', 'Contact', 'Payroll Date', 'Basic Salary', 'Allowances', 'Deductions', 'Net Amount', 'Status'],
+      filtered.map((r) => [
+        r.driverName, r.contact || '', r.date,
+        r.basicSalary, r.allowances, r.deductions, r.netAmount, statusLabel(r.status),
+      ])
+    )
+  }
+
+  function handleExportTrips() {
+    if (trips.length === 0) return
+    downloadCsv(
+      'trip-breakdown.csv',
+      TRIP_HEADERS,
+      trips.map((t, i) => [
+        i + 1, t.date, t.tripCode || t.plateNumber, t.driverName,
+        t.startTime, t.endTime, t.hours ?? '', t.distance ?? '',
+        t.startLocation, t.endLocation, t.expenses, t.remarks,
+      ])
+    )
+  }
 
   function setEarn(key, value) {
     setForm((f) => ({ ...f, earnings: { ...f.earnings, [key]: value } }))
@@ -184,8 +222,8 @@ export default function PayrollManagement() {
             <span className="badge badge--neutral">
               Cut-off Period · <strong>{records.length}</strong> record(s)
             </span>
-            <SearchBar value={search} onChange={setSearch} placeholder="Search driver..." />
-            <button className="btn btn--secondary btn--sm" title="Export to Excel (upcoming)">
+            <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1) }} placeholder="Search driver..." />
+            <button onClick={handleExport} className="btn btn--secondary btn--sm">
               <Download size={14} /> Export
             </button>
             <button
@@ -222,9 +260,9 @@ export default function PayrollManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((r, idx) => (
+                  {pageData.map((r, idx) => (
                     <tr key={r.id}>
-                      <td className="cell-muted">{idx + 1}</td>
+                      <td className="cell-muted">{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
                       <td className="cell-main">{r.driverName}</td>
                       <td>{r.contact || '-'}</td>
                       <td className="nowrap">{formatDate(r.date)}</td>
@@ -265,18 +303,13 @@ export default function PayrollManagement() {
               </table>
             </div>
           )}
-          <div className="toolbar" style={{ justifyContent: 'space-between', marginTop: 16 }}>
-            <span className="cell-sub">Showing {filtered.length} of {records.length} records</span>
-            <div className="toolbar">
-              <button className="btn btn--secondary btn--icon btn--sm" disabled title="Previous page">
-                <ChevronLeft size={16} />
-              </button>
-              <button className="btn btn--primary btn--sm">1</button>
-              <button className="btn btn--secondary btn--icon btn--sm" disabled title="Next page">
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+          <Pagination
+            page={safePage}
+            pageCount={pageCount}
+            onPage={setPage}
+            total={filtered.length}
+            label={`Showing ${pageData.length} of ${filtered.length} records`}
+          />
         </div>
       </section>
 
@@ -375,46 +408,53 @@ export default function PayrollManagement() {
           </div>
 
           <div className="form-section">
-            <div className="form-section__title">
-              D. TRIP BREAKDOWN <span className="form-hint">(sample trip records for reference)</span>
+            <div className="toolbar" style={{ justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 4 }}>
+              <div className="form-section__title">
+                D. TRIP BREAKDOWN <span className="form-hint">(from trip logs{selectedDriverId ? ` · ${drivers.find((d) => d.id === selectedDriverId)?.name || ''}` : ' · select a driver above'})</span>
+              </div>
+              <button onClick={handleExportTrips} className="btn btn--secondary btn--sm">
+                <Download size={14} /> Export Trips
+              </button>
             </div>
             <div className="table-wrap" style={{ marginTop: 14 }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    {['#', 'Date', 'Car Code', 'Rental Rate (₱)', 'Requested Time', 'Time Out', 'Work Hours', 'Excess KM', 'Excess Gas (₱)', 'Overnight Rate (₱)', 'OT Hrs', 'OT Rate (₱)', 'Dime (₱)', 'Hazard (₱)', 'Toll (₱)', 'Parking (₱)', 'Advance (₱)', 'Total Amount (₱)'].map((h) => (
-                      <th key={h} className="nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {TRIPS.map((t) => (
-                    <tr key={t.n}>
-                      <td style={{ textAlign: 'center' }}>{t.n}</td>
-                      <td className="nowrap">{t.date}</td>
-                      <td>{t.code}</td>
-                      <td style={{ textAlign: 'right' }}>{t.rate}</td>
-                      <td className="nowrap">{t.req}</td>
-                      <td className="nowrap">{t.out}</td>
-                      <td style={{ textAlign: 'right' }}>{t.hrs}</td>
-                      <td style={{ textAlign: 'right' }}>{t.km}</td>
-                      <td style={{ textAlign: 'right' }}>{t.gas}</td>
-                      <td style={{ textAlign: 'right' }}>{t.night}</td>
-                      <td style={{ textAlign: 'right' }}>{t.otH}</td>
-                      <td style={{ textAlign: 'right' }}>{t.otR}</td>
-                      <td style={{ textAlign: 'right' }}>{t.dime}</td>
-                      <td style={{ textAlign: 'right' }}>{t.hazard}</td>
-                      <td style={{ textAlign: 'right' }}>{t.toll}</td>
-                      <td style={{ textAlign: 'right' }}>{t.parking}</td>
-                      <td style={{ textAlign: 'right' }}>{t.adv}</td>
-                      <td className="cell-main" style={{ textAlign: 'right' }}>{t.total}</td>
+              {trips.length === 0 ? (
+                <div className="empty-state">
+                  <FileText size={32} />
+                  <div className="empty-state__title">No trip logs found</div>
+                  <div className="empty-state__sub">{selectedDriverId ? 'No trips recorded for this driver yet.' : 'Select a driver in the header to preview their trip logs.'}</div>
+                </div>
+              ) : (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      {TRIP_HEADERS.map((h) => (
+                        <th key={h} className="nowrap">{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {trips.slice(0, 20).map((t, i) => (
+                      <tr key={t.id}>
+                        <td style={{ textAlign: 'center' }}>{i + 1}</td>
+                        <td className="nowrap">{formatDate(t.date)}</td>
+                        <td className="nowrap">{t.tripCode || t.plateNumber || '-'}</td>
+                        <td>{t.driverName}</td>
+                        <td className="nowrap">{t.startTime}</td>
+                        <td className="nowrap">{t.endTime}</td>
+                        <td style={{ textAlign: 'right' }}>{t.hours ?? '-'}</td>
+                        <td style={{ textAlign: 'right' }}>{t.distance ?? '-'}</td>
+                        <td className="cell-muted">{t.startLocation || '-'}</td>
+                        <td className="cell-muted">{t.endLocation || '-'}</td>
+                        <td style={{ textAlign: 'right' }}>{formatPeso(t.expenses)}</td>
+                        <td className="cell-muted">{t.remarks || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
             <p className="form-hint" style={{ marginTop: 10 }}>
-              Trip breakdown is currently a reference table. Live trip import is part of the upcoming payroll integration.
+              Trip logs shown here are pulled live from the driver trip logs table for the selected driver.
             </p>
           </div>
 
@@ -425,8 +465,8 @@ export default function PayrollManagement() {
             <button onClick={handleSave} disabled={saving} className="btn btn--primary">
               <Save size={16} /> {saving ? 'Saving...' : 'Save Record'}
             </button>
-            <button className="btn btn--secondary">
-              <Download size={16} /> Print / Export
+            <button onClick={handleExportTrips} className="btn btn--secondary">
+              <Download size={16} /> Export Trip Logs
             </button>
           </div>
           <p className="form-hint">

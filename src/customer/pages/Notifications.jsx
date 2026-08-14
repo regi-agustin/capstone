@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { FiCheckCircle, FiClock, FiXCircle, FiInfo, FiBell } from 'react-icons/fi'
-import { fetchNotifications } from '../services/customerService.js'
+import { FiCheckCircle, FiClock, FiXCircle, FiInfo, FiBell, FiCheck } from 'react-icons/fi'
+import { fetchNotifications, markAllNotificationsRead } from '../services/customerService.js'
 import SummaryCard from '../../ro/components/SummaryCard.jsx'
 
 const typeMeta = {
@@ -15,12 +15,31 @@ export default function Notifications() {
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [showAll, setShowAll] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
+  const load = () =>
     fetchNotifications()
       .then(setNotifications)
       .catch((e) => setError(e.message))
+
+  useEffect(() => {
+    load()
   }, [])
+
+  async function handleMarkAll() {
+    setBusy(true)
+    try {
+      await markAllNotificationsRead()
+      setMsg('All notifications marked as read.')
+      await load()
+      setTimeout(() => setMsg(''), 3000)
+    } catch (e) {
+      setMsg(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const tabs = [
     { id: 'all', label: 'All' },
@@ -53,8 +72,13 @@ export default function Notifications() {
       </div>
 
       {error && <div className="error-banner" style={{ marginBottom: 16 }}>{error}</div>}
+      {msg && (
+        <div className={msg.startsWith('All notifications') ? 'success-banner' : 'error-banner'} style={{ marginBottom: 16 }}>
+          {msg}
+        </div>
+      )}
 
-      <div className="toolbar" style={{ marginBottom: 18 }}>
+      <div className="toolbar" style={{ marginBottom: 18, justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div className="filter-tabs" role="tablist" aria-label="Filter notifications">
           {tabs.map((tab) => (
             <button
@@ -69,6 +93,13 @@ export default function Notifications() {
             </button>
           ))}
         </div>
+        <button
+          onClick={handleMarkAll}
+          disabled={busy || summary.unread === 0}
+          className="btn btn--secondary btn--sm nowrap"
+        >
+          <FiCheck size={14} /> {busy ? 'Marking...' : 'Mark all as read'}
+        </button>
       </div>
 
       {activeTab === 'all' && (

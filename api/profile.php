@@ -3,6 +3,63 @@ require_once __DIR__ . '/helpers.php';
 
 $user = require_login();
 $pdo = db();
+$method = $_SERVER['REQUEST_METHOD'];
+
+if ($method === 'POST') {
+    $data = body_json();
+    $action = trim((string)($data['action'] ?? ''));
+    $userId = (int)$user['user_id'];
+
+    if ($action === 'update_profile') {
+        $email = trim((string)($data['email'] ?? ''));
+        $contactNumber = trim((string)($data['contactNumber'] ?? ''));
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            json_error('Please provide a valid email address.', 422);
+        }
+        $stmt = $pdo->prepare(
+            'UPDATE users
+             SET email = COALESCE(NULLIF(?, ""), email),
+                 contact_number = COALESCE(NULLIF(?, ""), contact_number)
+             WHERE user_id = ?'
+        );
+        $stmt->execute([$email, $contactNumber, $userId]);
+        log_action($pdo, $userId, 'UPDATE_PROFILE', 'Updated profile contact details');
+        json_out(['ok' => true]);
+    }
+
+    if ($action === 'change_password') {
+        $current = (string)($data['currentPassword'] ?? '');
+        $new = (string)($data['newPassword'] ?? '');
+        $confirm = (string)($data['confirmPassword'] ?? '');
+
+        if ($current === '' || $new === '') {
+            json_error('Current and new passwords are required.', 422);
+        }
+        if ($new !== $confirm) {
+            json_error('New password and confirmation do not match.', 422);
+        }
+        if (strlen($new) < 8) {
+            json_error('Password must be at least 8 characters.', 422);
+        }
+
+        $stmt = $pdo->prepare('SELECT password_hash FROM users WHERE user_id = ?');
+        $stmt->execute([$userId]);
+        $hash = (string)$stmt->fetchColumn();
+        if ($hash === '' || !hash_equals($hash, hash('sha256', $current))) {
+            json_error('Current password is incorrect.', 422);
+        }
+
+        $pdo->prepare('UPDATE users SET password_hash = ? WHERE user_id = ?')
+            ->execute([hash('sha256', $new), $userId]);
+        $pdo->prepare(
+            'UPDATE security_settings SET password_strength = "Strong", last_security_check = CURDATE() WHERE user_id = ?'
+        )->execute([$userId]);
+        log_action($pdo, $userId, 'CHANGE_PASSWORD', 'Password changed');
+        json_out(['ok' => true]);
+    }
+
+    json_error('Action must be one of: update_profile, change_password.', 422);
+}
 
 // Non-driver roles get their basic account profile.
 if ($user['role'] !== 'driver') {

@@ -24,7 +24,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
     $sql = 'SELECT a.attendance_id, a.attendance_date, a.time_in, a.time_out, a.verification_status,
-                   a.rejection_reason, a.time_in > "08:00:00" AS is_late,
+                   a.rejection_reason, a.vehicle_image, a.time_in > "08:00:00" AS is_late,
                    v.model, v.plate_number, d.fullname AS driver_name
             FROM attendance a
             JOIN vehicles v ON v.vehicle_id = a.vehicle_id
@@ -51,6 +51,8 @@ if ($method === 'GET') {
             'timeOut' => fmt_time($a['time_out']),
             'verificationStatus' => ucfirst($a['verification_status']),
             'rejectionReason' => $a['rejection_reason'],
+            'photoUrl' => $a['vehicle_image'],
+            'hasPhoto' => (bool)$a['vehicle_image'],
         ];
     }, $rows->fetchAll());
 
@@ -72,6 +74,90 @@ if ($method === 'POST') {
     }
 
     // time_in with plate-photo upload (OCR verification is pending until approved)
+    if ($action === 'manual') {
+        require_role($user, ['superadmin', 'admin', 'driver_management_head', 'payroll_officer']);
+
+        $targetDriverId = (int)($data['driverId'] ?? 0);
+        $date = trim((string)($data['date'] ?? ''));
+        $timeIn = trim((string)($data['timeIn'] ?? ''));
+        $timeOut = trim((string)($data['timeOut'] ?? ''));
+        $verification = trim((string)($data['verificationStatus'] ?? 'Verified'));
+
+        if ($targetDriverId <= 0 || $date === '' || $timeIn === '') {
+            json_error('Driver, date, and time-in are required.', 422);
+        }
+        if (!in_array($verification, ['Verified', 'Pending', 'Rejected'], true)) {
+            json_error('Verification status must be Verified, Pending, or Rejected.', 422);
+        }
+        if ($timeOut !== '' && $timeOut <= $timeIn) {
+            json_error('Time-out must be later than time-in.', 422);
+        }
+
+        $stmt = $pdo->prepare('SELECT driver_id FROM drivers WHERE driver_id = ?');
+        $stmt->execute([$targetDriverId]);
+        if (!$stmt->fetch()) json_error('Driver not found.', 404);
+
+        // Best-effort vehicle: active assignment, last used, else first on file.
+        $vehicleId = 0;
+        $active = active_reservation_for_driver($pdo, $targetDriverId);
+        if ($active && $active['vehicle_id']) {
+            $vehicleId = (int)$active['vehicle_id'];
+        }
+        if ($vehicleId <= 0) {
+            $last = $pdo->prepare('SELECT vehicle_id FROM attendance WHERE driver_id = ? ORDER BY attendance_id DESC LIMIT 1');
+            $last->execute([$targetDriverId]);
+            $vehicleId = (int)$last->fetchColumn();
+        }
+        if ($vehicleId <= 0) {
+            $vehicleId = (int)$pdo->query('SELECT vehicle_id FROM vehicles ORDER BY vehicle_id LIMIT 1')->fetchColumn();
+        }
+
+        $rejectionReason = $verification === 'Rejected'
+            ? trim((string)($data['rejectionReason'] ?? ''))
+            : null;
+        if ($verification === 'Rejected' && $rejectionReason === '') {
+            json_error('A rejection reason is required for rejected records.', 422);
+        }
+
+        $exists = $pdo->prepare('SELECT attendance_id FROM attendance WHERE driver_id = ? AND attendance_date = ?');
+        $exists->execute([$targetDriverId, $date]);
+        $existingId = (int)$exists->fetchColumn();
+
+        if ($existingId > 0) {
+            $upd = $pdo->prepare(
+                'UPDATE attendance
+                 SET time_in = ?, time_out = ?, verification_status = ?, rejection_reason = ?
+                 WHERE attendance_id = ?'
+            );
+            $upd->execute([
+                $timeIn . ':00',
+                $timeOut !== '' ? $timeOut . ':00' : null,
+                strtolower($verification),
+                $rejectionReason,
+                $existingId,
+            ]);
+            $attendanceId = $existingId;
+        } else {
+            $ins = $pdo->prepare(
+                'INSERT INTO attendance (driver_id, vehicle_id, attendance_date, time_in, time_out,
+                                         verification_status, rejection_reason)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)'
+            );
+            $ins->execute([
+                $targetDriverId, $vehicleId, $date,
+                $timeIn . ':00',
+                $timeOut !== '' ? $timeOut . ':00' : null,
+                strtolower($verification),
+                $rejectionReason,
+            ]);
+            $attendanceId = (int)$pdo->lastInsertId();
+        }
+
+        log_action($pdo, (int)$user['user_id'], 'ATTENDANCE_MANUAL',
+            'Recorded attendance for driver ' . $targetDriverId . ' on ' . $date . ' (' . $verification . ')');
+        json_out(['id' => $attendanceId, 'verificationStatus' => $verification], 201);
+    }
+
     $res = active_reservation_for_driver($pdo, $driverId);
     if (!$res || !$res['vehicle_id']) {
         json_error('No assigned vehicle found for today.', 422);

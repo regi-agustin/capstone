@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Download, Plus, Eye, Trash2, ChevronLeft, ChevronRight, Phone, MapPin } from 'lucide-react'
-import { fetchDrivers, fetchPayrollRecords, formatDate, formatPeso, statusLabel } from '../services/payrollService.js'
+import { Download, Plus, Eye, Trash2, Phone, MapPin, UserPlus } from 'lucide-react'
+import { fetchDrivers, fetchPayrollRecords, addDriver, formatDate, formatPeso, statusLabel } from '../services/payrollService.js'
 import SearchBar from '../../ro/components/SearchBar.jsx'
 import StatusBadge from '../../ro/components/StatusBadge.jsx'
+import Pagination from '../../ro/components/Pagination.jsx'
+import Modal from '../../ro/components/Modal.jsx'
+import { downloadCsv } from '../../ro/utils/csv.js'
 
 function initials(name) {
   return (name || '')
@@ -21,6 +24,13 @@ export default function DriverRecords() {
   const [statusFilter, setStatusFilter] = useState('All')
   const [selectedId, setSelectedId] = useState(null)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+  const [showAdd, setShowAdd] = useState(false)
+  const [addForm, setAddForm] = useState({ name: '', contact: '' })
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState('')
+  const [msg, setMsg] = useState('')
+  const PAGE_SIZE = 10
 
   useEffect(() => {
     Promise.all([fetchDrivers(), fetchPayrollRecords()])
@@ -38,6 +48,46 @@ export default function DriverRecords() {
     const matchesStatus = statusFilter === 'All' || d.status === statusFilter
     return matchesSearch && matchesStatus
   })
+
+  const pageCount = Math.ceil(filtered.length / PAGE_SIZE)
+  const safePage = Math.min(page, Math.max(1, pageCount))
+  const pageData = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  function handleExport() {
+    if (filtered.length === 0) return
+    downloadCsv(
+      'driver-records.csv',
+      ['Driver ID', 'Name', 'Contact', 'License Number', 'License Expiry', 'Hire Date', 'Address', 'Status'],
+      filtered.map((d) => [
+        `DRV-${String(d.id).padStart(3, '0')}`, d.name, d.contact,
+        d.licenseNumber || '', d.licenseExpiry, d.hireDate, d.address || '', d.status,
+      ])
+    )
+  }
+
+  async function handleAddDriver(e) {
+    e.preventDefault()
+    setAddError('')
+    if (!addForm.name.trim() || !addForm.contact.trim()) {
+      setAddError('Name and contact number are required.')
+      return
+    }
+    setAdding(true)
+    try {
+      const created = await addDriver({ name: addForm.name.trim(), contact: addForm.contact.trim() })
+      setShowAdd(false)
+      setAddForm({ name: '', contact: '' })
+      setMsg(`Driver ${created.name} added.`)
+      setTimeout(() => setMsg(''), 4000)
+      const d = await fetchDrivers()
+      setDrivers(d)
+      setSelectedId(created.id)
+    } catch (e) {
+      setAddError(e.message)
+    } finally {
+      setAdding(false)
+    }
+  }
 
   const selected = drivers.find((d) => d.id === selectedId) || null
   const selectedPayroll = useMemo(
@@ -87,13 +137,14 @@ export default function DriverRecords() {
         </select>
       </div>
       <div className="toolbar" style={{ justifyContent: 'flex-end', marginBottom: 18 }}>
-        <button className="btn btn--secondary btn--sm" title="Export to Excel (upcoming)">
+        <button onClick={handleExport} className="btn btn--secondary btn--sm">
           <Download size={14} /> Export
         </button>
-        <button className="btn btn--primary btn--sm" title="Driver enrollment handled by Driver Management">
+        <button onClick={() => setShowAdd(true)} className="btn btn--primary btn--sm">
           <Plus size={14} /> Add Driver
         </button>
       </div>
+      {msg && <div className="success-banner" style={{ marginBottom: 16 }}>{msg}</div>}
 
       <section className="card">
         <div className="card__header">
@@ -126,9 +177,9 @@ export default function DriverRecords() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((d, idx) => (
+                  {pageData.map((d, idx) => (
                     <tr key={d.id}>
-                      <td className="cell-muted">{idx + 1}</td>
+                      <td className="cell-muted">{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
                       <td className="cell-sub">DRV-{String(d.id).padStart(3, '0')}</td>
                       <td className="cell-main">{d.name}</td>
                       <td>{d.contact}</td>
@@ -152,18 +203,13 @@ export default function DriverRecords() {
               </table>
             </div>
           )}
-          <div className="toolbar" style={{ justifyContent: 'space-between', marginTop: 16 }}>
-            <span className="cell-sub">Showing {filtered.length} of {drivers.length} records</span>
-            <div className="toolbar">
-              <button className="btn btn--secondary btn--icon btn--sm" disabled title="Previous page">
-                <ChevronLeft size={16} />
-              </button>
-              <button className="btn btn--primary btn--sm">1</button>
-              <button className="btn btn--secondary btn--icon btn--sm" disabled title="Next page">
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+          <Pagination
+            page={safePage}
+            pageCount={pageCount}
+            onPage={setPage}
+            total={filtered.length}
+            label={`Showing ${pageData.length} of ${filtered.length} records`}
+          />
         </div>
       </section>
 
@@ -361,6 +407,48 @@ export default function DriverRecords() {
           </div>
         </section>
       )}
+
+      <Modal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="Add Driver"
+        subtitle="Enroll a new driver record"
+        size="sm"
+        footer={
+          <>
+            <button type="button" className="btn btn--secondary" onClick={() => setShowAdd(false)}>
+              Cancel
+            </button>
+            <button type="submit" form="add-driver-form" className="btn btn--primary" disabled={adding}>
+              <UserPlus size={16} /> {adding ? 'Adding...' : 'Add Driver'}
+            </button>
+          </>
+        }
+      >
+        <form id="add-driver-form" onSubmit={handleAddDriver} style={{ display: 'grid', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ad-name">Full Name <span className="req">*</span></label>
+            <input
+              id="ad-name"
+              className="form-input"
+              placeholder="e.g. Juan Dela Cruz"
+              value={addForm.name}
+              onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ad-contact">Contact Number <span className="req">*</span></label>
+            <input
+              id="ad-contact"
+              className="form-input"
+              placeholder="e.g. 0917 123 4567"
+              value={addForm.contact}
+              onChange={(e) => setAddForm({ ...addForm, contact: e.target.value })}
+            />
+          </div>
+          {addError && <div className="error-banner">{addError}</div>}
+        </form>
+      </Modal>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Calendar,
   Users,
@@ -164,9 +165,9 @@ export default function Dashboard() {
             </div>
             <div className="divider" />
             <div style={{ textAlign: 'center' }}>
-              <a href="#/payroll" className="toolbar" style={{ justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}>
+              <Link to="/payroll" className="toolbar" style={{ justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}>
                 View all payroll records <ChevronRight size={14} />
-              </a>
+              </Link>
             </div>
           </div>
         </section>
@@ -202,9 +203,9 @@ export default function Dashboard() {
             </div>
             <div className="divider" />
             <div style={{ textAlign: 'center' }}>
-              <a href="#/attendance" className="toolbar" style={{ justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}>
+              <Link to="/attendance" className="toolbar" style={{ justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}>
                 View attendance records <ChevronRight size={14} />
-              </a>
+              </Link>
             </div>
           </div>
         </section>
@@ -233,9 +234,9 @@ export default function Dashboard() {
             </div>
             <div className="divider" />
             <div style={{ textAlign: 'center' }}>
-              <a href="#/payroll" className="toolbar" style={{ justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}>
+              <Link to="/payroll" className="toolbar" style={{ justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}>
                 View payroll records <ChevronRight size={14} />
-              </a>
+              </Link>
             </div>
           </div>
         </section>
@@ -269,9 +270,9 @@ export default function Dashboard() {
             )}
             <div className="divider" />
             <div style={{ textAlign: 'center' }}>
-              <a href="#/notifications" className="toolbar" style={{ justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}>
+              <Link to="/notifications" className="toolbar" style={{ justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}>
                 View all notifications <ChevronRight size={14} />
-              </a>
+              </Link>
             </div>
           </div>
         </section>
@@ -303,9 +304,9 @@ export default function Dashboard() {
             )}
             <div className="divider" />
             <div style={{ textAlign: 'center' }}>
-              <a href="#/notifications" className="toolbar" style={{ justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}>
+              <Link to="/notifications" className="toolbar" style={{ justifyContent: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}>
                 View all announcements <ChevronRight size={14} />
-              </a>
+              </Link>
             </div>
           </div>
         </section>

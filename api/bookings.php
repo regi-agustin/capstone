@@ -293,7 +293,56 @@ if ($method === 'POST') {
         json_out(booking_shape(find_booking($pdo, $id)));
     }
 
-    json_error('Action must be one of: create, confirm, deny.', 422);
+    if ($action === 'cancel') {
+        require_role($user, ['superadmin', 'admin', 'reservation_officer', 'customer']);
+
+        $rawId = trim((string)($data['id'] ?? ''));
+        if ($rawId === '' || $rawId === '0') json_error('A booking id is required.', 422);
+        if (preg_match('/^BK-\d{4}-(\d+)$/', $rawId, $m)) {
+            $id = (int)$m[1];
+        } else {
+            $id = (int)$rawId;
+        }
+        if ($id <= 0) json_error('Invalid booking id.', 422);
+        $res = find_booking($pdo, $id);
+        if (!$res) json_error('Booking not found.', 404);
+        if (!in_array($res['status'], ['pending', 'confirmed', 'on_trip'], true)) {
+            json_error('Only pending, confirmed, or ongoing bookings can be cancelled.', 422);
+        }
+
+        // Customers may only cancel their own bookings.
+        if ($isCustomer) {
+            $stmt = $pdo->prepare(
+                'SELECT u.user_id FROM reservations r
+                 JOIN clients c ON c.client_id = r.client_id
+                 JOIN users u ON u.user_id = c.user_id
+                 WHERE r.reservation_id = ?'
+            );
+            $stmt->execute([$id]);
+            $ownerId = (int)$stmt->fetchColumn();
+            if ($ownerId > 0 && $ownerId !== (int)$user['user_id']) {
+                json_error('You can only cancel your own reservations.', 403);
+            }
+        }
+
+        $pdo->beginTransaction();
+        try {
+            if ($res['status'] === 'pending') {
+                $pdo->prepare('UPDATE reservations SET status = "cancelled" WHERE reservation_id = ?')->execute([$id]);
+            } else {
+                cancel_reservation($pdo, $id);
+            }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            json_error('Failed to cancel booking: ' . $e->getMessage(), 500);
+        }
+
+        log_action($pdo, (int)$user['user_id'], 'CANCEL_BOOKING', 'Cancelled reservation ' . $res['reservation_id'] . ' (' . $res['status'] . ')');
+        json_out(booking_shape(find_booking($pdo, $id)));
+    }
+
+    json_error('Action must be one of: create, confirm, deny, cancel.', 422);
 }
 
 json_error('Method not allowed.', 405);
