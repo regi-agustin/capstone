@@ -318,7 +318,7 @@ svg { flex-shrink: 0; }
 
 .ro-app .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .ro-app .form-grid .full { grid-column: 1 / -1; }
-@media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .ro-app .form-grid { grid-template-columns: 1fr; } }
 
 .ro-app .input-row { display: flex; gap: 10px; align-items: center; }
 
@@ -1053,7 +1053,23 @@ svg { flex-shrink: 0; }
 .ro-app .filter-tab { flex: 1; }
 .ro-app .toolbar { flex-direction: column; align-items: stretch; }
 .ro-app .toolbar .search-bar { max-width: none; width: 100%; }
-.ro-app .page-head { flex-direction: column; }
+.ro-app .page-head { flex-direction: column; gap: 10px; }
 .ro-app .page-actions { width: 100%; }
 .ro-app .page-actions .btn { flex: 1; }
+.ro-app .modal__body { padding: 16px; }
+.ro-app .modal__footer { padding: 14px 16px; }
+.ro-app .modal__footer .btn { flex: 1; justify-content: center; }
+.ro-app .toast-stack { left: 12px; right: 12px; max-width: none; }
+.ro-app .dropdown__menu { position: fixed; top: 60px; left: 12px; right: 12px; max-width: none; }
+.ro-app .card__body { padding: 16px; }
+.ro-app .form-section { padding: 14px; }
+.ro-app .vehicle-option { align-items: flex-start; flex-direction: column; gap: 8px; }
+.ro-app .ai-banner { flex-direction: column; }
+.ro-app .detail-grid { grid-template-columns: 1fr; }
+.ro-app .table th, .ro-app .table td { padding: 10px 12px; }
+}
+
+@media (max-width: 380px) {
+.ro-app .page-head h1 { font-size: 18px; }
+.ro-app .picker-popup--time { width: 290px; }
 }
