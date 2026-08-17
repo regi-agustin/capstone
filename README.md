@@ -68,6 +68,26 @@ npm run build
 Copy the contents of `dist/` into `C:\xampp\htdocs\fleetops\` (same folder that contains `api/`),
 then open `http://localhost/fleetops/`.
 
+## Always-on hosting (InfinityFree — free, runs without your PC)
+
+Cloudflare tunnels only work while your computer is on. For a permanent link, host the app on
+InfinityFree (free PHP 8 + MySQL + phpMyAdmin):
+
+1. Sign up at **infinityfree.com** and create a new project → pick a subdomain
+   (e.g. `fleetops.infinityfreeapp.com`).
+2. In their control panel, create a MySQL database. Note the values they give you
+   (host like `sqlxxx.infinityfree.com`, database name, username, password).
+3. Import **`fleetops_db_remote.sql`** (a version of the dump with the
+   `CREATE DATABASE`/`USE` lines stripped — their host assigns the DB name) via their phpMyAdmin.
+4. Build the frontend: `npm install` then `npm run build`.
+5. Upload to your project's `htdocs`:
+   - the contents of `dist/` (frontend), and
+   - the `api/` folder, and
+   - the `.htaccess` file (SPA routing so subroutes like `/payroll` don't 404 on refresh).
+6. Edit `api/config.php` on the server with their database credentials
+   (host, name, user, pass) and set your PHP version to 8.x in their control panel.
+7. Open your subdomain — it's live 24/7. Share the link.
+
 ## Login
 
 All demo accounts (see `fleetops_db.sql`):
