@@ -29,20 +29,30 @@ $stmt = $pdo->prepare(
 $stmt->execute([$user['user_id']]);
 
 $out = array_map(function ($n) {
-    return [
+$icon = 'Bell';
+        switch ($n['type']) {
+            case 'attendance_verified':
+                $icon = 'CheckCircle';
+                break;
+            case 'payroll_released':
+                $icon = 'DollarSign';
+                break;
+            case 'attendance_rejected':
+                $icon = 'XCircle';
+                break;
+            case 'vehicle_updated':
+                $icon = 'Truck';
+                break;
+        }
+
+        return [
         'id' => (int)$n['notification_id'],
         'type' => $n['type'],
         'title' => $n['title'],
         'description' => $n['description'],
         'timestamp' => date('Y-m-d h:i A', strtotime($n['created_at'])),
         'isRead' => (int)$n['is_read'] === 1,
-        'icon' => match ($n['type']) {
-            'attendance_verified' => 'CheckCircle',
-            'payroll_released' => 'DollarSign',
-            'attendance_rejected' => 'XCircle',
-            'vehicle_updated' => 'Truck',
-            default => 'Bell',
-        },
+        'icon' => $icon,
     ];
 }, $stmt->fetchAll());
 
