@@ -119,12 +119,17 @@ function permission_matrix(): array
 // Map DB vehicle status to the GUI display status
 function vehicle_gui_status(string $status): string
 {
-    return match ($status) {
-        'available' => 'Available',
-        'reserved', 'on_trip' => 'Assigned',
-        'maintenance' => 'Maintenance',
-        default => ucfirst($status),
-    };
+    switch ($status) {
+        case 'available':
+            return 'Available';
+        case 'reserved':
+        case 'on_trip':
+            return 'Assigned';
+        case 'maintenance':
+            return 'Maintenance';
+        default:
+            return ucfirst($status);
+    }
 }
 
 function vehicle_car_code(array $vehicle): string

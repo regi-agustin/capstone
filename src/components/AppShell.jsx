@@ -43,6 +43,7 @@ export default function AppShell({
       return false
     }
   })
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   function toggleCollapsed() {
     setCollapsed((v) => {
@@ -55,10 +56,15 @@ export default function AppShell({
     })
   }
 
+  function closeMobile() {
+    setMobileOpen(false)
+  }
+
   return (
-    <div className={`app${collapsed ? ' sidebar-collapsed' : ''}`}>
+    <div className={`app${collapsed ? ' sidebar-collapsed' : ''}${mobileOpen ? ' sidebar-open' : ''}`}>
+      <div className="sidebar-backdrop" onClick={closeMobile} />
       <aside className="sidebar">
-        <div className="logo">
+        <div className="logo" onClick={closeMobile}>
           <div className="logo-mark">FO</div>
           FleetOps
         </div>
@@ -79,6 +85,7 @@ export default function AppShell({
                       to={item.to}
                       end={item.end}
                       title={item.label}
+                      onClick={closeMobile}
                       className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
                     >
                       <I size={18} /> {item.label}
@@ -91,6 +98,7 @@ export default function AppShell({
                     className={`nav-item ${activeKey === item.key ? 'active' : ''} ${item.soon ? 'badge-row' : ''}`}
                     onClick={() => {
                       if (item.soon) return
+                      closeMobile()
                       if (item.onClick) item.onClick()
                       else if (onNavigate) onNavigate(item.key)
                     }}
@@ -134,9 +142,20 @@ export default function AppShell({
 
       <div className="main">
         <header className="topbar">
-          <div>
-            <h2>{title}</h2>
-            <div className="crumb">{crumb}</div>
+          <div className="topbar-left">
+            <button
+              type="button"
+              className="sidebar-toggle"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
+              title="Menu"
+            >
+              <Icon.menu size={20} />
+            </button>
+            <div className="topbar-title">
+              <h2>{title}</h2>
+              <div className="crumb">{crumb}</div>
+            </div>
           </div>
           <div className="topbar-right">
             {topbarExtra}
