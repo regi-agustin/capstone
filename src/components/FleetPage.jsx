@@ -1,7 +1,18 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { Upload, FileText, X } from 'lucide-react'
 import { Icon } from './Icons.jsx'
+import VehiclePhotos from '../ro/components/VehiclePhotos.jsx'
 
 const VEHICLE_TYPES = ['AUV', 'SUV', 'L300']
+const MAX_IMAGES = 12
+
+const readAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 
 export default function FleetPage({ vehicles, onAddVehicle }) {
   const [modalOpen, setModalOpen] = useState(false)
@@ -14,6 +25,10 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
     seats: 5,
     dailyRate: 0
   })
+  const [images, setImages] = useState([])
+  const [primaryIndex, setPrimaryIndex] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const fileRef = useRef(null)
   const [error, setError] = useState('')
 
   const byType = (t) => vehicles.filter((v) => v.type === t)
@@ -21,8 +36,36 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
 
   const openModal = () => {
     setForm({ plate: '', type: 'AUV', model: '', year: new Date().getFullYear(), seats: 5, dailyRate: 0 })
+    setImages([])
+    setPrimaryIndex(0)
     setError('')
     setModalOpen(true)
+  }
+
+  const handlePickImages = async (files) => {
+    const list = Array.from(files || [])
+    if (!list.length) return
+    if (list.some((f) => !f.type.startsWith('image/'))) {
+      setError('Only image files (PNG, JPG, or WebP) are supported.')
+      return
+    }
+    setError('')
+    const room = Math.max(0, MAX_IMAGES - images.length)
+    const pending = list.slice(0, room)
+    const added = await Promise.all(pending.map(async (f) => ({ name: f.name, dataUrl: await readAsDataUrl(f) })))
+    setImages((prev) => [...prev, ...added])
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setIsDragging(false)
+    handlePickImages(e.dataTransfer.files)
+  }
+
+  const removeImage = (idx) => {
+    setImages((prev) => prev.filter((_, i) => i !== idx))
+    setPrimaryIndex(0)
   }
 
   const handleSubmit = async () => {
@@ -33,7 +76,11 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
     setSaving(true)
     setError('')
     try {
-      await onAddVehicle(form)
+      const ordered = [...images]
+      if (ordered.length && primaryIndex >= 0 && primaryIndex < ordered.length) {
+        ordered.splice(0, 0, ordered.splice(primaryIndex, 1)[0])
+      }
+      await onAddVehicle({ ...form, images: ordered.map((i) => i.dataUrl) })
       setModalOpen(false)
     } catch (e) {
       setError(e.message)
@@ -90,6 +137,7 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
             <table>
               <thead>
                 <tr>
+                  <th></th>
                   <th>Fleet / Car Code</th>
                   <th>Plate Number</th>
                   <th>Model</th>
@@ -100,13 +148,20 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
               <tbody>
                 {byType(t).length === 0 && (
                   <tr>
-                    <td colSpan={5} className="cell-sub" style={{ textAlign: 'center', padding: 24 }}>
+                    <td colSpan={6} className="cell-sub" style={{ textAlign: 'center', padding: 24 }}>
                       No vehicles in this category yet. Use "Add Vehicle" to register the first unit.
                     </td>
                   </tr>
                 )}
                 {byType(t).map((v) => (
                   <tr key={v.id}>
+                    <td>
+                      {v.photoUrl || (v.images && v.images.length) ? (
+                        <VehiclePhotos vehicle={v} thumb={{ width: 46, height: 34, borderRadius: 6 }} />
+                      ) : (
+                        <Icon.car width={20} height={20} />
+                      )}
+                    </td>
                     <td className="mono cell-strong">{v.carCode}</td>
                     <td className="mono">{v.plate}</td>
                     <td>{v.model}</td>
@@ -122,7 +177,7 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
 
       {modalOpen && (
         <div className="overlay" onClick={() => !saving && setModalOpen(false)}>
-          <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 540 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <h3>Add New Vehicle</h3>
               <button className="x" onClick={() => !saving && setModalOpen(false)}>×</button>
@@ -154,6 +209,149 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
               <div className="form-row">
                 <label>Daily Rate (₱)</label>
                 <input type="number" min={0} step="50" value={form.dailyRate} onChange={set('dailyRate')} />
+              </div>
+              <div className="form-row">
+                <label>Vehicle Photo ( Add more images for customers to use as visual references. ) </label>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleDrop}
+                  style={{
+                    border: `2px dashed ${isDragging ? '#991b1b' : 'var(--border)'}`,
+                    background: isDragging ? 'var(--red-bg)' : '#fbfdff',
+                    borderRadius: 12,
+                    padding: '26px 18px',
+                    textAlign: 'center',
+                    transition: 'border-color .15s, background .15s',
+                  }}
+                >
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    id="vehicle-photo"
+                    accept="image/png,image/jpeg,image/webp"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => handlePickImages(e.target.files)}
+                  />
+                  <label htmlFor="vehicle-photo" style={{ cursor: 'pointer', display: 'block' }}>
+                    <span
+                      style={{
+                        width: 58,
+                        height: 58,
+                        borderRadius: '50%',
+                        background: 'var(--red-bg)',
+                        color: '#991b1b',
+                        display: 'grid',
+                        placeItems: 'center',
+                        margin: '0 auto 12px',
+                      }}
+                    >
+                      <Upload size={26} />
+                    </span>
+                    <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>
+                      Drag and drop or{' '}
+                      <span style={{ color: '#991b1b', fontWeight: 700, textDecoration: 'underline' }}>Browse</span>{' '}
+                      to choose files
+                    </span>
+                  </label>
+                </div>
+                <span className="help" style={{ display: 'block', textAlign: 'center', marginTop: 8, fontSize: 12 }}>
+                  All the PNG, JPG and WebP image formats are supported.
+                </span>
+                
+                {images.length > 0 && (
+                  <div style={{ marginTop: 14 }}>
+                    <div className="cell-sub" style={{ marginBottom: 8, fontWeight: 700, fontSize: 12 }}>
+                      Uploaded Docs ({images.length})
+                    </div>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      {images.map((img, i) => {
+                        const isPrimary = i === primaryIndex
+                        return (
+                          <div
+                            key={i}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 10,
+                              padding: '8px 10px',
+                              borderRadius: 10,
+                              background: isPrimary ? 'var(--red-bg)' : '#f8fafc',
+                              border: isPrimary ? '1px solid #991b1b' : '1px solid var(--border)',
+                            }}
+                          >
+                            <FileText size={18} style={{ color: '#991b1b', flexShrink: 0 }} />
+                            <span
+                              style={{
+                                flex: 1,
+                                fontSize: 13,
+                                fontWeight: 600,
+                                color: 'var(--text)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {img.name}
+                            </span>
+                            {isPrimary ? (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  color: '#991b1b',
+                                  background: '#fff',
+                                  borderRadius: 999,
+                                  padding: '3px 10px',
+                                  border: '1px solid #991b1b',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                Primary
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setPrimaryIndex(i)}
+                                title="Set as primary"
+                                aria-label={`Set ${img.name} as primary`}
+                                style={{
+                                  border: '1.5px solid var(--muted)',
+                                  background: '#fff',
+                                  borderRadius: 999,
+                                  width: 18,
+                                  height: 18,
+                                  padding: 0,
+                                  flexShrink: 0,
+                                  cursor: 'pointer',
+                                }}
+                              />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeImage(i)}
+                              aria-label="Remove photo"
+                              style={{
+                                border: 'none',
+                                background: 'none',
+                                color: 'var(--muted)',
+                                cursor: 'pointer',
+                                display: 'grid',
+                                placeItems: 'center',
+                                padding: 4,
+                                borderRadius: 6,
+                                flexShrink: 0,
+                              }}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="modal-foot">

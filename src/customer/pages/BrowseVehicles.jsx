@@ -4,6 +4,7 @@ import { fetchVehicles, createBooking, formatPeso } from '../services/customerSe
 import SearchBar from '../../ro/components/SearchBar.jsx'
 import StatusBadge from '../../ro/components/StatusBadge.jsx'
 import Modal from '../../ro/components/Modal.jsx'
+import VehiclePhotos from '../../ro/components/VehiclePhotos.jsx'
 
 const emojis = { MPV: '🚙', SUV: '🚘', Sedan: '🚗', Van: '🚐' }
 
@@ -176,9 +177,13 @@ export default function BrowseVehicles() {
                 <section key={vehicle.id} className="card">
                   <div className="card__body">
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ fontSize: 34 }}>{emojis[vehicle.type] || '🚗'}</div>
-                        <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                        {vehicle.photoUrl || (vehicle.images && vehicle.images.length) ? (
+                          <VehiclePhotos vehicle={vehicle} />
+                        ) : (
+                          <div style={{ fontSize: 34 }}>{emojis[vehicle.type] || '🚗'}</div>
+                        )}
+                        <div style={{ minWidth: 0 }}>
                           <h3 style={{ fontSize: 15 }}>{vehicle.model}</h3>
                           <div className="cell-sub">{vehicle.type}</div>
                           <div className="cell-sub">{vehicle.seats} Seats · {vehicle.plate}</div>

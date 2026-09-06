@@ -85,7 +85,6 @@ CREATE TABLE `attendance` (
 
 LOCK TABLES `attendance` WRITE;
 /*!40000 ALTER TABLE `attendance` DISABLE KEYS */;
-INSERT INTO `attendance` VALUES (7,6,3,'2026-08-14','08:00:00','17:00:00',NULL,'verified',NULL),(8,7,4,'2026-08-14','08:15:00','17:30:00',NULL,'verified',NULL),(9,8,5,'2026-08-14','07:45:00',NULL,NULL,'pending',NULL),(10,6,3,'2026-08-13','07:50:00','17:10:00',NULL,'verified',NULL),(11,7,4,'2026-08-13','08:05:00','17:20:00',NULL,'verified',NULL);
 /*!40000 ALTER TABLE `attendance` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -512,7 +511,7 @@ CREATE TABLE `reservations` (
   CONSTRAINT `fk_reservations_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`client_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_reservations_driver` FOREIGN KEY (`driver_id`) REFERENCES `drivers` (`driver_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_reservations_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -521,7 +520,6 @@ CREATE TABLE `reservations` (
 
 LOCK TABLES `reservations` WRITE;
 /*!40000 ALTER TABLE `reservations` DISABLE KEYS */;
-INSERT INTO `reservations` VALUES (2,2,NULL,3,'BK-2026-0001','2026-08-14 12:14:11','2026-08-17','2026-08-20','08:00:00','17:00:00',NULL,'Family trip','Clark Freeport Zone, Pampanga',7,NULL,'pending',NULL,7500.00,0.00),(4,2,NULL,NULL,'BK-2026-0004','2026-08-14 19:59:41','2026-08-16','2026-08-17','09:00:00','17:00:00','verify-cancel','Clark Freeport Zone','Clark Freeport Zone',2,NULL,'cancelled',NULL,5000.00,0.00),(5,2,NULL,NULL,'BK-2026-0005','2026-08-14 20:00:03','2026-08-16','2026-08-17','09:00:00','17:00:00','verify-cancel','Clark Freeport Zone','Clark Freeport Zone',2,NULL,'cancelled',NULL,5000.00,0.00);
 /*!40000 ALTER TABLE `reservations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -763,12 +761,13 @@ CREATE TABLE `vehicles` (
   `color` varchar(30) DEFAULT NULL,
   `owner_id` int(10) unsigned DEFAULT NULL,
   `status` enum('available','reserved','on_trip','maintenance','inactive') NOT NULL DEFAULT 'available',
+  `vehicle_image` varchar(255) DEFAULT NULL,
   `purchase_date` date DEFAULT NULL,
   PRIMARY KEY (`vehicle_id`),
   UNIQUE KEY `uk_vehicles_plate` (`plate_number`),
   KEY `idx_vehicles_owner` (`owner_id`),
   CONSTRAINT `fk_vehicles_owner` FOREIGN KEY (`owner_id`) REFERENCES `vehicle_owners` (`owner_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -777,8 +776,34 @@ CREATE TABLE `vehicles` (
 
 LOCK TABLES `vehicles` WRITE;
 /*!40000 ALTER TABLE `vehicles` DISABLE KEYS */;
-INSERT INTO `vehicles` VALUES (3,'ABC 1234','Toyota Innova','MPV',2500.00,7,2021,NULL,NULL,'available','2022-01-15'),(4,'BCD 2345','Mitsubishi Xpander','MPV',2300.00,7,2022,NULL,NULL,'available','2022-06-20'),(5,'CDE 3456','Toyota Veloz','MPV',2300.00,7,2023,NULL,NULL,'available','2023-03-10'),(6,'DEF 4567','Toyota Fortuner','SUV',3800.00,7,2021,NULL,NULL,'available','2021-11-05'),(7,'EFG 5678','Honda City','Sedan',1800.00,5,2022,NULL,NULL,'available','2022-09-01'),(8,'FGH 6789','Nissan Urban','Van',4000.00,15,2020,NULL,NULL,'available','2020-05-15'),(9,'GHI 7890','Hyundai Starex','Van',3500.00,12,2019,NULL,NULL,'available','2019-08-22'),(10,'HIJ 8901','Toyota Hiace','Van',4200.00,15,2022,NULL,NULL,'available','2022-02-14');
 /*!40000 ALTER TABLE `vehicles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `vehicle_images`
+--
+
+DROP TABLE IF EXISTS `vehicle_images`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vehicle_images` (
+  `image_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `vehicle_id` int(10) unsigned NOT NULL,
+  `image_url` varchar(255) NOT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`image_id`),
+  KEY `idx_vehicle_images_vehicle` (`vehicle_id`),
+  CONSTRAINT `fk_vehicle_images_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vehicle_images`
+--
+
+LOCK TABLES `vehicle_images` WRITE;
+/*!40000 ALTER TABLE `vehicle_images` DISABLE KEYS */;
+/*!40000 ALTER TABLE `vehicle_images` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
