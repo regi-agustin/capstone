@@ -5,8 +5,7 @@ import SearchBar from '../../ro/components/SearchBar.jsx'
 import StatusBadge from '../../ro/components/StatusBadge.jsx'
 import Modal from '../../ro/components/Modal.jsx'
 import VehiclePhotos from '../../ro/components/VehiclePhotos.jsx'
-
-const emojis = { MPV: '🚙', SUV: '🚘', Sedan: '🚗', Van: '🚐' }
+import { Icon } from '../../components/Icons.jsx'
 
 export default function BrowseVehicles() {
   const [vehicles, setVehicles] = useState([])
@@ -203,7 +202,7 @@ export default function BrowseVehicles() {
                         {vehicle.photoUrl || (vehicle.images && vehicle.images.length) ? (
                           <VehiclePhotos vehicle={vehicle} />
                         ) : (
-                          <div style={{ fontSize: 34 }}>{emojis[vehicle.type] || '🚗'}</div>
+                          <Icon.car width={20} height={20} />
                         )}
                         <div style={{ minWidth: 0 }}>
                           <h3 style={{ fontSize: 15 }}>{vehicle.model}</h3>

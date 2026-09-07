@@ -307,22 +307,15 @@ function preferences_for(PDO $pdo, int $userId): array
     ];
 }
 
-// Save an optional base64 image payload into uploads/vehicles and return its
-// public URL path, or null when absent/empty/malformed.
+// Validate a base64 image payload and return the data URL for direct DB storage,
+// or null when absent/empty/malformed.
 function save_single_image(?string $image): ?string
 {
     if (!preg_match('#^data:image/(png|jpe?g|webp);base64,(.+)$#i', (string)$image, $m)) {
         return null;
     }
 
-    $dir = __DIR__ . '/uploads/vehicles';
-    if (!is_dir($dir)) mkdir($dir, 0777, true);
-
-    $ext = strtolower($m[1]);
-    $name = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-    file_put_contents($dir . '/' . $name, base64_decode($m[2]));
-
-    return '/fleetops/api/uploads/vehicles/' . $name;
+    return $image;
 }
 
 // Persist the vehicle images from a request body. Accepts an explicit list of

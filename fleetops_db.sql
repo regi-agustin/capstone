@@ -41,7 +41,7 @@ CREATE TABLE `action_logs` (
   PRIMARY KEY (`log_id`),
   KEY `idx_action_logs_user` (`user_id`),
   CONSTRAINT `fk_action_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -50,7 +50,6 @@ CREATE TABLE `action_logs` (
 
 LOCK TABLES `action_logs` WRITE;
 /*!40000 ALTER TABLE `action_logs` DISABLE KEYS */;
-INSERT INTO `action_logs` VALUES (8,1,'UPDATE_ACCOUNT','Updated user account (user id 2, Role: driver_management_head).','2026-08-13 17:54:56'),(9,8,'Payroll','Set payroll 4 to paid','2026-08-14 04:32:10'),(10,1,'CREATE_ACCOUNT','Created user account: miggy basina (Role: payroll_officer, Email: basinamigo@gmail.com)','2026-08-14 11:27:18'),(11,8,'ATTENDANCE_MANUAL','Recorded attendance for driver 6 on 2026-08-14 (Verified)','2026-08-14 11:59:10'),(12,9,'BACKUP_CODES','Viewed backup codes','2026-08-14 11:59:10'),(13,9,'CHANGE_PASSWORD','Password changed','2026-08-14 11:59:10'),(14,9,'CHANGE_PASSWORD','Password changed','2026-08-14 11:59:10'),(15,8,'ATTENDANCE_MANUAL','Recorded attendance for driver 6 on 2026-08-14 (Verified)','2026-08-14 11:59:41'),(16,9,'CANCEL_BOOKING','Cancelled reservation  (pending)','2026-08-14 11:59:41'),(17,9,'BACKUP_CODES','Viewed backup codes','2026-08-14 11:59:41'),(18,9,'CHANGE_PASSWORD','Password changed','2026-08-14 11:59:41'),(19,9,'CHANGE_PASSWORD','Password changed','2026-08-14 11:59:41'),(20,8,'ATTENDANCE_MANUAL','Recorded attendance for driver 6 on 2026-08-14 (Verified)','2026-08-14 12:00:03'),(21,9,'CANCEL_BOOKING','Cancelled reservation 5 (pending)','2026-08-14 12:00:03'),(22,9,'BACKUP_CODES','Viewed backup codes','2026-08-14 12:00:03'),(23,9,'CHANGE_PASSWORD','Password changed','2026-08-14 12:00:03'),(24,9,'CHANGE_PASSWORD','Password changed','2026-08-14 12:00:03'),(25,1,'ARCHIVE_ACCOUNT','Archived user account: miggy basina (Role: payroll_officer)','2026-08-14 12:03:15'),(26,1,'UPDATE_ACCOUNT','Set account status to active (user id 10).','2026-08-14 12:03:18'),(27,1,'UPDATE_ACCOUNT','Set account status to suspended (user id 10).','2026-08-14 12:03:18'),(28,1,'UPDATE_ACCOUNT','Set account status to active (user id 10).','2026-08-14 12:03:19'),(29,1,'ARCHIVE_ACCOUNT','Archived user account: miggy basina (Role: payroll_officer)','2026-08-14 12:03:21'),(30,1,'ARCHIVE_ACCOUNT','Archived user account: macasinag (Role: billing_officer)','2026-08-14 12:03:28'),(31,1,'ARCHIVE_ACCOUNT','Archived user account: elena.reyes (Role: reservation_officer)','2026-08-14 12:03:29'),(32,1,'ARCHIVE_ACCOUNT','Archived user account: miggy.basina (Role: driver_management_head)','2026-08-14 12:03:30'),(33,1,'ARCHIVE_ACCOUNT','Archived user account: maria.santos (Role: payroll_officer)','2026-08-14 12:03:32'),(34,1,'UPDATE_ACCOUNT','Set account status to active (user id 10).','2026-08-14 12:07:48'),(35,1,'ARCHIVE_ACCOUNT','Archived user account: miggy basina (Role: payroll_officer)','2026-08-14 12:18:16'),(36,1,'ARCHIVE_ACCOUNT','Archived user account: charles.buque (Role: customer)','2026-08-14 12:18:18');
 /*!40000 ALTER TABLE `action_logs` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -68,7 +67,7 @@ CREATE TABLE `attendance` (
   `attendance_date` date NOT NULL,
   `time_in` time NOT NULL,
   `time_out` time DEFAULT NULL,
-  `vehicle_image` varchar(255) DEFAULT NULL,
+  `vehicle_image` text DEFAULT NULL,
   `verification_status` enum('pending','verified','rejected') NOT NULL DEFAULT 'pending',
   `rejection_reason` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`attendance_id`),
@@ -141,7 +140,7 @@ CREATE TABLE `clients` (
   KEY `idx_clients_company` (`company_name`),
   KEY `idx_clients_user` (`user_id`),
   CONSTRAINT `fk_clients_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -150,7 +149,6 @@ CREATE TABLE `clients` (
 
 LOCK TABLES `clients` WRITE;
 /*!40000 ALTER TABLE `clients` DISABLE KEYS */;
-INSERT INTO `clients` VALUES (2,9,'Charles John Buque','Charles John Buque','0912 345 6789','charles.buque@email.com','individual','2026-08-14','active');
 /*!40000 ALTER TABLE `clients` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -270,7 +268,7 @@ CREATE TABLE `login_sessions` (
   PRIMARY KEY (`session_id`),
   KEY `idx_login_sessions_user` (`user_id`),
   CONSTRAINT `fk_login_sessions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -279,7 +277,6 @@ CREATE TABLE `login_sessions` (
 
 LOCK TABLES `login_sessions` WRITE;
 /*!40000 ALTER TABLE `login_sessions` DISABLE KEYS */;
-INSERT INTO `login_sessions` VALUES (1,8,'Windows · Chrome','Pampanga, Philippines','192.168.1.10','active','2026-08-14 05:20:58'),(2,8,'Android · Chrome','Pampanga, Philippines','192.168.1.11','active','2026-08-14 03:20:58'),(3,8,'Windows · Edge','Pampanga, Philippines','192.168.1.12','active','2026-08-13 05:20:58'),(4,9,'Windows · Chrome','Pampanga, Philippines','192.168.1.20','active','2026-08-14 05:20:58'),(5,9,'Android · Chrome','Pampanga, Philippines','192.168.1.21','active','2026-08-14 02:20:58'),(6,9,'Windows · Edge','Pampanga, Philippines','192.168.1.22','active','2026-08-12 05:20:58'),(7,8,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-08-14 05:22:59'),(8,8,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-08-14 05:26:00'),(9,9,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-08-14 05:26:06'),(10,9,'Windows · Edge','Pampanga, Philippines','::1','active','2026-08-14 05:29:47'),(11,8,'Windows · Edge','Pampanga, Philippines','::1','active','2026-08-14 05:29:59'),(12,8,'Windows · Edge','Pampanga, Philippines','::1','active','2026-08-14 11:25:19'),(13,9,'Windows · Edge','Pampanga, Philippines','::1','active','2026-08-14 11:25:28'),(14,1,'Windows · Edge','Pampanga, Philippines','::1','active','2026-08-14 11:25:57'),(15,10,'Windows · Edge','Pampanga, Philippines','::1','current','2026-08-14 11:27:33'),(16,1,'Windows · Edge','Pampanga, Philippines','::1','active','2026-08-14 11:29:15'),(17,8,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-08-14 11:59:10'),(18,9,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-08-14 11:59:10'),(19,8,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-08-14 11:59:41'),(20,9,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-08-14 11:59:41'),(21,8,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-08-14 12:00:03'),(22,9,'Windows · Chrome','Pampanga, Philippines','::1','current','2026-08-14 12:00:03'),(23,8,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-08-14 12:00:28'),(24,8,'Windows · Edge','Pampanga, Philippines','::1','current','2026-08-14 12:01:41'),(25,1,'Windows · Edge','Pampanga, Philippines','::1','active','2026-08-14 12:02:29'),(26,1,'Windows · Edge','Pampanga, Philippines','::1','active','2026-08-14 12:02:40'),(27,1,'Windows · Edge','Pampanga, Philippines','::1','active','2026-08-14 12:03:07'),(28,1,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-08-14 12:07:06'),(29,1,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-08-14 12:07:48'),(30,1,'Windows · Edge','Pampanga, Philippines','::1','active','2026-08-14 12:18:38'),(31,1,'Windows · Edge','Pampanga, Philippines','::1','active','2026-08-14 12:21:24'),(32,1,'Windows · Chrome','Pampanga, Philippines','::1','current','2026-08-14 12:25:00');
 /*!40000 ALTER TABLE `login_sessions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -333,7 +330,7 @@ CREATE TABLE `notifications` (
   PRIMARY KEY (`notification_id`),
   KEY `idx_notifications_user` (`user_id`),
   CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -342,7 +339,6 @@ CREATE TABLE `notifications` (
 
 LOCK TABLES `notifications` WRITE;
 /*!40000 ALTER TABLE `notifications` DISABLE KEYS */;
-INSERT INTO `notifications` VALUES (1,9,'reservation_confirmed','Reservation received','Your reservation BK-2026-0001 is awaiting approval.',1,'2026-08-14 04:14:11'),(2,8,'attendance_verified','OCR Attendance Verified','Ana Cruz attendance on 2026-08-14 has been verified.',1,'2026-08-14 04:30:05'),(3,8,'attendance_rejected','OCR Attendance Mismatch','Pedro Santos plate number mismatch on 2026-08-13. Entered: DEF 4567 | OCR: DEF 4567',1,'2026-08-14 04:30:05'),(4,8,'payroll_released','Payroll Record Updated','Juan Dela Cruz payroll record for the current cut-off was marked Completed.',1,'2026-08-14 04:30:05'),(5,8,'system_announcement','System Maintenance Schedule','Scheduled system maintenance is set for this weekend. Payroll features will be temporarily unavailable during the window.',0,'2026-08-14 05:21:20'),(6,8,'system_announcement','New Feature Update','Payroll and attendance enhancements are now live. Review the Help Center for details.',1,'2026-08-14 05:21:20'),(7,9,'system_announcement','System Maintenance Schedule','Scheduled system maintenance is set for this weekend. Booking features will be temporarily unavailable.',1,'2026-08-14 05:21:20');
 /*!40000 ALTER TABLE `notifications` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -553,7 +549,6 @@ CREATE TABLE `security_settings` (
 
 LOCK TABLES `security_settings` WRITE;
 /*!40000 ALTER TABLE `security_settings` DISABLE KEYS */;
-INSERT INTO `security_settings` VALUES (1,0,1,'Authenticator App (TOTP)',1,10,2,NULL,'Strong','2026-08-14','2026-08-14 05:20:58'),(2,0,1,'Authenticator App (TOTP)',1,10,2,NULL,'Strong','2026-08-14','2026-08-14 05:20:58'),(3,0,1,'Authenticator App (TOTP)',1,10,2,NULL,'Strong','2026-08-14','2026-08-14 05:20:58'),(4,0,1,'Authenticator App (TOTP)',1,10,2,NULL,'Strong','2026-08-14','2026-08-14 05:20:58'),(8,0,1,'Authenticator App (TOTP)',1,10,2,NULL,'Strong','2026-08-14','2026-08-14 05:20:58'),(9,1,1,'Authenticator App (TOTP)',1,10,0,'SHZU-2J8B-2RFV,KDMQ-EANX-NBT7,3KQ4-UTUT-GLNE,2R32-XYVE-5556,AZUN-SJQE-BV5M,HKML-BEFT-3DTU,UU4S-WX2A-BCFK,DZNQ-LQ64-UB5Q,KVYQ-ZYMH-646T,PGQ9-ECLQ-X3P2','Strong','2026-08-14','2026-08-14 11:59:10');
 /*!40000 ALTER TABLE `security_settings` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -651,7 +646,6 @@ CREATE TABLE `user_preferences` (
 
 LOCK TABLES `user_preferences` WRITE;
 /*!40000 ALTER TABLE `user_preferences` DISABLE KEYS */;
-INSERT INTO `user_preferences` VALUES (1,'English','MMM D, YYYY','12-hour (AM/PM)','(GMT+08:00) Asia/Manila'),(2,'English','MMM D, YYYY','12-hour (AM/PM)','(GMT+08:00) Asia/Manila'),(3,'English','MMM D, YYYY','12-hour (AM/PM)','(GMT+08:00) Asia/Manila'),(4,'English','MMM D, YYYY','12-hour (AM/PM)','(GMT+08:00) Asia/Manila'),(8,'English','MMM D, YYYY','12-hour (AM/PM)','(GMT+08:00) Asia/Manila'),(9,'English','MMM D, YYYY','12-hour (AM/PM)','(GMT+08:00) Asia/Manila');
 /*!40000 ALTER TABLE `user_preferences` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -675,7 +669,7 @@ CREATE TABLE `users` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `uk_users_username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -684,7 +678,6 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'admin','240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9','System Administrator',NULL,NULL,'superadmin','active',1,'2026-08-13 14:26:54'),(2,'miggy.basina','845979227e62e26330f60f62a762b1cb5da65af27d120cac7cf99b1c4b5f4078','Miggy Basina','basina.mi.bsinfotech@gmail.com','09492549864','driver_management_head','inactive',1,'2026-08-13 14:26:54'),(3,'elena.reyes','04ef8cc3a64588a48373bc2553524c78e0f8dc09b41992c0b587e39a59749316','Elena Reyes',NULL,NULL,'reservation_officer','inactive',1,'2026-08-13 14:26:54'),(4,'macasinag','e007fbdc563042ac6aa9dcdfc979b2a8233938d600c412c2b2ad00a273ddd0d1','Macasinag',NULL,NULL,'billing_officer','inactive',1,'2026-08-13 14:26:54'),(8,'maria.santos','ae73ed7baa283dcfb004d4b855041c27f8d913bc4bd9ffc9929f176e86343498','Maria Santos','maria.santos@hollydot.com','0917 555 1234','payroll_officer','inactive',1,'2026-08-14 04:14:11'),(9,'charles.buque','a2b629e293f5efea6939928836e8482520a804d68586919fd58d98cee36a4d5b','Charles John Buque','charles.buque@email.com','0912 345 6789','customer','inactive',1,'2026-08-14 04:14:11'),(10,'miggy basina','845979227e62e26330f60f62a762b1cb5da65af27d120cac7cf99b1c4b5f4078','Miguel Iñigo S. Basina','basinamigo@gmail.com','09492549864','payroll_officer','inactive',1,'2026-08-14 11:27:18');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -739,7 +732,6 @@ CREATE TABLE `vehicle_pricing` (
 
 LOCK TABLES `vehicle_pricing` WRITE;
 /*!40000 ALTER TABLE `vehicle_pricing` DISABLE KEYS */;
-INSERT INTO `vehicle_pricing` VALUES ('AUV',2500.00,0.00,0.00,'2026-08-13 14:26:54'),('L300',4000.00,0.00,0.00,'2026-08-13 14:26:54'),('SUV',3500.00,0.00,0.00,'2026-08-13 16:52:21');
 /*!40000 ALTER TABLE `vehicle_pricing` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -761,7 +753,7 @@ CREATE TABLE `vehicles` (
   `color` varchar(30) DEFAULT NULL,
   `owner_id` int(10) unsigned DEFAULT NULL,
   `status` enum('available','reserved','on_trip','maintenance','inactive') NOT NULL DEFAULT 'available',
-  `vehicle_image` varchar(255) DEFAULT NULL,
+  `vehicle_image` text DEFAULT NULL,
   `purchase_date` date DEFAULT NULL,
   PRIMARY KEY (`vehicle_id`),
   UNIQUE KEY `uk_vehicles_plate` (`plate_number`),
@@ -789,7 +781,7 @@ DROP TABLE IF EXISTS `vehicle_images`;
 CREATE TABLE `vehicle_images` (
   `image_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `vehicle_id` int(10) unsigned NOT NULL,
-  `image_url` varchar(255) NOT NULL,
+  `image_url` text NOT NULL,
   `sort_order` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`image_id`),
   KEY `idx_vehicle_images_vehicle` (`vehicle_id`),
