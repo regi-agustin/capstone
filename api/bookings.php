@@ -34,6 +34,7 @@ function booking_shape(array $r): array
             'returnDate' => $r['end_date'],
             'returnTime' => $r['return_time'] ? date('H:i', strtotime($r['return_time'])) : '',
             'specialRequests' => $r['special_requests'] ?? '',
+            'passengers' => (int)($r['passengers'] ?? 0),
             'days' => $days,
             'durationLabel' => $durationLabel,
         ],
@@ -62,9 +63,9 @@ function booking_shape(array $r): array
 
 function booking_select(): string
 {
-    return 'SELECT r.reservation_id, r.vehicle_id, r.driver_id, r.reservation_date, r.start_date, r.end_date,
+    return 'SELECT r.reservation_id, r.client_id, r.vehicle_id, r.driver_id, r.reservation_date, r.start_date, r.end_date,
                    r.pickup_time, r.return_time, r.special_requests, r.denial_reason, r.status,
-                   r.destination, r.additional_charges, r.total_amount,
+                   r.destination, r.additional_charges, r.total_amount, r.passengers,
                    c.company_name, c.contact_person, c.contact_number, c.email_address,
                    d.fullname AS driver_name, d.contact_number AS driver_contact,
                    v.plate_number, v.model, v.vehicle_type, v.daily_rate, v.seats
@@ -80,6 +81,35 @@ function find_booking(PDO $pdo, int $id): ?array
     $stmt->execute([$id]);
     $row = $stmt->fetch();
     return $row ?: null;
+}
+
+function parse_booking_id(?string $rawId): ?int
+{
+    $rawId = trim((string)$rawId);
+    if ($rawId === '') return null;
+    if (preg_match('/^BK-\d{4}-(\d+)$/', $rawId, $m)) {
+        return (int)$m[1];
+    }
+    $id = (int)$rawId;
+    return $id > 0 ? $id : null;
+}
+
+function res_booking_id(array $r): string
+{
+    return 'BK-' . substr($r['start_date'], 0, 4) . '-' . str_pad((string)$r['reservation_id'], 4, '0', STR_PAD_LEFT);
+}
+
+// Notifies the linked customer account when their reservation status changes.
+function notify_booking_owner(PDO $pdo, int $clientId, string $type, string $title, string $description): void
+{
+    $stmt = $pdo->prepare('SELECT user_id FROM clients WHERE client_id = ?');
+    $stmt->execute([$clientId]);
+    $userId = (int)$stmt->fetchColumn();
+    if ($userId <= 0) return;
+    $ins = $pdo->prepare(
+        'INSERT INTO notifications (user_id, type, title, description) VALUES (?, ?, ?, ?)'
+    );
+    $ins->execute([$userId, $type, $title, $description]);
 }
 
 if ($method === 'GET') {
@@ -126,14 +156,16 @@ if ($method === 'POST') {
         $email = trim((string)($client['email'] ?? ''));
         $company = trim((string)($client['company'] ?? ''));
 
-        // Customers book under their own account; profile fields come from the session.
+        // Customers book under their own account; fall back to session profile when fields are blank.
         if ($isCustomer) {
-            $clientName = $user['fullname'];
             $stmt = $pdo->prepare('SELECT email, contact_number FROM users WHERE user_id = ?');
             $stmt->execute([$user['user_id']]);
             $acc = $stmt->fetch();
-            $email = $acc && $acc['email'] ? $acc['email'] : ($email !== '' ? $email : $clientName . '@email.com');
-            $contact = $contact !== '' ? $contact : ($acc['contact_number'] ?? '');
+            $sessionEmail = $acc && $acc['email'] ? $acc['email'] : '';
+            $sessionContact = $acc && $acc['contact_number'] ? $acc['contact_number'] : '';
+            if ($clientName === '') $clientName = $user['fullname'];
+            if ($email === '') $email = $sessionEmail !== '' ? $sessionEmail : $clientName . '@email.com';
+            if ($contact === '') $contact = $sessionContact;
             $company = $clientName;
         }
         $destination = trim((string)($trip['destination'] ?? ''));
@@ -221,7 +253,10 @@ if ($method === 'POST') {
     if ($action === 'confirm') {
         require_permission($pdo, $user, 'Reservations', 'Edit');
 
-        $id = (int)($data['id'] ?? 0);
+        $id = parse_booking_id($data['id'] ?? null);
+        if (!$id) {
+            json_error('A valid booking id is required.', 422);
+        }
         $res = find_booking($pdo, $id);
         if (!$res || $res['status'] !== 'pending') {
             json_error('Booking not found or already processed.', 422);
@@ -271,13 +306,19 @@ if ($method === 'POST') {
             json_error('Failed to confirm booking: ' . $e->getMessage(), 500);
         }
 
+        notify_booking_owner($pdo, $res['client_id'], 'reservation_confirmed', 'Reservation Confirmed',
+            'Your booking ' . res_booking_id($res) . ' has been confirmed. A driver will be assigned for your trip.');
+
         json_out(booking_shape(find_booking($pdo, $id)));
     }
 
     if ($action === 'deny') {
         require_permission($pdo, $user, 'Reservations', 'Edit');
 
-        $id = (int)($data['id'] ?? 0);
+        $id = parse_booking_id($data['id'] ?? null);
+        if (!$id) {
+            json_error('A valid booking id is required.', 422);
+        }
         $reason = trim((string)($data['reason'] ?? ''));
         $res = find_booking($pdo, $id);
         if (!$res || $res['status'] !== 'pending') {
@@ -290,20 +331,17 @@ if ($method === 'POST') {
         $pdo->prepare('UPDATE reservations SET status = "denied", denial_reason = ? WHERE reservation_id = ?')
             ->execute([$reason, $id]);
 
+        notify_booking_owner($pdo, $res['client_id'], 'system_alert', 'Reservation Denied',
+            'Your booking ' . res_booking_id($res) . ' was not approved. Reason: ' . $reason);
+
         json_out(booking_shape(find_booking($pdo, $id)));
     }
 
     if ($action === 'cancel') {
         require_role($user, ['superadmin', 'admin', 'reservation_officer', 'customer']);
 
-        $rawId = trim((string)($data['id'] ?? ''));
-        if ($rawId === '' || $rawId === '0') json_error('A booking id is required.', 422);
-        if (preg_match('/^BK-\d{4}-(\d+)$/', $rawId, $m)) {
-            $id = (int)$m[1];
-        } else {
-            $id = (int)$rawId;
-        }
-        if ($id <= 0) json_error('Invalid booking id.', 422);
+        $id = parse_booking_id($data['id'] ?? null);
+        if (!$id) json_error('A valid booking id is required.', 422);
         $res = find_booking($pdo, $id);
         if (!$res) json_error('Booking not found.', 404);
         if (!in_array($res['status'], ['pending', 'confirmed', 'on_trip'], true)) {

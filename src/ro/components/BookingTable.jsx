@@ -5,7 +5,7 @@ import { formatMoney, formatDate, formatTime } from '../utils/format.js';
 import SearchBar from './SearchBar.jsx';
 import StatusBadge from './StatusBadge.jsx';
 
-const STATUS_FILTERS = ['All', 'Pending', 'Confirmed', 'Denied'];
+const STATUS_FILTERS = ['All', 'Pending', 'Confirmed', 'Denied', 'Cancelled'];
 
 export default function BookingTable({ loading, onView, onConfirm, onDeny, onAdd }) {
   const { bookings, bookingSearch, setBookingSearch, bookingStatus, setBookingStatus, bookingSort, setBookingSort } = useApp();
@@ -111,9 +111,21 @@ export default function BookingTable({ loading, onView, onConfirm, onDeny, onAdd
                       </div>
                       <div className="cell-sub">
                         <CalendarDays size={13} style={{ display: 'inline', verticalAlign: '-2px' }} />
-                        {formatDate(b.trip.pickupDate)} · {formatTime(b.trip.pickupTime)}
+                        Pickup {formatDate(b.trip.pickupDate)} · {formatTime(b.trip.pickupTime)}
                       </div>
-                      <div className="cell-muted">Duration: {b.trip.durationLabel}</div>
+                      <div className="cell-sub">
+                        <CalendarDays size={13} style={{ display: 'inline', verticalAlign: '-2px' }} />
+                        Return {formatDate(b.trip.returnDate)} · {formatTime(b.trip.returnTime)}
+                      </div>
+                      <div className="cell-muted">
+                        Duration: {b.trip.durationLabel}
+                        {b.trip.passengers ? ` · ${b.trip.passengers} pax` : ''}
+                      </div>
+                      {b.trip.specialRequests && (
+                        <div className="cell-muted" style={{ color: 'var(--primary-dark)' }} title={b.trip.specialRequests}>
+                          📝 {b.trip.specialRequests}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <div className="cell-main">{formatMoney(b.preBilling.estimatedTotal)}</div>
