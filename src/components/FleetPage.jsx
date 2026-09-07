@@ -6,12 +6,31 @@ import VehiclePhotos from '../ro/components/VehiclePhotos.jsx'
 const VEHICLE_TYPES = ['AUV', 'SUV', 'L300']
 const MAX_IMAGES = 12
 
-const readAsDataUrl = (file) =>
+const MAX_IMAGE_DIMENSION = 1280
+const JPEG_QUALITY = 0.8
+
+const compressImage = (file) =>
   new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(img.width, img.height))
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', JPEG_QUALITY))
+      } catch (e) {
+        reject(e)
+      } finally {
+        URL.revokeObjectURL(url)
+      }
+    }
+    img.onerror = reject
+    img.src = url
   })
 
 export default function FleetPage({ vehicles, onAddVehicle }) {
@@ -52,7 +71,7 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
     setError('')
     const room = Math.max(0, MAX_IMAGES - images.length)
     const pending = list.slice(0, room)
-    const added = await Promise.all(pending.map(async (f) => ({ name: f.name, dataUrl: await readAsDataUrl(f) })))
+    const added = await Promise.all(pending.map(async (f) => ({ name: f.name, dataUrl: await compressImage(f) })))
     setImages((prev) => [...prev, ...added])
     if (fileRef.current) fileRef.current.value = ''
   }
