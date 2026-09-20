@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, CheckCircle2, DollarSign, XCircle, Truck } from 'lucide-react';
+import { Bell, CheckCircle2, DollarSign, XCircle, Truck, Calendar, AlertCircle } from 'lucide-react';
 import { apiFetch } from '../services/api.js';
 
 const ICONS = {
@@ -7,6 +7,8 @@ const ICONS = {
   DollarSign: DollarSign,
   XCircle: XCircle,
   Truck: Truck,
+  Calendar: Calendar,
+  AlertCircle: AlertCircle,
 };
 
 function useClickOutside(onClose) {

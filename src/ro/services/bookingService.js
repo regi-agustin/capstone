@@ -107,7 +107,7 @@ export const sortBookings = (bookings, sortBy) => {
       arr.sort((a, b) => a.client.name.localeCompare(b.client.name));
       return arr;
     case 'status':
-      const order = { Pending: 0, Confirmed: 1, Denied: 2 };
+      const order = { Pending: 0, Confirmed: 1, Denied: 2, Cancelled: 3 };
       arr.sort((a, b) => order[a.status] - order[b.status]);
       return arr;
     case 'newest':

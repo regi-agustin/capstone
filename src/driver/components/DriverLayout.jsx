@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useLocation, NavLink } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Truck, CalendarClock, Wallet, Bell, User } from 'lucide-react';
 import AppShell from '../../components/AppShell.jsx';
+import NotificationsBell from '../../components/NotificationsBell.jsx';
 import { apiFetch } from '../../services/api.js';
+import { fetchDriverProfile, resolveProfileImageUrl } from '../services/driverService.js';
 
 const TITLES = {
   '/dashboard': { title: 'My Dashboard', crumb: 'FleetOps / Driver' },
@@ -25,19 +27,18 @@ const NAV = [
 export default function DriverLayout({ onLogout }) {
   const location = useLocation();
   const [profile, setProfile] = useState(null);
-  const [unread, setUnread] = useState(0);
   const meta = TITLES[location.pathname] || { title: 'Driver', crumb: 'FleetOps / Driver' };
 
   useEffect(() => {
-    apiFetch('profile.php')
+    fetchDriverProfile()
       .then((p) => {
         setProfile(p);
-        if (p.stats) setUnread(p.stats.unreadNotifications || 0);
       })
       .catch(() => {});
   }, []);
 
   const name = profile?.driver?.name || '';
+  const profileImageUrl = resolveProfileImageUrl(profile?.driver?.profileImage);
 
   return (
     <AppShell
@@ -46,18 +47,10 @@ export default function DriverLayout({ onLogout }) {
       roleSub="Accept trips · clock attendance"
       user={name || 'Driver'}
       userSub="Driver"
+      userImage={profileImageUrl}
       title={meta.title}
       crumb={meta.crumb}
-      topbarExtra={
-        <NavLink
-          to="/notifications"
-          aria-label="Notifications"
-          style={{ position: 'relative', color: 'var(--muted)', display: 'inline-flex' }}
-        >
-          <Bell width={19} height={19} />
-          {unread > 0 && <span className="notif-dot" />}
-        </NavLink>
-      }
+      topbarExtra={<NotificationsBell />}
       onLogout={onLogout}
     >
       <Outlet />

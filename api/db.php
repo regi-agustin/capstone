@@ -15,6 +15,8 @@ function db(): PDO
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ]
         );
+        // Set timezone to ensure consistent time handling
+        $pdo->exec("SET time_zone = '+08:00'");
     }
     return $pdo;
 }

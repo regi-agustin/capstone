@@ -18,6 +18,7 @@ const COLORS = {
   Unassigned: 'badge--available',
   Verified: 'badge--confirmed',
   Rejected: 'badge--denied',
+  Approved: 'badge--confirmed',
   'For Review': 'badge--pending',
 };
 

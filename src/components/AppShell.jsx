@@ -30,6 +30,7 @@ export default function AppShell({
   roleSub,
   user = '',
   userSub,
+  userImage,
   title,
   crumb,
   topbarExtra,
@@ -159,7 +160,17 @@ export default function AppShell({
           </div>
           <div className="topbar-right">
             {topbarExtra}
-            <div className="avatar">{initialsOf(user)}</div>
+            <div className="avatar">
+              {userImage ? (
+                <img
+                  src={userImage}
+                  alt={`${user} profile`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                initialsOf(user)
+              )}
+            </div>
             <div className="topbar-name" style={{ lineHeight: 1.2 }}>
               <div style={{ fontSize: 13.5, fontWeight: 700 }}>{user}</div>
               <div className="cell-sub">{userSub}</div>

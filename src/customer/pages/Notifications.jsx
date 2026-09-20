@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { FiCheckCircle, FiClock, FiXCircle, FiInfo, FiBell, FiCheck } from 'react-icons/fi'
-import { fetchNotifications, markAllNotificationsRead } from '../services/customerService.js'
+import { FiCheckCircle, FiClock, FiXCircle, FiInfo, FiBell, FiCheck, FiTrash2 } from 'react-icons/fi'
+import { fetchNotifications, markAllNotificationsRead, clearReadNotifications } from '../services/customerService.js'
 import SummaryCard from '../../ro/components/SummaryCard.jsx'
 
 const typeMeta = {
@@ -32,6 +32,23 @@ export default function Notifications() {
     try {
       await markAllNotificationsRead()
       setMsg('All notifications marked as read.')
+      await load()
+      setTimeout(() => setMsg(''), 3000)
+    } catch (e) {
+      setMsg(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleClearRead() {
+    if (!window.confirm('Are you sure you want to clear all read notifications?')) {
+      return
+    }
+    setBusy(true)
+    try {
+      await clearReadNotifications()
+      setMsg('Read notifications cleared successfully.')
       await load()
       setTimeout(() => setMsg(''), 3000)
     } catch (e) {
@@ -73,7 +90,7 @@ export default function Notifications() {
 
       {error && <div className="error-banner" style={{ marginBottom: 16 }}>{error}</div>}
       {msg && (
-        <div className={msg.startsWith('All notifications') ? 'success-banner' : 'error-banner'} style={{ marginBottom: 16 }}>
+        <div className={msg.startsWith('All notifications') || msg.startsWith('Read notifications') ? 'success-banner' : 'error-banner'} style={{ marginBottom: 16 }}>
           {msg}
         </div>
       )}
@@ -93,13 +110,23 @@ export default function Notifications() {
             </button>
           ))}
         </div>
-        <button
-          onClick={handleMarkAll}
-          disabled={busy || summary.unread === 0}
-          className="btn btn--secondary btn--sm nowrap"
-        >
-          <FiCheck size={14} /> {busy ? 'Marking...' : 'Mark all as read'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={handleMarkAll}
+            disabled={busy || summary.unread === 0}
+            className="btn btn--secondary btn--sm nowrap"
+          >
+            <FiCheck size={14} /> {busy ? 'Marking...' : 'Mark all as read'}
+          </button>
+          <button
+            onClick={handleClearRead}
+            disabled={busy || summary.total - summary.unread === 0}
+            className="btn btn--secondary btn--sm nowrap"
+            title="Clear all read notifications"
+          >
+            <FiTrash2 size={14} /> {busy ? 'Clearing...' : 'Clear all'}
+          </button>
+        </div>
       </div>
 
       {activeTab === 'all' && (

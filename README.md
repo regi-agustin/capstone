@@ -84,6 +84,32 @@ All demo accounts (see `fleetops_db.sql`):
 Note: the latest SQL dump marks most demo accounts as archived (inactive). Log in as
 `admin` / `admin123` and use the **Archive** dashboard to restore them.
 
+## Payroll module (workflow demo)
+
+The payroll desk is a multi-step process: **Draft → For Review → Approved → Paid**, with
+**Cancelled** and **Return for Correction** on the side. Login as `maria.santos` / `payroll2026`
+and open **Payroll → Payroll Processing**.
+
+Demo data included:
+
+- Driver **Sherwin Aspa**, plate **NBX8012**, vehicles 11–17, and 8 completed trips inside the
+  **July 1–15, 2026** cut-off.
+- Payroll **#6** shows the finished worked example exactly: rental ₱14,630 + OT ₱540 + toll/parking
+  ₱1,174 → earnings ₱16,344; 2% WTAX ₱34.28 + Coop Savings ₱1,000 + Coop Loan ₱2,500 →
+  deductions ₱3,534.28; **net ₱12,809.72**, fully **paid** with an imprintable payslip.
+
+To replay the flow step by step in the wizard, first clear the pre-seeded result:
+
+```sql
+DELETE FROM payroll_trips WHERE payroll_id = 6;
+DELETE FROM payroll WHERE payroll_id = 6;
+```
+
+Then use **Create Payroll** (pick the July 1–15 cut-off → Sherwin Aspa → verify trips → earnings →
+deductions → submit). Note the wizard loads trips with OT/Toll/Parking at ₱0 for verification —
+enter 315/90/135 OT across the three overtime days and tolls 146/382/596 + parking 50 to reproduce
+the exact ₱12,809.72.
+
 ## Troubleshooting
 
 - **404 on API calls** — the `api/` folder is not inside `htdocs\fleetops\` (step 2), or you changed the folder name without updating `vite.config.js`.

@@ -59,43 +59,63 @@ export default function Dashboard() {
   const [attendance, setAttendance] = useState([])
   const [notifications, setNotifications] = useState([])
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    setLoading(true)
     Promise.all([fetchPayrollRecords(), fetchDrivers(), fetchAttendance(), fetchNotifications()])
       .then(([p, d, a, n]) => {
-        setPayroll(p)
-        setDrivers(d)
-        setAttendance(a)
-        setNotifications(n)
+        setPayroll(p || [])
+        setDrivers(d || [])
+        setAttendance(a || [])
+        setNotifications(n || [])
+        setError('')
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => {
+        setError(e.message || 'Failed to load dashboard data')
+        setPayroll([])
+        setDrivers([])
+        setAttendance([])
+        setNotifications([])
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const month = new Date().toISOString().slice(0, 7)
-  const cutoff = payroll.filter((r) => (r.date || '').startsWith(month))
-  const totalReceivable = cutoff.reduce((s, r) => s + r.netAmount, 0)
+  const cutoff = (payroll || []).filter((r) => (r.date || '').startsWith(month))
+  const totalReceivable = cutoff.reduce((s, r) => s + (r.netAmount || 0), 0)
   const statusCounts = cutoff.reduce((acc, r) => {
-    acc[r.status] = (acc[r.status] || 0) + 1
+    const status = r.status || 'Pending'
+    acc[status] = (acc[status] || 0) + 1
     return acc
   }, {})
   const total = cutoff.length
   const pct = (c) => (total > 0 ? ((c / total) * 100).toFixed(2) : '0.00')
 
-  const verified = attendance.filter((a) => a.verificationStatus === 'Verified').length
-  const pendingA = attendance.filter((a) => a.verificationStatus === 'Pending').length
-  const rejected = attendance.filter((a) => a.verificationStatus === 'Rejected').length
-  const missing = Math.max(0, drivers.length - attendance.length)
-  const presentTotal = drivers.length || attendance.length
+  const verified = (attendance || []).filter((a) => a.verificationStatus === 'Verified').length
+  const pendingA = (attendance || []).filter((a) => a.verificationStatus === 'Pending').length
+  const rejected = (attendance || []).filter((a) => a.verificationStatus === 'Rejected').length
+  const missing = Math.max(0, (drivers || []).length - (attendance || []).length)
+  const presentTotal = (drivers || []).length || (attendance || []).length
 
-  const recent = notifications.slice(0, 4)
-  const announcements = notifications.filter(
+  const recent = (notifications || []).slice(0, 4)
+  const announcements = (notifications || []).filter(
     (n) => n.type !== 'attendance_verified' && n.type !== 'attendance_rejected'
   ).slice(0, 2)
 
   const attendancePct = (c) => (presentTotal > 0 ? ((c / presentTotal) * 100).toFixed(2) : '0.00')
 
+  if (loading) {
+    return (
+      <div className="ro-app loading-state">
+        <div className="spinner"></div>
+        <span>Loading dashboard data...</span>
+      </div>
+    )
+  }
+
   if (error) {
-    return <div className="error-banner">{error}</div>
+    return <div className="ro-app error-banner">{error}</div>
   }
 
   return (
@@ -110,8 +130,8 @@ export default function Dashboard() {
       <div className="stats-grid">
         <SummaryCard icon={<Calendar size={22} />} label="Current Cut-Off Period" value={cutoffLabel()} note="This period" tone="primary" />
         <SummaryCard icon={<Users size={22} />} label="Drivers with Payroll Records" value={cutoff.length} note={`Total Drivers: ${drivers.length}`} tone="confirmed" />
-        <SummaryCard icon={<FileText size={22} />} label="Payroll Records for Review" value={statusCounts.Pending || 0} note="Needs your attention" tone="pending" />
-        <SummaryCard icon={<CreditCard size={22} />} label="Total Receivable" value={formatPeso(totalReceivable)} note="For this cut-off" tone="in-use" />
+        <SummaryCard icon={<FileText size={22} />} label="Payroll Records for Review" value={statusCounts.for_review || 0} note="Needs your attention" tone="pending" />
+        <SummaryCard icon={<CreditCard size={22} />} label="Total Receivable" value={formatPeso(totalReceivable)} note="For this cut-off" tone="confirmed" />
       </div>
 
       <div className="stats-grid">
@@ -145,21 +165,33 @@ export default function Dashboard() {
               <div className="cell-sub" style={{ flex: 1, paddingLeft: 16, display: 'grid', gap: 10 }}>
                 <div className="toolbar" style={{ justifyContent: 'space-between' }}>
                   <span className="toolbar" style={{ gap: 8 }}>
-                    <span className="badge badge--dot" style={{ background: 'var(--primary)' }} /> For Review
+                    <span className="badge badge--dot" style={{ background: 'var(--primary)' }} /> Draft
                   </span>
-                  <span>{statusCounts.Pending || 0} ({pct(statusCounts.Pending || 0)}%)</span>
+                  <span>{statusCounts.draft || 0} ({pct(statusCounts.draft || 0)}%)</span>
                 </div>
                 <div className="toolbar" style={{ justifyContent: 'space-between' }}>
                   <span className="toolbar" style={{ gap: 8 }}>
-                    <span className="badge badge--dot" style={{ background: 'var(--success)' }} /> Completed
+                    <span className="badge badge--dot" style={{ background: 'var(--pending, #f59e0b)' }} /> For Review
                   </span>
-                  <span>{statusCounts.Paid || 0} ({pct(statusCounts.Paid || 0)}%)</span>
+                  <span>{statusCounts.for_review || 0} ({pct(statusCounts.for_review || 0)}%)</span>
                 </div>
                 <div className="toolbar" style={{ justifyContent: 'space-between' }}>
                   <span className="toolbar" style={{ gap: 8 }}>
-                    <span className="badge badge--dot" style={{ background: 'var(--danger)' }} /> Unpaid
+                    <span className="badge badge--dot" style={{ background: 'var(--success)' }} /> Approved
                   </span>
-                  <span>{statusCounts.Unpaid || 0} ({pct(statusCounts.Unpaid || 0)}%)</span>
+                  <span>{statusCounts.approved || 0} ({pct(statusCounts.approved || 0)}%)</span>
+                </div>
+                <div className="toolbar" style={{ justifyContent: 'space-between' }}>
+                  <span className="toolbar" style={{ gap: 8 }}>
+                    <span className="badge badge--dot" style={{ background: 'var(--confirmed, #16a34a)' }} /> Paid
+                  </span>
+                  <span>{statusCounts.paid || 0} ({pct(statusCounts.paid || 0)}%)</span>
+                </div>
+                <div className="toolbar" style={{ justifyContent: 'space-between' }}>
+                  <span className="toolbar" style={{ gap: 8 }}>
+                    <span className="badge badge--dot" style={{ background: 'var(--danger)' }} /> Cancelled
+                  </span>
+                  <span>{statusCounts.cancelled || 0} ({pct(statusCounts.cancelled || 0)}%)</span>
                 </div>
               </div>
             </div>
@@ -255,12 +287,12 @@ export default function Dashboard() {
             ) : (
               <div>
                 {recent.map((n, i) => (
-                  <div key={i}>
+                  <div key={n.id || i}>
                     {i > 0 && <div className="divider" />}
                     <div className="toolbar" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
-                        <div className="cell-main">{activityIcon(n.type)} {n.title}</div>
-                        <div className="muted">{n.description}</div>
+                        <div className="cell-main">{activityIcon(n.type)} {n.title || 'Activity'}</div>
+                        <div className="muted">{n.description || ''}</div>
                       </div>
                       <div className="cell-muted nowrap" style={{ paddingLeft: 16, textAlign: 'right' }}>{formatDateTime(n.timestamp)}</div>
                     </div>
@@ -291,12 +323,12 @@ export default function Dashboard() {
             ) : (
               <div>
                 {announcements.map((n, i) => (
-                  <div key={i}>
+                  <div key={n.id || i}>
                     {i > 0 && <div className="divider" />}
                     <div className="cell-main">
-                      <Bell size={16} style={{ marginTop: 1 }} /> {n.title}
+                      <Bell size={16} style={{ marginTop: 1 }} /> {n.title || 'Announcement'}
                     </div>
-                    <div className="cell-sub" style={{ marginTop: 4 }}>{n.description}</div>
+                    <div className="cell-sub" style={{ marginTop: 4 }}>{n.description || ''}</div>
                     <div className="cell-muted" style={{ marginTop: 8 }}>{formatDateTime(n.timestamp)}</div>
                   </div>
                 ))}

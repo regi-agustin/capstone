@@ -116,6 +116,14 @@ if ($method === 'POST') {
         $stmt->execute([$driverId, $vehicleId, $reservationId, $start, $time]);
 
         $pdo->prepare('UPDATE vehicles SET status = "on_trip" WHERE vehicle_id = ?')->execute([$vehicleId]);
+        
+        // Create notification for the assigned driver within the transaction
+        $assignedUserId = get_user_id_by_driver($pdo, $driverId);
+        if ($assignedUserId) {
+            create_notification($pdo, $assignedUserId, 'reservation_confirmed', 
+                'New Trip Assigned', 
+                'You have been assigned a new trip to ' . $destination . '. Trip code: ' . $tripCode);
+        }
 
         $pdo->commit();
     } catch (Throwable $e) {

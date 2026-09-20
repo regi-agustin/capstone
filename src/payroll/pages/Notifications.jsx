@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bell, Mail, AlertCircle, Calendar, CheckCircle, XCircle, FileText, Users, Settings, Truck, DollarSign, Download } from 'lucide-react'
-import { fetchNotifications, markAllNotificationsRead } from '../services/payrollService.js'
+import { Bell, Mail, AlertCircle, Calendar, CheckCircle, XCircle, FileText, Users, Settings, Truck, DollarSign, Download, Trash2 } from 'lucide-react'
+import { fetchNotifications, markAllNotificationsRead, clearReadNotifications } from '../services/payrollService.js'
 import SearchBar from '../../ro/components/SearchBar.jsx'
 import SummaryCard from '../../ro/components/SummaryCard.jsx'
 import Pagination from '../../ro/components/Pagination.jsx'
@@ -95,6 +95,20 @@ export default function Notifications() {
     }
   }
 
+  async function handleClearRead() {
+    if (!window.confirm('Are you sure you want to clear all read notifications?')) {
+      return
+    }
+    try {
+      await clearReadNotifications()
+      setMsg('Read notifications cleared successfully.')
+      await load()
+      setTimeout(() => setMsg(null), 3000)
+    } catch (e) {
+      setMsg(e.message)
+    }
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -132,6 +146,9 @@ export default function Notifications() {
               <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1) }} placeholder="Search notifications..." />
               <button onClick={handleMarkAll} className="btn btn--secondary btn--sm nowrap">
                 <CheckCircle size={14} /> Mark all as read
+              </button>
+              <button onClick={handleClearRead} className="btn btn--secondary btn--sm nowrap" disabled={notifs.length - unreadCount === 0} title="Clear all read notifications">
+                <Trash2 size={14} /> Clear all
               </button>
               <button onClick={handleExport} className="btn btn--secondary btn--sm nowrap">
                 <Download size={14} /> Export

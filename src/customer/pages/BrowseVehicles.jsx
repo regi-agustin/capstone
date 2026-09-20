@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { FiTruck } from 'react-icons/fi'
-import { fetchVehicles, createBooking, formatPeso } from '../services/customerService.js'
+import { fetchVehicles, createBooking, fetchProfile, formatPeso } from '../services/customerService.js'
 import SearchBar from '../../ro/components/SearchBar.jsx'
 import StatusBadge from '../../ro/components/StatusBadge.jsx'
 import Modal from '../../ro/components/Modal.jsx'
-
-const emojis = { MPV: '🚙', SUV: '🚘', Sedan: '🚗', Van: '🚐' }
+import VehiclePhotos from '../../ro/components/VehiclePhotos.jsx'
+import { Icon } from '../../components/Icons.jsx'
 
 export default function BrowseVehicles() {
   const [vehicles, setVehicles] = useState([])
@@ -16,7 +16,8 @@ export default function BrowseVehicles() {
   const [priceRange, setPriceRange] = useState(6000)
   const [availableOnly, setAvailableOnly] = useState(false)
   const [booking, setBooking] = useState(null)
-  const [form, setForm] = useState({ destination: '', pickupDate: '', returnDate: '', passengers: 1 })
+  const [profile, setProfile] = useState(null)
+  const [form, setForm] = useState({ clientName: '', contact: '', email: '', destination: '', pickupDate: '', pickupTime: '', returnDate: '', returnTime: '', passengers: 1, specialRequests: '' })
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState('')
 
@@ -24,6 +25,9 @@ export default function BrowseVehicles() {
     fetchVehicles()
       .then(setVehicles)
       .catch((e) => setError(e.message))
+    fetchProfile()
+      .then(setProfile)
+      .catch(() => {})
   }, [])
 
   const filtered = useMemo(() => {
@@ -44,7 +48,18 @@ export default function BrowseVehicles() {
     setBooking(v)
     setSuccess('')
     const today = new Date().toISOString().slice(0, 10)
-    setForm({ destination: '', pickupDate: today, returnDate: today, passengers: Math.min(v.seats, 1) })
+    setForm({
+      clientName: profile?.account?.name || '',
+      contact: profile?.account?.contactNumber || '',
+      email: profile?.account?.email || '',
+      destination: '',
+      pickupDate: today,
+      pickupTime: '',
+      returnDate: today,
+      returnTime: '',
+      passengers: Math.min(v.seats, 1),
+      specialRequests: '',
+    })
   }
 
   async function handleSubmit(e) {
@@ -56,12 +71,19 @@ export default function BrowseVehicles() {
       const estimatedTotal = booking.dailyRate * days
       await createBooking({
         vehicleId: booking.id,
-        client: {},
+        client: {
+          name: form.clientName,
+          contact: form.contact,
+          email: form.email,
+        },
         trip: {
           destination: form.destination,
           pickupDate: form.pickupDate,
+          pickupTime: form.pickupTime,
           returnDate: form.returnDate,
+          returnTime: form.returnTime,
           passengers: Number(form.passengers),
+          specialRequests: form.specialRequests,
         },
         estimatedTotal,
       })
@@ -176,9 +198,13 @@ export default function BrowseVehicles() {
                 <section key={vehicle.id} className="card">
                   <div className="card__body">
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ fontSize: 34 }}>{emojis[vehicle.type] || '🚗'}</div>
-                        <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                        {vehicle.photoUrl || (vehicle.images && vehicle.images.length) ? (
+                          <VehiclePhotos vehicle={vehicle} />
+                        ) : (
+                          <Icon.car width={20} height={20} />
+                        )}
+                        <div style={{ minWidth: 0 }}>
                           <h3 style={{ fontSize: 15 }}>{vehicle.model}</h3>
                           <div className="cell-sub">{vehicle.type}</div>
                           <div className="cell-sub">{vehicle.seats} Seats · {vehicle.plate}</div>
@@ -215,6 +241,42 @@ export default function BrowseVehicles() {
         >
           <form onSubmit={handleSubmit}>
             <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label" htmlFor="bk-client-name">Client Name</label>
+                <input
+                  id="bk-client-name"
+                  type="text"
+                  required
+                  placeholder="Enter full name"
+                  value={form.clientName}
+                  onChange={(e) => setForm({ ...form, clientName: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="bk-contact">Contact Number</label>
+                <input
+                  id="bk-contact"
+                  type="tel"
+                  required
+                  placeholder="e.g., 0917 123 4567"
+                  value={form.contact}
+                  onChange={(e) => setForm({ ...form, contact: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group full">
+                <label className="form-label" htmlFor="bk-email">Email Address</label>
+                <input
+                  id="bk-email"
+                  type="email"
+                  required
+                  placeholder="e.g., you@email.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="form-input"
+                />
+              </div>
               <div className="form-group full">
                 <label className="form-label" htmlFor="bk-destination">Destination</label>
                 <input
@@ -239,6 +301,17 @@ export default function BrowseVehicles() {
                 />
               </div>
               <div className="form-group">
+                <label className="form-label" htmlFor="bk-pickup-time">Pickup Time</label>
+                <input
+                  id="bk-pickup-time"
+                  type="time"
+                  placeholder="e.g., 09:00 AM"
+                  value={form.pickupTime}
+                  onChange={(e) => setForm({ ...form, pickupTime: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
                 <label className="form-label" htmlFor="bk-return">Return Date</label>
                 <input
                   id="bk-return"
@@ -246,6 +319,17 @@ export default function BrowseVehicles() {
                   required
                   value={form.returnDate}
                   onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="bk-return-time">Return Time</label>
+                <input
+                  id="bk-return-time"
+                  type="time"
+                  placeholder="e.g., 06:00 PM"
+                  value={form.returnTime}
+                  onChange={(e) => setForm({ ...form, returnTime: e.target.value })}
                   className="form-input"
                 />
               </div>
@@ -259,6 +343,17 @@ export default function BrowseVehicles() {
                   value={form.passengers}
                   onChange={(e) => setForm({ ...form, passengers: e.target.value })}
                   className="form-input"
+                />
+              </div>
+              <div className="form-group full">
+                <label className="form-label" htmlFor="bk-special-requests">Special Requests <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(optional)</span></label>
+                <textarea
+                  id="bk-special-requests"
+                  rows="3"
+                  placeholder="Any special requests or notes for this trip"
+                  value={form.specialRequests}
+                  onChange={(e) => setForm({ ...form, specialRequests: e.target.value })}
+                  className="form-textarea"
                 />
               </div>
             </div>

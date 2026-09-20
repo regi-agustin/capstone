@@ -186,6 +186,10 @@ svg { flex-shrink: 0; }
   margin-bottom: 22px;
 }
 
+.ro-app .stats-grid--five {
+  grid-template-columns: repeat(5, 1fr);
+}
+
 .ro-app .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -225,6 +229,7 @@ svg { flex-shrink: 0; }
 .ro-app .stat-card--available { --accent: var(--success); --accent-soft: var(--success-soft); }
 .ro-app .stat-card--in-use { --accent: var(--info); --accent-soft: var(--info-soft); }
 .ro-app .stat-card--in-maintenance { --accent: var(--warning); --accent-soft: var(--warning-soft); }
+.ro-app .stat-card--cancelled { --accent: var(--text-soft); --accent-soft: #eef1f6; }
 
 /* ---------------- Page head ---------------- */
 
@@ -318,7 +323,7 @@ svg { flex-shrink: 0; }
 
 .ro-app .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .ro-app .form-grid .full { grid-column: 1 / -1; }
-@media (max-width: 640px) { .ro-app .form-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
 
 .ro-app .input-row { display: flex; gap: 10px; align-items: center; }
 
@@ -727,7 +732,132 @@ svg { flex-shrink: 0; }
 }
 .ro-app .form-section__sub { font-size: 12px; color: var(--text-2); margin: 0 0 14px 30px; }
 
-/* ---------------- Vehicle picker ---------------- */
+/* ---------------- Payroll wizard stepper ---------------- */
+
+.ro-app .stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.ro-app .stepper__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: default;
+  white-space: nowrap;
+}
+.ro-app .stepper__step .step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--text-2);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.ro-app .stepper__step--active {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+.ro-app .stepper__step--active .step-num { background: var(--primary); color: #fff; }
+.ro-app .stepper__step--done {
+  background: var(--success-soft);
+  border-color: #bfe8cc;
+  color: var(--success);
+}
+.ro-app .stepper__step--done .step-num { background: var(--success); color: #fff; }
+.ro-app .stepper__arrow { color: var(--text-faint); flex-shrink: 0; }
+
+/* ---------------- Driver picker (payroll eligibility) ---------------- */
+
+.ro-app .driver-picker { display: grid; gap: 10px; }
+.ro-app .driver-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.ro-app .driver-option:hover:not(:disabled) { border-color: var(--primary); background: var(--primary-soft); }
+.ro-app .driver-option--selected { border-color: var(--primary); background: var(--primary-soft); box-shadow: 0 0 0 1px var(--primary) inset; }
+.ro-app .driver-option--disabled { opacity: 0.55; cursor: not-allowed; background: var(--surface-2); }
+.ro-app .driver-option__main { font-weight: 600; color: var(--ink); }
+.ro-app .driver-option__sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+/* ---------------- Payroll payslip ---------------- */
+
+.ro-app .payslip { max-width: 760px; margin: 0 auto; }
+.ro-app .payslip__head { text-align: center; border-bottom: 2px solid var(--ink); padding-bottom: 12px; margin-bottom: 16px; }
+.ro-app .payslip__company { font-size: 16px; font-weight: 800; letter-spacing: 0.4px; }
+.ro-app .payslip__title { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+.ro-app .payslip__meta {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ro-app .payslip__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ro-app .payslip__col { border: 1px solid var(--border); border-radius: var(--r); padding: 12px; }
+.ro-app .payslip__col-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-faint); font-weight: 700; margin-bottom: 8px; }
+.ro-app .payslip__row { display: flex; justify-content: space-between; gap: 10px; padding: 6px 2px; font-size: 13px; }
+.ro-app .payslip__row + .payslip__row { border-top: 1px dashed var(--border); }
+.ro-app .payslip__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 800;
+  padding: 12px 14px;
+  border-radius: var(--r);
+  background: var(--ink);
+  color: #fff;
+  margin-top: 14px;
+}
+.ro-app .payslip__footer { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; font-size: 12.5px; color: var(--text-2); }
+
+/* ---------------- Status track (workflow) ---------------- */
+
+.ro-app .status-track { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 6px 0 14px; }
+.ro-app .status-track__node { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--text-faint); white-space: nowrap; }
+.ro-app .status-track__node.is-reached { color: var(--success); }
+.ro-app .status-track__node.is-current { color: var(--primary-dark); font-weight: 800; }
+.ro-app .status-track__dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+.ro-app .status-track__node.is-reached .status-track__dot { background: var(--success); }
+.ro-app .status-track__node.is-current .status-track__dot { background: var(--primary); }
+.ro-app .status-track__line { flex: 0 0 16px; height: 2px; background: var(--border); }
+.ro-app .status-track__line.is-reached { background: var(--success); }
+
+.ro-app .money-input { width: 110px; text-align: right; }
+.ro-app .wizard-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 18px; border-top: 1px solid var(--border); }
+.ro-app .wizard-foot__right { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ---------------- Print (payslip) ---------------- */
+
+@media print {
+  body * { visibility: hidden; }
+  .ro-app .payslip, .ro-app .payslip * { visibility: visible; }
+  .ro-app .payslip { position: absolute; left: 0; top: 0; width: 100%; max-width: 760px; box-shadow: none; border: none; }
+  .ro-app .payslip__col { break-inside: avoid; }
+}
+
+ /* ---------------- Vehicle picker ---------------- */
 
 .ro-app .vehicle-picker { display: grid; gap: 10px; max-height: 220px; overflow-y: auto; padding-right: 4px; }
 .ro-app .vehicle-option {
@@ -1039,14 +1169,17 @@ svg { flex-shrink: 0; }
 
 @media (max-width: 1200px) {
 .ro-app .stats-grid { grid-template-columns: repeat(2, 1fr); }
+.ro-app .stats-grid--five { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 860px) {
 .ro-app .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.ro-app .stats-grid--five { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 560px) {
 .ro-app .stats-grid { grid-template-columns: 1fr; }
+.ro-app .stats-grid--five { grid-template-columns: 1fr; }
 .ro-app .modal-backdrop { padding: 0; align-items: stretch; }
 .ro-app .modal { max-width: none; max-height: 100vh; height: 100vh; border-radius: 0; }
 .ro-app .filter-tabs { width: 100%; }

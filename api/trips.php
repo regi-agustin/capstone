@@ -78,7 +78,7 @@ if ($method === 'POST') {
     }
 
     $stmt = $pdo->prepare(
-        'SELECT reservation_id, status, start_date FROM reservations
+        'SELECT reservation_id, status, start_date, destination FROM reservations
          WHERE reservation_id = ? AND driver_id = ?'
     );
     $stmt->execute([$id, $driverId]);
@@ -90,6 +90,16 @@ if ($method === 'POST') {
             json_error('Only confirmed trips can be accepted.', 422);
         }
         $pdo->prepare('UPDATE reservations SET status = "on_trip" WHERE reservation_id = ?')->execute([$id]);
+        
+        // Create notification for trip acceptance (with error handling)
+        try {
+            create_notification($pdo, (int)$user['user_id'], 'reservation_confirmed', 
+                'Trip Accepted', 
+                'You have accepted the trip to ' . $res['destination'] . '. Drive safely!');
+        } catch (Exception $e) {
+            error_log('WARNING: Failed to create trip accept notification for user_id: ' . (int)$user['user_id'] . ' - ' . $e->getMessage());
+        }
+        
         json_out(['ok' => true, 'status' => 'on_trip']);
     }
 
@@ -104,6 +114,15 @@ if ($method === 'POST') {
         try {
             complete_reservation($pdo, $id);
             $pdo->commit();
+            
+            // Create notification for trip completion (with error handling)
+            try {
+                create_notification($pdo, (int)$user['user_id'], 'system_alert', 
+                    'Trip Completed', 
+                    'You have successfully completed the trip to ' . $res['destination'] . '. Great job!');
+            } catch (Exception $e) {
+                error_log('WARNING: Failed to create trip completion notification for user_id: ' . (int)$user['user_id'] . ' - ' . $e->getMessage());
+            }
         } catch (Throwable $e) {
             $pdo->rollBack();
             json_error('Failed to complete trip: ' . $e->getMessage(), 500);
@@ -119,6 +138,15 @@ if ($method === 'POST') {
         try {
             cancel_reservation($pdo, $id);
             $pdo->commit();
+            
+            // Create notification for trip cancellation (with error handling)
+            try {
+                create_notification($pdo, (int)$user['user_id'], 'system_alert', 
+                    'Trip Cancelled', 
+                    'You have cancelled the trip to ' . $res['destination'] . '.');
+            } catch (Exception $e) {
+                error_log('WARNING: Failed to create trip cancellation notification for user_id: ' . (int)$user['user_id'] . ' - ' . $e->getMessage());
+            }
         } catch (Throwable $e) {
             $pdo->rollBack();
             json_error('Failed to cancel trip: ' . $e->getMessage(), 500);
