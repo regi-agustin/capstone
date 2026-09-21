@@ -31,7 +31,7 @@ CREATE TABLE `action_logs` (
   PRIMARY KEY (`log_id`),
   KEY `idx_action_logs_user` (`user_id`),
   CONSTRAINT `fk_action_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -40,7 +40,7 @@ CREATE TABLE `action_logs` (
 
 LOCK TABLES `action_logs` WRITE;
 /*!40000 ALTER TABLE `action_logs` DISABLE KEYS */;
-INSERT INTO `action_logs` VALUES (8,1,'UPDATE_ACCOUNT','Updated user account (user id 2, Role: driver_management_head).','2026-08-13 17:54:56'),(9,8,'Payroll','Set payroll 4 to paid','2026-08-14 04:32:10'),(10,1,'CREATE_ACCOUNT','Created user account: miggy basina (Role: payroll_officer, Email: basinamigo@gmail.com)','2026-08-14 11:27:18'),(11,8,'ATTENDANCE_MANUAL','Recorded attendance for driver 6 on 2026-08-14 (Verified)','2026-08-14 11:59:10'),(12,9,'BACKUP_CODES','Viewed backup codes','2026-08-14 11:59:10'),(13,9,'CHANGE_PASSWORD','Password changed','2026-08-14 11:59:10'),(14,9,'CHANGE_PASSWORD','Password changed','2026-08-14 11:59:10'),(15,8,'ATTENDANCE_MANUAL','Recorded attendance for driver 6 on 2026-08-14 (Verified)','2026-08-14 11:59:41'),(16,9,'CANCEL_BOOKING','Cancelled reservation  (pending)','2026-08-14 11:59:41'),(17,9,'BACKUP_CODES','Viewed backup codes','2026-08-14 11:59:41'),(18,9,'CHANGE_PASSWORD','Password changed','2026-08-14 11:59:41'),(19,9,'CHANGE_PASSWORD','Password changed','2026-08-14 11:59:41'),(20,8,'ATTENDANCE_MANUAL','Recorded attendance for driver 6 on 2026-08-14 (Verified)','2026-08-14 12:00:03'),(21,9,'CANCEL_BOOKING','Cancelled reservation 5 (pending)','2026-08-14 12:00:03'),(22,9,'BACKUP_CODES','Viewed backup codes','2026-08-14 12:00:03'),(23,9,'CHANGE_PASSWORD','Password changed','2026-08-14 12:00:03'),(24,9,'CHANGE_PASSWORD','Password changed','2026-08-14 12:00:03'),(25,1,'ARCHIVE_ACCOUNT','Archived user account: miggy basina (Role: payroll_officer)','2026-08-14 12:03:15'),(26,1,'UPDATE_ACCOUNT','Set account status to active (user id 10).','2026-08-14 12:03:18'),(27,1,'UPDATE_ACCOUNT','Set account status to suspended (user id 10).','2026-08-14 12:03:18'),(28,1,'UPDATE_ACCOUNT','Set account status to active (user id 10).','2026-08-14 12:03:19'),(29,1,'ARCHIVE_ACCOUNT','Archived user account: miggy basina (Role: payroll_officer)','2026-08-14 12:03:21'),(30,1,'ARCHIVE_ACCOUNT','Archived user account: macasinag (Role: billing_officer)','2026-08-14 12:03:28'),(31,1,'ARCHIVE_ACCOUNT','Archived user account: elena.reyes (Role: reservation_officer)','2026-08-14 12:03:29'),(32,1,'ARCHIVE_ACCOUNT','Archived user account: miggy.basina (Role: driver_management_head)','2026-08-14 12:03:30'),(33,1,'ARCHIVE_ACCOUNT','Archived user account: maria.santos (Role: payroll_officer)','2026-08-14 12:03:32'),(34,1,'UPDATE_ACCOUNT','Set account status to active (user id 10).','2026-08-14 12:07:48'),(35,1,'ARCHIVE_ACCOUNT','Archived user account: miggy basina (Role: payroll_officer)','2026-08-14 12:18:16'),(36,1,'ARCHIVE_ACCOUNT','Archived user account: charles.buque (Role: customer)','2026-08-14 12:18:18'),(37,1,'UPDATE_ACCOUNT','Set account status to active (user id 8).','2026-09-20 20:08:12'),(38,1,'UPDATE_ACCOUNT','Set account status to active (user id 10).','2026-09-20 20:08:13'),(39,1,'UPDATE_ACCOUNT','Set account status to active (user id 9).','2026-09-20 20:11:58'),(40,1,'UPDATE_ACCOUNT','Set account status to active (user id 2).','2026-09-20 20:11:58'),(41,1,'UPDATE_ACCOUNT','Set account status to active (user id 3).','2026-09-20 20:11:59'),(42,1,'UPDATE_ACCOUNT','Set account status to active (user id 4).','2026-09-20 20:12:00');
+INSERT INTO `action_logs` VALUES (1,9,'CANCEL_BOOKING','Cancelled reservation 1 (pending)','2026-09-21 00:10:33'),(2,1,'UPDATE_ACCOUNT','Updated user account (user id 4, Role: billing_officer).','2026-09-21 00:13:19');
 /*!40000 ALTER TABLE `action_logs` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -92,7 +92,7 @@ CREATE TABLE `attendance` (
   KEY `idx_attendance_vehicle` (`vehicle_id`),
   CONSTRAINT `fk_attendance_driver` FOREIGN KEY (`driver_id`) REFERENCES `drivers` (`driver_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_attendance_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -101,7 +101,6 @@ CREATE TABLE `attendance` (
 
 LOCK TABLES `attendance` WRITE;
 /*!40000 ALTER TABLE `attendance` DISABLE KEYS */;
-INSERT INTO `attendance` VALUES (7,6,3,'2026-08-14','08:00:00','17:00:00',NULL,NULL,'verified',NULL),(8,7,4,'2026-08-14','08:15:00','17:30:00',NULL,NULL,'verified',NULL),(9,8,5,'2026-08-14','07:45:00',NULL,NULL,NULL,'pending',NULL),(10,6,3,'2026-08-13','07:50:00','17:10:00',NULL,NULL,'verified',NULL),(11,7,4,'2026-08-13','08:05:00','17:20:00',NULL,NULL,'verified',NULL);
 /*!40000 ALTER TABLE `attendance` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -167,7 +166,7 @@ CREATE TABLE `clients` (
 
 LOCK TABLES `clients` WRITE;
 /*!40000 ALTER TABLE `clients` DISABLE KEYS */;
-INSERT INTO `clients` VALUES (2,9,'Charles John Buque','Charles John Buque','0912 345 6789','charles.buque@email.com','individual','2026-08-14','active'),(3,NULL,'BSIT','Miguel I├▒igo S. Basia','09492549864','basinamigo@gmail.com','corporate','2026-09-21','active');
+INSERT INTO `clients` VALUES (2,9,'Charles John Buque','Smoke Test','09000000000','smoke@test.com','individual','2026-08-14','active'),(3,NULL,'BSIT','Miguel I├▒igo S. Basia','09492549864','basinamigo@gmail.com','corporate','2026-09-21','active');
 /*!40000 ALTER TABLE `clients` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -203,7 +202,7 @@ CREATE TABLE `drivers` (
 
 LOCK TABLES `drivers` WRITE;
 /*!40000 ALTER TABLE `drivers` DISABLE KEYS */;
-INSERT INTO `drivers` VALUES (6,11,'Juan Dela Cruz','0917 111 2222','N01-23-456789','2027-05-10',NULL,NULL,'active',0,'2022-03-01'),(7,NULL,'Pedro Santos','0918 222 3333','N02-23-456790','2026-11-20',NULL,NULL,'active',0,'2022-07-15'),(8,NULL,'Ana Cruz','0919 333 4444','N03-23-456791','2028-01-30',NULL,NULL,'active',0,'2023-02-01'),(9,NULL,'Miguel Lopez','0920 444 5555','N04-23-456792','2026-09-25',NULL,NULL,'active',0,'2023-06-12'),(10,NULL,'Rosa Mendoza','0921 555 6666','N05-23-456793','2027-12-05',NULL,NULL,'active',0,'2024-01-08'),(11,NULL,'Sherwin Aspa','0917 888 7777','N06-23-456794','2028-06-15','Angeles City, Pampanga',NULL,'active',0,'2022-08-01');
+INSERT INTO `drivers` VALUES (6,11,'Juan Dela Cruz','0917 111 2222','N01-23-456789','2027-05-10',NULL,'/api/uploads/profile/20260921_000345_6.png','active',0,'2022-03-01'),(7,12,'Pedro Santos','0918 222 3333','N02-23-456790','2026-11-20',NULL,NULL,'active',0,'2022-07-15'),(8,13,'Ana Cruz','0919 333 4444','N03-23-456791','2028-01-30',NULL,NULL,'active',0,'2023-02-01'),(9,14,'Miguel Lopez','0920 444 5555','N04-23-456792','2026-09-25',NULL,NULL,'active',0,'2023-06-12'),(10,15,'Rosa Mendoza','0921 555 6666','N05-23-456793','2027-12-05',NULL,NULL,'active',0,'2024-01-08'),(11,16,'Sherwin Aspa','0917 888 7777','N06-23-456794','2028-06-15','Angeles City, Pampanga',NULL,'active',0,'2022-08-01');
 /*!40000 ALTER TABLE `drivers` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -226,7 +225,7 @@ CREATE TABLE `feedback` (
   KEY `idx_feedback_reservation` (`reservation_id`),
   CONSTRAINT `fk_feedback_reservation` FOREIGN KEY (`reservation_id`) REFERENCES `reservations` (`reservation_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_feedback_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -258,7 +257,7 @@ CREATE TABLE `loans` (
   PRIMARY KEY (`loan_id`),
   KEY `idx_loans_driver` (`driver_id`),
   CONSTRAINT `fk_loans_driver` FOREIGN KEY (`driver_id`) REFERENCES `drivers` (`driver_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -267,7 +266,6 @@ CREATE TABLE `loans` (
 
 LOCK TABLES `loans` WRITE;
 /*!40000 ALTER TABLE `loans` DISABLE KEYS */;
-INSERT INTO `loans` VALUES (1,11,'Cooperative Loan',30000.00,0.00,'2026-01-01',2500.00,15000.00,'active');
 /*!40000 ALTER TABLE `loans` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -289,7 +287,7 @@ CREATE TABLE `login_sessions` (
   PRIMARY KEY (`session_id`),
   KEY `idx_login_sessions_user` (`user_id`),
   CONSTRAINT `fk_login_sessions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -298,7 +296,7 @@ CREATE TABLE `login_sessions` (
 
 LOCK TABLES `login_sessions` WRITE;
 /*!40000 ALTER TABLE `login_sessions` DISABLE KEYS */;
-INSERT INTO `login_sessions` VALUES (1,8,'Windows ┬╖ Chrome','Pampanga, Philippines','192.168.1.10','active','2026-08-14 05:20:58'),(2,8,'Android ┬╖ Chrome','Pampanga, Philippines','192.168.1.11','active','2026-08-14 03:20:58'),(3,8,'Windows ┬╖ Edge','Pampanga, Philippines','192.168.1.12','active','2026-08-13 05:20:58'),(4,9,'Windows ┬╖ Chrome','Pampanga, Philippines','192.168.1.20','active','2026-08-14 05:20:58'),(5,9,'Android ┬╖ Chrome','Pampanga, Philippines','192.168.1.21','active','2026-08-14 02:20:58'),(6,9,'Windows ┬╖ Edge','Pampanga, Philippines','192.168.1.22','active','2026-08-12 05:20:58'),(7,8,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 05:22:59'),(8,8,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 05:26:00'),(9,9,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 05:26:06'),(10,9,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 05:29:47'),(11,8,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 05:29:59'),(12,8,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 11:25:19'),(13,9,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 11:25:28'),(14,1,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 11:25:57'),(15,10,'Windows ┬╖ Edge','Pampanga, Philippines','::1','current','2026-08-14 11:27:33'),(16,1,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 11:29:15'),(17,8,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 11:59:10'),(18,9,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 11:59:10'),(19,8,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 11:59:41'),(20,9,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 11:59:41'),(21,8,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 12:00:03'),(22,9,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','current','2026-08-14 12:00:03'),(23,8,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 12:00:28'),(24,8,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 12:01:41'),(25,1,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 12:02:29'),(26,1,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 12:02:40'),(27,1,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 12:03:07'),(28,1,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 12:07:06'),(29,1,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 12:07:48'),(30,1,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 12:18:38'),(31,1,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-08-14 12:21:24'),(32,1,'Windows ┬╖ Chrome','Pampanga, Philippines','::1','active','2026-08-14 12:25:00'),(33,1,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-09-20 19:25:21'),(34,1,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-09-20 20:07:58'),(35,8,'Windows ┬╖ Edge','Pampanga, Philippines','::1','current','2026-09-20 20:08:23'),(36,1,'Windows ┬╖ Edge','Pampanga, Philippines','::1','active','2026-09-20 20:11:38'),(37,3,'Windows ┬╖ Edge','Pampanga, Philippines','::1','current','2026-09-20 20:12:23'),(38,1,'Windows ┬╖ Edge','Pampanga, Philippines','::1','current','2026-09-20 20:30:35');
+INSERT INTO `login_sessions` VALUES (1,2,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-20 22:21:59'),(2,11,'Windows · Edge','Pampanga, Philippines','::1','current','2026-09-20 22:22:13'),(3,1,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-09-20 22:23:35'),(4,2,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-20 22:29:00'),(5,12,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-09-20 22:31:53'),(6,2,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-20 22:34:12'),(7,9,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-20 22:36:59'),(8,3,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-20 22:40:06'),(9,9,'Windows · Chrome','Pampanga, Philippines','::1','active','2026-09-20 23:17:57'),(10,9,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-20 23:21:45'),(11,4,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-20 23:22:37'),(12,3,'Windows · Edge','Pampanga, Philippines','::1','current','2026-09-20 23:22:48'),(13,9,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-20 23:23:01'),(14,2,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-20 23:24:49'),(15,9,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-21 00:10:25'),(16,4,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-21 00:11:12'),(17,2,'Windows · Edge','Pampanga, Philippines','::1','current','2026-09-21 00:11:27'),(18,1,'Windows · Edge','Pampanga, Philippines','::1','active','2026-09-21 00:12:57'),(19,1,'Windows · Chrome','Pampanga, Philippines','::1','current','2026-09-21 00:19:17'),(20,9,'Windows · Chrome','Pampanga, Philippines','::1','current','2026-09-21 00:19:34'),(21,4,'Windows · Chrome','Pampanga, Philippines','::1','current','2026-09-21 00:19:41'),(22,12,'Windows · Chrome','Pampanga, Philippines','::1','current','2026-09-21 00:20:41'),(23,8,'Windows · Chrome','Pampanga, Philippines','::1','current','2026-09-21 00:21:01');
 /*!40000 ALTER TABLE `login_sessions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -352,7 +350,7 @@ CREATE TABLE `notifications` (
   PRIMARY KEY (`notification_id`),
   KEY `idx_notifications_user` (`user_id`),
   CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -361,7 +359,7 @@ CREATE TABLE `notifications` (
 
 LOCK TABLES `notifications` WRITE;
 /*!40000 ALTER TABLE `notifications` DISABLE KEYS */;
-INSERT INTO `notifications` VALUES (1,9,'reservation_confirmed','Reservation received','Your reservation BK-2026-0001 is awaiting approval.',1,'2026-08-14 04:14:11'),(2,8,'attendance_verified','OCR Attendance Verified','Ana Cruz attendance on 2026-08-14 has been verified.',1,'2026-08-14 04:30:05'),(3,8,'attendance_rejected','OCR Attendance Mismatch','Pedro Santos plate number mismatch on 2026-08-13. Entered: DEF 4567 | OCR: DEF 4567',1,'2026-08-14 04:30:05'),(4,8,'payroll_released','Payroll Record Updated','Juan Dela Cruz payroll record for the current cut-off was marked Completed.',1,'2026-08-14 04:30:05'),(5,8,'system_announcement','System Maintenance Schedule','Scheduled system maintenance is set for this weekend. Payroll features will be temporarily unavailable during the window.',1,'2026-08-14 05:21:20'),(6,8,'system_announcement','New Feature Update','Payroll and attendance enhancements are now live. Review the Help Center for details.',1,'2026-08-14 05:21:20'),(7,9,'system_announcement','System Maintenance Schedule','Scheduled system maintenance is set for this weekend. Booking features will be temporarily unavailable.',1,'2026-08-14 05:21:20');
+INSERT INTO `notifications` VALUES (4,12,'reservation_confirmed','Trip Accepted','You have accepted the trip to SMOKE TEST. Drive safely!',0,'2026-09-21 00:20:41'),(5,12,'system_alert','Trip Completed','You have successfully completed the trip to SMOKE TEST. Great job!',0,'2026-09-21 00:20:48');
 /*!40000 ALTER TABLE `notifications` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -383,7 +381,7 @@ CREATE TABLE `payments` (
   PRIMARY KEY (`payment_id`),
   KEY `idx_payments_billing` (`billing_id`),
   CONSTRAINT `fk_payments_billing` FOREIGN KEY (`billing_id`) REFERENCES `billing` (`billing_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -442,7 +440,7 @@ CREATE TABLE `payroll` (
   CONSTRAINT `fk_payroll_driver` FOREIGN KEY (`driver_id`) REFERENCES `drivers` (`driver_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_payroll_submitted_by` FOREIGN KEY (`submitted_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_payroll_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -451,7 +449,6 @@ CREATE TABLE `payroll` (
 
 LOCK TABLES `payroll` WRITE;
 /*!40000 ALTER TABLE `payroll` DISABLE KEYS */;
-INSERT INTO `payroll` VALUES (6,11,11,'Additional','NBX8012','AUV',NULL,'2026-07-01','2026-07-15','2026-07-30','paid','{\"car_rental\":14630.00,\"fuel_subsidy\":0,\"excess_gas\":0,\"overnight_allowance\":0,\"overtime\":540.00,\"misc\":1174.00,\"time_hazard\":0,\"dispute\":0}','{\"advance\":0,\"penalty\":0,\"no_line_up\":0,\"absent_leave\":0,\"wtax\":34.28,\"membership\":0,\"cash_bond\":0,\"coop_savings\":1000.00,\"coop_loan\":2500.00,\"others\":0}',16344.00,3534.28,12809.72,'July 1-15, 2026 payroll','Bank Transfer',12809.72,'2026-07-30','TRF-2026-0711',8,1,'2026-07-28 10:00:00',8,'2026-09-20 21:10:52','2026-09-20 21:10:52');
 /*!40000 ALTER TABLE `payroll` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -491,7 +488,7 @@ CREATE TABLE `payroll_trips` (
   KEY `fk_pt_reservation` (`reservation_id`),
   CONSTRAINT `fk_pt_payroll` FOREIGN KEY (`payroll_id`) REFERENCES `payroll` (`payroll_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_pt_reservation` FOREIGN KEY (`reservation_id`) REFERENCES `reservations` (`reservation_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -500,7 +497,6 @@ CREATE TABLE `payroll_trips` (
 
 LOCK TABLES `payroll_trips` WRITE;
 /*!40000 ALTER TABLE `payroll_trips` DISABLE KEYS */;
-INSERT INTO `payroll_trips` VALUES (1,6,11,11,'2026-07-01','HD-AUV-12','NNA 1006','Toyota Adventure',1900.00,'08:00:00','17:00:00',9.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,146.00,0.00,0.00,2046.00),(2,6,12,12,'2026-07-03','HD-AUV-13','NNA 1004','Mitsubishi Adventure',1765.00,'09:00:00','18:00:00',9.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,1765.00),(3,6,13,13,'2026-07-07','HD-AUV-14','NNA 1001','Toyota Adventure',1800.00,'08:00:00','17:00:00',9.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,1800.00),(4,6,14,14,'2026-07-08','HD-AUV-15','NNA 1002','Toyota Adventure',1800.00,'08:00:00','17:00:00',9.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,50.00,0.00,1850.00),(5,6,15,15,'2026-07-09','HD-AUV-16','NNA 1007','Toyota Adventure',1800.00,'06:00:00','18:30:00',12.50,0.00,0.00,0.00,4.50,315.00,0.00,0.00,382.00,0.00,0.00,2497.00),(6,6,16,16,'2026-07-10','HD-AUV-17','NNA 2002','Hyundai Starex',1865.00,'08:00:00','18:00:00',10.00,0.00,0.00,0.00,1.50,90.00,0.00,0.00,0.00,50.00,0.00,1955.00),(7,6,17,17,'2026-07-14','HD-AUV-15','NNA 1002','Toyota Adventure',1800.00,'08:00:00','18:30:00',10.50,0.00,0.00,0.00,2.50,135.00,0.00,0.00,596.00,0.00,0.00,2531.00),(8,6,18,18,'2026-07-15','HD-AUV-12','NNA 1006','Toyota Adventure',1900.00,'08:00:00','17:00:00',9.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,1900.00);
 /*!40000 ALTER TABLE `payroll_trips` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -560,7 +556,7 @@ CREATE TABLE `reservations` (
   `destination` varchar(255) DEFAULT NULL,
   `passengers` smallint(5) unsigned DEFAULT NULL,
   `luggage` varchar(100) DEFAULT NULL,
-  `status` enum('pending','confirmed','on_trip','completed','cancelled','denied') NOT NULL DEFAULT 'pending',
+  `status` enum('pending','pricing_approved','confirmed','on_trip','completed','cancelled','denied') NOT NULL DEFAULT 'pending',
   `denial_reason` varchar(255) DEFAULT NULL,
   `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `additional_charges` decimal(10,2) NOT NULL DEFAULT 0.00,
@@ -573,7 +569,7 @@ CREATE TABLE `reservations` (
   CONSTRAINT `fk_reservations_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`client_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_reservations_driver` FOREIGN KEY (`driver_id`) REFERENCES `drivers` (`driver_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_reservations_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -582,7 +578,7 @@ CREATE TABLE `reservations` (
 
 LOCK TABLES `reservations` WRITE;
 /*!40000 ALTER TABLE `reservations` DISABLE KEYS */;
-INSERT INTO `reservations` VALUES (2,2,NULL,3,'BK-2026-0001','2026-08-14 12:14:11','2026-08-17','2026-08-20','08:00:00','17:00:00',NULL,'Family trip','Clark Freeport Zone, Pampanga',7,NULL,'pending',NULL,7500.00,0.00),(4,2,NULL,NULL,'BK-2026-0004','2026-08-14 19:59:41','2026-08-16','2026-08-17','09:00:00','17:00:00','verify-cancel','Clark Freeport Zone','Clark Freeport Zone',2,NULL,'cancelled',NULL,5000.00,0.00),(5,2,NULL,NULL,'BK-2026-0005','2026-08-14 20:00:03','2026-08-16','2026-08-17','09:00:00','17:00:00','verify-cancel','Clark Freeport Zone','Clark Freeport Zone',2,NULL,'cancelled',NULL,5000.00,0.00),(6,3,NULL,7,'BK-2026-0006','2026-09-21 03:43:16','2026-09-21','2026-09-22','12:00:00','00:00:00',NULL,'Victorino Mapa Street, Sta. Mesa Manila','Victorino Mapa Street, Sta. Mesa Manila',5,NULL,'pending',NULL,2300.00,500.00),(7,3,NULL,7,'BK-2026-0007','2026-09-21 04:18:47','2026-09-21','2026-09-21','07:00:00','18:00:00','Urgent','EARIST Manila Campus','EARIST Manila Campus',1,NULL,'pending',NULL,2300.00,500.00),(10,2,11,12,'BK-2026-0010','2026-06-30 09:00:00','2026-06-30','2026-06-30','08:00:00','17:00:00',NULL,'Corporate transfer','Clark Freeport Zone, Pampanga',5,NULL,'completed',NULL,1900.00,0.00),(11,2,11,13,'BK-2026-0011','2026-07-01 09:00:00','2026-07-01','2026-07-01','08:00:00','17:00:00',NULL,'Airport transfer','Clark International Airport',6,NULL,'completed',NULL,1900.00,0.00),(12,2,11,14,'BK-2026-0012','2026-07-03 09:00:00','2026-07-03','2026-07-03','09:00:00','18:00:00',NULL,'City tour','Angeles City, Pampanga',7,NULL,'completed',NULL,1765.00,0.00),(13,2,11,15,'BK-2026-0013','2026-07-07 09:00:00','2026-07-07','2026-07-07','08:00:00','17:00:00',NULL,'Event shuttle','San Fernando, Pampanga',8,NULL,'completed',NULL,1800.00,0.00),(14,2,11,16,'BK-2026-0014','2026-07-08 09:00:00','2026-07-08','2026-07-08','08:00:00','17:00:00',NULL,'Field visit','Porac, Pampanga',6,NULL,'completed',NULL,1800.00,0.00),(15,2,11,17,'BK-2026-0015','2026-07-09 08:00:00','2026-07-09','2026-07-09','06:00:00','18:30:00',NULL,'Provincial transfer','Bataan',9,NULL,'completed',NULL,1800.00,0.00),(16,2,11,18,'BK-2026-0016','2026-07-10 09:00:00','2026-07-10','2026-07-10','08:00:00','18:00:00',NULL,'Site visit','Tarlac City',7,NULL,'completed',NULL,1865.00,0.00),(17,2,11,15,'BK-2026-0017','2026-07-14 09:00:00','2026-07-14','2026-07-14','08:00:00','18:30:00',NULL,'Board meeting','Subic, Zambales',6,NULL,'completed',NULL,1800.00,0.00),(18,2,11,12,'BK-2026-0018','2026-07-15 09:00:00','2026-07-15','2026-07-15','08:00:00','17:00:00',NULL,'Airport transfer','Clark International Airport',5,NULL,'completed',NULL,1900.00,0.00),(19,2,11,13,'BK-2026-0019','2026-07-16 09:00:00','2026-07-16','2026-07-16','08:00:00','17:00:00',NULL,'Corporate run','Balanga, Bataan',6,NULL,'completed',NULL,1765.00,0.00);
+INSERT INTO `reservations` VALUES (1,2,NULL,13,'BK-2026-0001','2026-09-21 07:22:25','2026-09-20','2026-09-20',NULL,'18:00:00',NULL,'EARIST Manila Campus','EARIST Manila Campus',1,NULL,'cancelled',NULL,1765.00,0.00),(2,2,NULL,13,'BK-2026-0002','2026-09-21 08:10:57','2026-09-21','2026-09-21',NULL,'18:00:00',NULL,'EARIST Manila Campus','EARIST Manila Campus',1,NULL,'pending',NULL,1765.00,0.00);
 /*!40000 ALTER TABLE `reservations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -648,7 +644,7 @@ CREATE TABLE `trip_logs` (
   CONSTRAINT `fk_trip_driver` FOREIGN KEY (`driver_id`) REFERENCES `drivers` (`driver_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_trip_reservation` FOREIGN KEY (`reservation_id`) REFERENCES `reservations` (`reservation_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_trip_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -657,7 +653,6 @@ CREATE TABLE `trip_logs` (
 
 LOCK TABLES `trip_logs` WRITE;
 /*!40000 ALTER TABLE `trip_logs` DISABLE KEYS */;
-INSERT INTO `trip_logs` VALUES (10,11,12,10,'2026-06-30','08:00:00','17:00:00','Hollydot Depot, Pasig','Clark Freeport Zone, Pampanga',NULL,120.00,0.00,'Trip completed'),(11,11,12,11,'2026-07-01','08:00:00','17:00:00','Hollydot Depot, Pasig','Clark International Airport',NULL,110.00,0.00,'Trip completed'),(12,11,13,12,'2026-07-03','09:00:00','18:00:00','Hollydot Depot, Pasig','Angeles City, Pampanga',NULL,95.00,0.00,'Trip completed'),(13,11,14,13,'2026-07-07','08:00:00','17:00:00','Hollydot Depot, Pasig','San Fernando, Pampanga',NULL,90.00,0.00,'Trip completed'),(14,11,15,14,'2026-07-08','08:00:00','17:00:00','Hollydot Depot, Pasig','Porac, Pampanga',NULL,130.00,0.00,'Trip completed'),(15,11,16,15,'2026-07-09','06:00:00','18:30:00','Hollydot Depot, Pasig','Bataan',NULL,310.00,0.00,'Trip completed'),(16,11,17,16,'2026-07-10','08:00:00','18:00:00','Hollydot Depot, Pasig','Tarlac City',NULL,240.00,0.00,'Trip completed'),(17,11,15,17,'2026-07-14','08:00:00','18:30:00','Hollydot Depot, Pasig','Subic, Zambales',NULL,290.00,0.00,'Trip completed'),(18,11,12,18,'2026-07-15','08:00:00','17:00:00','Hollydot Depot, Pasig','Clark International Airport',NULL,110.00,0.00,'Trip completed'),(19,11,13,19,'2026-07-16','08:00:00','17:00:00','Hollydot Depot, Pasig','Balanga, Bataan',NULL,150.00,0.00,'Trip completed');
 /*!40000 ALTER TABLE `trip_logs` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -678,7 +673,7 @@ CREATE TABLE `user_permissions` (
   UNIQUE KEY `uk_user_scope_action` (`user_id`,`scope`,`action`),
   KEY `idx_permissions_user` (`user_id`),
   CONSTRAINT `fk_permissions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=61 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -687,7 +682,7 @@ CREATE TABLE `user_permissions` (
 
 LOCK TABLES `user_permissions` WRITE;
 /*!40000 ALTER TABLE `user_permissions` DISABLE KEYS */;
-INSERT INTO `user_permissions` VALUES (13,3,'Home','View',1),(14,3,'Reservations','View',1),(15,3,'Reservations','Add',1),(16,3,'Reservations','Edit',1),(17,3,'Reservations','Delete',1),(18,4,'Home','View',1),(19,4,'Billing','View',1),(20,4,'Billing','Add',1),(21,4,'Billing','Edit',1),(22,4,'Billing','Delete',1),(23,4,'Payroll','View',1),(41,2,'Home','View',1),(42,2,'Drivers','View',1),(43,2,'Drivers','Add',1),(44,2,'Drivers','Edit',1),(45,2,'Drivers','Delete',1),(46,2,'Fleet','View',1),(47,2,'Fleet','Add',1),(48,2,'Fleet','Edit',1),(49,2,'Fleet','Delete',1),(50,2,'Assignments','View',1),(51,2,'Assignments','Add',1),(52,2,'Assignments','Delete',1),(53,8,'Home','View',1),(54,8,'Payroll','View',1),(55,8,'Payroll','Add',1),(56,8,'Payroll','Edit',1),(57,8,'Drivers','View',1),(58,8,'Attendance','View',1),(59,10,'Home','View',1),(60,10,'Payroll','View',1);
+INSERT INTO `user_permissions` VALUES (13,3,'Home','View',1),(14,3,'Reservations','View',1),(15,3,'Reservations','Add',1),(16,3,'Reservations','Edit',1),(17,3,'Reservations','Delete',1),(41,2,'Home','View',1),(42,2,'Drivers','View',1),(43,2,'Drivers','Add',1),(44,2,'Drivers','Edit',1),(45,2,'Drivers','Delete',1),(46,2,'Fleet','View',1),(47,2,'Fleet','Add',1),(48,2,'Fleet','Edit',1),(49,2,'Fleet','Delete',1),(50,2,'Assignments','View',1),(51,2,'Assignments','Add',1),(52,2,'Assignments','Delete',1),(53,8,'Home','View',1),(54,8,'Payroll','View',1),(55,8,'Payroll','Add',1),(56,8,'Payroll','Edit',1),(57,8,'Drivers','View',1),(58,8,'Attendance','View',1),(59,10,'Home','View',1),(60,10,'Payroll','View',1),(61,4,'Home','View',1),(62,4,'Billing','View',1),(63,4,'Billing','Add',1),(64,4,'Billing','Edit',1),(65,4,'Billing','Delete',1);
 /*!40000 ALTER TABLE `user_permissions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -739,7 +734,7 @@ CREATE TABLE `users` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `uk_users_username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -748,7 +743,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'admin','240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9','System Administrator',NULL,NULL,'superadmin','active',1,'2026-08-13 14:26:54'),(2,'miggy.basina','845979227e62e26330f60f62a762b1cb5da65af27d120cac7cf99b1c4b5f4078','Miggy Basina','basina.mi.bsinfotech@gmail.com','09492549864','driver_management_head','active',1,'2026-08-13 14:26:54'),(3,'elena.reyes','04ef8cc3a64588a48373bc2553524c78e0f8dc09b41992c0b587e39a59749316','Elena Reyes',NULL,NULL,'reservation_officer','active',1,'2026-08-13 14:26:54'),(4,'macasinag','e007fbdc563042ac6aa9dcdfc979b2a8233938d600c412c2b2ad00a273ddd0d1','Macasinag',NULL,NULL,'billing_officer','active',1,'2026-08-13 14:26:54'),(8,'maria.santos','ae73ed7baa283dcfb004d4b855041c27f8d913bc4bd9ffc9929f176e86343498','Maria Santos','maria.santos@hollydot.com','0917 555 1234','payroll_officer','active',1,'2026-08-14 04:14:11'),(9,'charles.buque','a2b629e293f5efea6939928836e8482520a804d68586919fd58d98cee36a4d5b','Charles John Buque','charles.buque@email.com','0912 345 6789','customer','active',1,'2026-08-14 04:14:11'),(10,'miggy basina','845979227e62e26330f60f62a762b1cb5da65af27d120cac7cf99b1c4b5f4078','Miguel I├▒igo S. Basina','basinamigo@gmail.com','09492549864','payroll_officer','active',1,'2026-08-14 11:27:18'),(11,'juan.driver','494d022492052a06f8f81949639a1d148c1051fa3d4e4688fbd96efe649cd382','Juan Dela Cruz','juan.delacruz@hollydot.com','0917 111 2222','driver','active',1,'2026-08-13 06:26:54');
+INSERT INTO `users` VALUES (1,'admin','240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9','System Administrator',NULL,NULL,'superadmin','active',1,'2026-08-13 14:26:54'),(2,'miggy.basina','d30b3a38b28285bfce128889b4966e02728a1ba783d9ef2002562ea907811bd2','Miggy Basina','basina.mi.bsinfotech@gmail.com','09492549864','driver_management_head','active',1,'2026-08-13 14:26:54'),(3,'elena.reyes','04ef8cc3a64588a48373bc2553524c78e0f8dc09b41992c0b587e39a59749316','Elena Reyes',NULL,NULL,'reservation_officer','active',1,'2026-08-13 14:26:54'),(4,'macasinag','e007fbdc563042ac6aa9dcdfc979b2a8233938d600c412c2b2ad00a273ddd0d1','Macasinag',NULL,NULL,'billing_officer','active',1,'2026-08-13 14:26:54'),(8,'maria.santos','ae73ed7baa283dcfb004d4b855041c27f8d913bc4bd9ffc9929f176e86343498','Maria Santos','maria.santos@hollydot.com','0917 555 1234','payroll_officer','active',1,'2026-08-14 04:14:11'),(9,'charles.buque','a2b629e293f5efea6939928836e8482520a804d68586919fd58d98cee36a4d5b','Charles John Buque','charles.buque@email.com','0912 345 6789','customer','active',1,'2026-08-14 04:14:11'),(10,'miggy basina','845979227e62e26330f60f62a762b1cb5da65af27d120cac7cf99b1c4b5f4078','Miguel I├▒igo S. Basina','basinamigo@gmail.com','09492549864','payroll_officer','active',1,'2026-08-14 11:27:18'),(11,'juan.driver','494d022492052a06f8f81949639a1d148c1051fa3d4e4688fbd96efe649cd382','Juan Dela Cruz','juan.delacruz@hollydot.com','0917 111 2222','driver','active',1,'2026-08-13 06:26:54'),(12,'pedro.santos','494d022492052a06f8f81949639a1d148c1051fa3d4e4688fbd96efe649cd382','Pedro Santos',NULL,'0918 222 3333','driver','active',1,'2026-09-20 22:31:47'),(13,'ana.cruz','494d022492052a06f8f81949639a1d148c1051fa3d4e4688fbd96efe649cd382','Ana Cruz',NULL,'0919 333 4444','driver','active',1,'2026-09-20 22:31:47'),(14,'miguel.lopez','494d022492052a06f8f81949639a1d148c1051fa3d4e4688fbd96efe649cd382','Miguel Lopez',NULL,'0920 444 5555','driver','active',1,'2026-09-20 22:31:47'),(15,'rosa.mendoza','494d022492052a06f8f81949639a1d148c1051fa3d4e4688fbd96efe649cd382','Rosa Mendoza',NULL,'0921 555 6666','driver','active',1,'2026-09-20 22:31:47'),(16,'sherwin.aspa','494d022492052a06f8f81949639a1d148c1051fa3d4e4688fbd96efe649cd382','Sherwin Aspa',NULL,'0917 888 7777','driver','active',1,'2026-09-20 22:31:47');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -881,4 +876,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-21  5:14:57
+-- Dump completed on 2026-09-21  8:21:21

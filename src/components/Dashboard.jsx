@@ -1,9 +1,11 @@
 import { Icon } from './Icons.jsx'
 
 export default function Dashboard({ drivers, vehicles, assignments, onNavigate }) {
+  const active = assignments.filter((a) => a.status !== 'pricing_approved')
+  const awaiting = assignments.filter((a) => a.status === 'pricing_approved')
   const availableVehicles = vehicles.filter((v) => v.status === 'Available').length
   const fleetUtilization = Math.round(
-    (assignments.length / Math.max(vehicles.length, 1)) * 100
+    (active.length / Math.max(vehicles.length, 1)) * 100
   )
 
   return (
@@ -21,8 +23,13 @@ export default function Dashboard({ drivers, vehicles, assignments, onNavigate }
         </div>
         <div className="stat">
           <div className="label">Active Trips</div>
-          <div className="value">{assignments.length}</div>
+          <div className="value">{active.length}</div>
           <div className="cell-sub">assigned right now</div>
+        </div>
+        <div className="stat">
+          <div className="label">Awaiting Dispatch</div>
+          <div className="value" style={{ color: 'var(--amber)' }}>{awaiting.length}</div>
+          <div className="cell-sub">pricing approved, needs driver</div>
         </div>
         <div className="stat">
           <div className="label">Fleet Utilization</div>
@@ -42,14 +49,14 @@ export default function Dashboard({ drivers, vehicles, assignments, onNavigate }
               View all
             </button>
           </div>
-          {assignments.length === 0 && (
+          {active.length === 0 && (
             <div className="empty">
               <Icon.clipboard width={42} height={42} />
               <div>No drivers assigned yet. Dispatch your first trip.</div>
             </div>
           )}
           <div>
-            {assignments.map((a) => {
+            {active.map((a) => {
               const driver = drivers.find((d) => d.id === a.driverId)
               const vehicle = vehicles.find((v) => v.id === a.vehicleId)
               return (

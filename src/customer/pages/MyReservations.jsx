@@ -5,6 +5,7 @@ import StatusBadge from '../../ro/components/StatusBadge.jsx'
 
 const tabs = [
   { id: 'pending', label: 'Pending', statuses: ['Pending'] },
+  { id: 'pricing', label: 'Pricing Approved', statuses: ['Pricing Approved'] },
   { id: 'approved', label: 'Approved', statuses: ['Confirmed'] },
   { id: 'ongoing', label: 'Ongoing', statuses: ['On trip'] },
   { id: 'completed', label: 'Completed', statuses: ['Completed'] },
@@ -117,6 +118,12 @@ export default function MyReservations() {
                   </div>
                 )}
 
+                {res.status === 'Pricing Approved' && (
+                  <div className="success-banner" style={{ marginTop: 12 }}>
+                    Pricing approved — a driver will be assigned to your trip shortly.
+                  </div>
+                )}
+
                 <div className="detail-grid" style={{ marginTop: 16 }}>
                   <Detail label="Pickup Date & Time" value={`${formatDate(res.trip.pickupDate)} · ${formatTime(res.trip.pickupTime)}`} />
                   <Detail label="Return Date & Time" value={`${formatDate(res.trip.returnDate)} · ${formatTime(res.trip.returnTime)}`} />
@@ -137,7 +144,7 @@ export default function MyReservations() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-                  {(res.status === 'Pending' || res.status === 'Confirmed') && (
+                  {(res.status === 'Pending' || res.status === 'Pricing Approved' || res.status === 'Confirmed') && (
                     <button
                       type="button"
                       onClick={() => handleCancel(res)}

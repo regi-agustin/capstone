@@ -414,6 +414,9 @@ export default function AddBookingModal({ open, onClose }) {
         }}
         passengers={Number(form.passengers) || 0}
         selectedVehicleId={form.vehicleId}
+        bookings={bookings}
+        vehicles={vehicles}
+        notify={notify}
         onPickVehicle={(id) => {
           setForm((p) => ({ ...p, vehicleId: id }));
         }}

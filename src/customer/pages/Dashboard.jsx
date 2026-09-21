@@ -35,7 +35,7 @@ export default function Dashboard({ user }) {
   }, [])
 
   const availableVehicles = vehicles.filter((v) => v.status === 'Available').length
-  const pending = bookings.filter((b) => b.status === 'Pending').length
+  const pending = bookings.filter((b) => b.status === 'Pending' || b.status === 'Pricing Approved').length
   const active = bookings.filter((b) => b.status === 'On trip' || b.status === 'Confirmed').length
   const completed = bookings.filter((b) => b.status === 'Completed').length
   const latest = bookings[0] || null

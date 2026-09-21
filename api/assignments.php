@@ -11,7 +11,8 @@ function assignment_shape(PDO $pdo, array $r): array
 {
     return [
         'id' => (int)$r['reservation_id'],
-        'driverId' => (int)$r['driver_id'],
+        'status' => $r['status'],
+        'driverId' => $r['driver_id'] ? (int)$r['driver_id'] : null,
         'client' => [
             'name' => $r['client_name'],
             'contact' => $r['contact_number'],
@@ -30,14 +31,14 @@ function assignment_shape(PDO $pdo, array $r): array
 
 if ($method === 'GET') {
     $rows = $pdo->query(
-        'SELECT r.reservation_id, r.driver_id, r.vehicle_id, r.trip_code, r.start_date,
+        'SELECT r.reservation_id, r.status, r.driver_id, r.vehicle_id, r.trip_code, r.start_date,
                 r.destination, r.passengers, r.luggage, r.trip_purpose,
                 c.company_name AS client_name, c.contact_number,
                 tl.start_time
          FROM reservations r
          JOIN clients c ON c.client_id = r.client_id
          LEFT JOIN trip_logs tl ON tl.reservation_id = r.reservation_id
-         WHERE r.status IN ("confirmed", "on_trip")
+         WHERE r.status IN ("confirmed", "on_trip", "pricing_approved")
          ORDER BY r.start_date DESC, r.reservation_id DESC'
     )->fetchAll();
 
@@ -48,6 +49,98 @@ if ($method === 'POST') {
     require_permission($pdo, $user, 'Assignments', 'Add');
 
     $data = body_json();
+    $action = trim((string)($data['action'] ?? ''));
+
+    // DMH picks a driver for a booking whose pricing the billing desk already approved.
+    if ($action === 'assign_driver') {
+        $id = (int)($data['id'] ?? 0);
+        $driverId = (int)($data['driverId'] ?? 0);
+        if ($id <= 0 || $driverId <= 0) {
+            json_error('Booking id and driver id are required.', 422);
+        }
+
+        $stmt = $pdo->prepare(
+            'SELECT r.*, c.user_id AS client_user_id, v.plate_number, v.status AS vehicle_status
+             FROM reservations r
+             JOIN clients c ON c.client_id = r.client_id
+             LEFT JOIN vehicles v ON v.vehicle_id = r.vehicle_id
+             WHERE r.reservation_id = ?'
+        );
+        $stmt->execute([$id]);
+        $res = $stmt->fetch();
+        if (!$res) json_error('Booking not found.', 404);
+        if ($res['status'] !== 'pricing_approved') {
+            json_error('Only bookings with approved pricing can be dispatched.', 422);
+        }
+        if (!$res['vehicle_id']) {
+            json_error('No vehicle selected on this booking.', 422);
+        }
+        if ($res['vehicle_status'] !== 'available') {
+            json_error('The requested vehicle is not available for dispatch.', 422);
+        }
+
+        $driver = $pdo->prepare(
+            'SELECT driver_id FROM drivers d
+             WHERE d.driver_id = ? AND d.is_unavailable = 0
+               AND NOT EXISTS (
+                   SELECT 1 FROM reservations r
+                   WHERE r.driver_id = d.driver_id AND r.status IN ("confirmed", "on_trip")
+               )'
+        );
+        $driver->execute([$driverId]);
+        if (!$driver->fetch()) {
+            json_error('Driver not found or already has an active assignment.', 422);
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('UPDATE vehicles SET status = "on_trip" WHERE vehicle_id = ?')->execute([$res['vehicle_id']]);
+            $pdo->prepare(
+                'UPDATE reservations SET status = "confirmed", driver_id = ? WHERE reservation_id = ?'
+            )->execute([$driverId, $id]);
+            $pdo->prepare(
+                'INSERT INTO trip_logs (driver_id, vehicle_id, reservation_id, trip_date, start_time, start_location)
+                 VALUES (?, ?, ?, ?, ?, "Hollydot Depot, Pasig")'
+            )->execute([
+                $driverId,
+                $res['vehicle_id'],
+                $id,
+                $res['start_date'],
+                $res['pickup_time'] ?: date('H:i:s'),
+            ]);
+
+            $driverUserId = get_user_id_by_driver($pdo, $driverId);
+            if ($driverUserId) {
+                create_notification(
+                    $pdo,
+                    $driverUserId,
+                    'reservation_confirmed',
+                    'New Trip Assigned',
+                    'You have been assigned to a new trip. Destination: ' . $res['destination'] . ', Date: ' . $res['start_date'] .
+                    ', Booking: ' . $res['trip_code'] . '.'
+                );
+            }
+
+            if ($res['client_user_id'] > 0) {
+                $pdo->prepare(
+                    'INSERT INTO notifications (user_id, type, title, description) VALUES (?, ?, ?, ?)'
+                )->execute([
+                    (int)$res['client_user_id'],
+                    'reservation_confirmed',
+                    'Driver Assigned',
+                    'Your booking ' . ($res['trip_code'] ?: '#' . $id) . ' has been dispatched. A driver is on the way.',
+                ]);
+            }
+
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            json_error('Failed to assign driver: ' . $e->getMessage(), 500);
+        }
+
+        json_out(['ok' => true, 'id' => $id, 'status' => 'confirmed'], 200);
+    }
+
     $driverId = (int)($data['driverId'] ?? 0);
     $vehicleId = (int)($data['vehicleId'] ?? 0);
     $clientName = trim((string)($data['client']['name'] ?? ''));

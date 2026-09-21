@@ -1,14 +1,16 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { ReceiptText, CreditCard, ShieldCheck } from 'lucide-react';
+import { ReceiptText, CreditCard, ClipboardCheck, ShieldCheck } from 'lucide-react';
 import AppShell from '../../components/AppShell.jsx';
 import { useBilling } from '../context/BillingContext.jsx';
 
 const TITLES = {
+  '/reviews': { title: 'Booking Review', crumb: 'FleetOps / Pricing Desk' },
   '/invoices': { title: 'Clients Billing', crumb: 'FleetOps / Billing Desk' },
   '/payments': { title: 'Payments', crumb: 'FleetOps / Collections' },
 };
 
 const NAV = [
+  { to: '/reviews', label: 'Booking Review', icon: ClipboardCheck },
   { to: '/invoices', label: 'Clients Billing', icon: ReceiptText },
   { to: '/payments', label: 'Payments', icon: CreditCard },
 ];

@@ -124,7 +124,7 @@ if ($method === 'GET') {
         $stmt->execute([$user['user_id']]);
         $rows = $stmt->fetchAll();
     } else {
-        require_role($user, ['superadmin', 'admin', 'reservation_officer']);
+        require_role($user, ['superadmin', 'admin', 'reservation_officer', 'billing_officer']);
         $rows = $pdo->query(
             booking_select() . '
             ORDER BY FIELD(r.status, "pending", "denied", "confirmed", "on_trip", "completed", "cancelled"),
@@ -325,8 +325,55 @@ if ($method === 'POST') {
         json_out(booking_shape(find_booking($pdo, $id)));
     }
 
+    if ($action === 'approve_pricing') {
+        if (in_array($user['role'], ['superadmin', 'admin', 'billing_officer'], true)) {
+            require_permission($pdo, $user, 'Billing', 'Edit');
+        } else {
+            require_permission($pdo, $user, 'Reservations', 'Edit');
+        }
+
+        $id = parse_booking_id($data['id'] ?? null);
+        if (!$id) {
+            json_error('A valid booking id is required.', 422);
+        }
+        $res = find_booking($pdo, $id);
+        if (!$res || $res['status'] !== 'pending') {
+            json_error('Booking not found or already processed.', 422);
+        }
+        if (!$res['vehicle_id']) {
+            json_error('No vehicle selected on this booking.', 422);
+        }
+
+        $days = max(1, (int)ceil((strtotime($res['end_date']) - strtotime($res['start_date'])) / 86400));
+        $rentalFee = round((float)$res['daily_rate'] * $days, 2);
+        $additionalCharges = max(0, round((float)($data['additionalCharges'] ?? $res['additional_charges'] ?? 0), 2));
+        $total = round($rentalFee + $additionalCharges, 2);
+
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare(
+                'UPDATE reservations SET status = "pricing_approved", additional_charges = ?, total_amount = ? WHERE reservation_id = ?'
+            )->execute([$additionalCharges, $total, $id]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            json_error('Failed to approve pricing: ' . $e->getMessage(), 500);
+        }
+
+        notify_booking_owner($pdo, $res['client_id'], 'reservation_confirmed', 'Pricing Approved',
+            'Your booking ' . res_booking_id($res) . ' has been reviewed and approved at ' . number_format($total, 2) .
+            ' (rental ' . number_format($rentalFee, 2) . ' + charges ' . number_format($additionalCharges, 2) .
+            '). Awaiting driver assignment.');
+
+        json_out(booking_shape(find_booking($pdo, $id)));
+    }
+
     if ($action === 'deny') {
-        require_permission($pdo, $user, 'Reservations', 'Edit');
+        if (in_array($user['role'], ['superadmin', 'admin', 'billing_officer'], true)) {
+            require_permission($pdo, $user, 'Billing', 'Edit');
+        } else {
+            require_permission($pdo, $user, 'Reservations', 'Edit');
+        }
 
         $id = parse_booking_id($data['id'] ?? null);
         if (!$id) {

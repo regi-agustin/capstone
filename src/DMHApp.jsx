@@ -85,6 +85,12 @@ export default function DMHApp({ user, onLogout, onSwitchToAdmin }) {
     return run(() => apiFetch(`assignments.php?id=${id}`, { method: 'DELETE' }))
   }
 
+  function assignDriverToBooking(id, driverId) {
+    return run(() =>
+      apiFetch('assignments.php', { method: 'POST', body: JSON.stringify({ action: 'assign_driver', id, driverId }) })
+    )
+  }
+
   const pageMeta = {
     dashboard: ['My Dashboard', 'FleetOps / Driver Management Head'],
     drivers: ['Drivers Dashboard', 'FleetOps / Drivers'],
@@ -142,7 +148,7 @@ export default function DMHApp({ user, onLogout, onSwitchToAdmin }) {
             />
           )}
           {page === 'assignments' && (
-            <AssignmentsPage assignments={assignments} drivers={drivers} vehicles={vehicles} onRelease={release} />
+            <AssignmentsPage assignments={assignments} drivers={drivers} vehicles={vehicles} onRelease={release} onAssignDriver={assignDriverToBooking} />
           )}
 {page === 'fleet' && <FleetPage vehicles={vehicles} onAddVehicle={addVehicle} />}
           </>

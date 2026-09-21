@@ -2,11 +2,9 @@ import { useEffect, useState } from 'react';
 import { Sparkles, Check, AlertTriangle, Info, CircleAlert } from 'lucide-react';
 import Modal from './Modal.jsx';
 import { analyzeTrip } from '../services/aiAssistantService.js';
-import { useApp } from '../context/AppContext.jsx';
 import StatusBadge from './StatusBadge.jsx';
 
-export default function AIAssistantModal({ open, onClose, client, trip, passengers, selectedVehicleId, onPickVehicle }) {
-  const { bookings, vehicles, notify } = useApp();
+export default function AIAssistantModal({ open, onClose, client, trip, passengers, selectedVehicleId, onPickVehicle, bookings = [], vehicles = [], notify }) {
   const [loading, setLoading] = useState(true);
   const [analysis, setAnalysis] = useState(null);
 
@@ -67,7 +65,7 @@ export default function AIAssistantModal({ open, onClose, client, trip, passenge
                     className="btn btn--primary btn--sm"
                     onClick={() => {
                       onPickVehicle?.(analysis.recommendedVehicle.id);
-                      notify('info', `${analysis.recommendedVehicle.type} added to your booking.`);
+                      notify?.('info', `${analysis.recommendedVehicle.type} added to your booking.`);
                     }}
                   >
                     <Check size={15} /> Use this vehicle

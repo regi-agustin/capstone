@@ -1,34 +1,49 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FiTruck } from 'react-icons/fi'
-import { fetchVehicles, createBooking, fetchProfile, formatPeso } from '../services/customerService.js'
+import { FiTruck, FiPlus } from 'react-icons/fi'
+import { fetchVehicles, fetchMyBookings, fetchProfile, formatPeso } from '../services/customerService.js'
 import SearchBar from '../../ro/components/SearchBar.jsx'
 import StatusBadge from '../../ro/components/StatusBadge.jsx'
-import Modal from '../../ro/components/Modal.jsx'
 import VehiclePhotos from '../../ro/components/VehiclePhotos.jsx'
+import NewBookingModal from '../components/NewBookingModal.jsx'
 import { Icon } from '../../components/Icons.jsx'
 
 export default function BrowseVehicles() {
   const [vehicles, setVehicles] = useState([])
+  const [bookings, setBookings] = useState([])
   const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('All Types')
   const [seatsFilter, setSeatsFilter] = useState('All Capacity')
   const [priceRange, setPriceRange] = useState(6000)
   const [availableOnly, setAvailableOnly] = useState(false)
-  const [booking, setBooking] = useState(null)
   const [profile, setProfile] = useState(null)
-  const [form, setForm] = useState({ clientName: '', contact: '', email: '', destination: '', pickupDate: '', pickupTime: '', returnDate: '', returnTime: '', passengers: 1, specialRequests: '' })
-  const [submitting, setSubmitting] = useState(false)
-  const [success, setSuccess] = useState('')
+  const [bookingOpen, setBookingOpen] = useState(false)
+  const [initialVehicleId, setInitialVehicleId] = useState(null)
+  const [banner, setBanner] = useState('')
 
   useEffect(() => {
     fetchVehicles()
       .then(setVehicles)
       .catch((e) => setError(e.message))
+    fetchMyBookings()
+      .then(setBookings)
+      .catch(() => {})
     fetchProfile()
       .then(setProfile)
       .catch(() => {})
   }, [])
+
+  const notify = (type, msg) => {
+    setError(type === 'error' ? msg : '')
+    setBanner(type !== 'error' ? msg : '')
+  }
+
+  function openBooking(vehicleId = null) {
+    setInitialVehicleId(vehicleId)
+    setBookingOpen(true)
+    setError('')
+    setBanner('')
+  }
 
   const filtered = useMemo(() => {
     return vehicles.filter((v) => {
@@ -44,58 +59,6 @@ export default function BrowseVehicles() {
   const types = [...new Set(vehicles.map((v) => v.type))].sort()
   const seats = [...new Set(vehicles.map((v) => v.seats))].sort()
 
-  function openBooking(v) {
-    setBooking(v)
-    setSuccess('')
-    const today = new Date().toISOString().slice(0, 10)
-    setForm({
-      clientName: profile?.account?.name || '',
-      contact: profile?.account?.contactNumber || '',
-      email: profile?.account?.email || '',
-      destination: '',
-      pickupDate: today,
-      pickupTime: '',
-      returnDate: today,
-      returnTime: '',
-      passengers: Math.min(v.seats, 1),
-      specialRequests: '',
-    })
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setSubmitting(true)
-    setError('')
-    try {
-      const days = Math.max(1, Math.ceil((new Date(form.returnDate) - new Date(form.pickupDate)) / 86400000))
-      const estimatedTotal = booking.dailyRate * days
-      await createBooking({
-        vehicleId: booking.id,
-        client: {
-          name: form.clientName,
-          contact: form.contact,
-          email: form.email,
-        },
-        trip: {
-          destination: form.destination,
-          pickupDate: form.pickupDate,
-          pickupTime: form.pickupTime,
-          returnDate: form.returnDate,
-          returnTime: form.returnTime,
-          passengers: Number(form.passengers),
-          specialRequests: form.specialRequests,
-        },
-        estimatedTotal,
-      })
-      setSuccess('Reservation submitted! It is now pending approval. Check My Reservations.')
-      setBooking(null)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   return (
     <div>
       <div className="page-head">
@@ -103,10 +66,13 @@ export default function BrowseVehicles() {
           <h1>Browse Vehicles</h1>
           <p className="page-head__sub">Find the perfect vehicle for your trip.</p>
         </div>
+        <button className="btn btn--primary" onClick={() => openBooking(null)}>
+          <FiPlus size={16} /> Book a Vehicle
+        </button>
       </div>
 
       {error && <div className="error-banner" style={{ marginBottom: 16 }}>{error}</div>}
-      {success && <div className="success-banner" style={{ marginBottom: 16 }}>{success}</div>}
+      {banner && <div className="success-banner" style={{ marginBottom: 16 }}>{banner}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 22, alignItems: 'start' }}>
         <aside>
@@ -217,7 +183,7 @@ export default function BrowseVehicles() {
                         {formatPeso(vehicle.dailyRate)} <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-2)' }}>/ day</span>
                       </p>
                       <button
-                        onClick={() => openBooking(vehicle)}
+                        onClick={() => openBooking(vehicle.id)}
                         disabled={vehicle.status !== 'Available'}
                         className="btn btn--primary btn--sm"
                       >
@@ -232,145 +198,15 @@ export default function BrowseVehicles() {
         </div>
       </div>
 
-      {booking && (
-        <Modal
-          open
-          onClose={() => setBooking(null)}
-          title={`Rent ${booking.model}`}
-          subtitle={`${booking.type} · ${booking.seats} Seats · ${formatPeso(booking.dailyRate)}/day`}
-        >
-          <form onSubmit={handleSubmit}>
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label" htmlFor="bk-client-name">Client Name</label>
-                <input
-                  id="bk-client-name"
-                  type="text"
-                  required
-                  placeholder="Enter full name"
-                  value={form.clientName}
-                  onChange={(e) => setForm({ ...form, clientName: e.target.value })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="bk-contact">Contact Number</label>
-                <input
-                  id="bk-contact"
-                  type="tel"
-                  required
-                  placeholder="e.g., 0917 123 4567"
-                  value={form.contact}
-                  onChange={(e) => setForm({ ...form, contact: e.target.value })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group full">
-                <label className="form-label" htmlFor="bk-email">Email Address</label>
-                <input
-                  id="bk-email"
-                  type="email"
-                  required
-                  placeholder="e.g., you@email.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group full">
-                <label className="form-label" htmlFor="bk-destination">Destination</label>
-                <input
-                  id="bk-destination"
-                  type="text"
-                  required
-                  placeholder="e.g., Clark Freeport Zone, Pampanga"
-                  value={form.destination}
-                  onChange={(e) => setForm({ ...form, destination: e.target.value })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="bk-pickup">Pickup Date</label>
-                <input
-                  id="bk-pickup"
-                  type="date"
-                  required
-                  value={form.pickupDate}
-                  onChange={(e) => setForm({ ...form, pickupDate: e.target.value })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="bk-pickup-time">Pickup Time</label>
-                <input
-                  id="bk-pickup-time"
-                  type="time"
-                  placeholder="e.g., 09:00 AM"
-                  value={form.pickupTime}
-                  onChange={(e) => setForm({ ...form, pickupTime: e.target.value })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="bk-return">Return Date</label>
-                <input
-                  id="bk-return"
-                  type="date"
-                  required
-                  value={form.returnDate}
-                  onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="bk-return-time">Return Time</label>
-                <input
-                  id="bk-return-time"
-                  type="time"
-                  placeholder="e.g., 06:00 PM"
-                  value={form.returnTime}
-                  onChange={(e) => setForm({ ...form, returnTime: e.target.value })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group full">
-                <label className="form-label" htmlFor="bk-passengers">Passengers</label>
-                <input
-                  id="bk-passengers"
-                  type="number"
-                  min="1"
-                  max={booking.seats}
-                  value={form.passengers}
-                  onChange={(e) => setForm({ ...form, passengers: e.target.value })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group full">
-                <label className="form-label" htmlFor="bk-special-requests">Special Requests <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(optional)</span></label>
-                <textarea
-                  id="bk-special-requests"
-                  rows="3"
-                  placeholder="Any special requests or notes for this trip"
-                  value={form.specialRequests}
-                  onChange={(e) => setForm({ ...form, specialRequests: e.target.value })}
-                  className="form-textarea"
-                />
-              </div>
-            </div>
-
-            <p className="form-hint" style={{ marginTop: 14 }}>
-              Your reservation will be submitted for approval. An administrator will confirm your booking.
-            </p>
-
-            <div className="modal__footer" style={{ marginTop: 16 }}>
-              <button type="button" className="btn btn--ghost" onClick={() => setBooking(null)}>Cancel</button>
-              <button type="submit" className="btn btn--primary" disabled={submitting}>
-                {submitting ? 'Submitting…' : 'Submit Reservation'}
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
+      <NewBookingModal
+        open={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+        vehicles={vehicles}
+        bookings={bookings}
+        profile={profile}
+        initialVehicleId={initialVehicleId}
+        notify={notify}
+      />
     </div>
   )
 }

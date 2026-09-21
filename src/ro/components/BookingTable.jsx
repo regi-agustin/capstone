@@ -5,7 +5,7 @@ import { formatMoney, formatDate, formatTime } from '../utils/format.js';
 import SearchBar from './SearchBar.jsx';
 import StatusBadge from './StatusBadge.jsx';
 
-const STATUS_FILTERS = ['All', 'Pending', 'Confirmed', 'Denied', 'Cancelled'];
+const STATUS_FILTERS = ['All', 'Pending', 'Pricing Approved', 'Confirmed', 'Denied', 'Cancelled'];
 
 export default function BookingTable({ loading, onView, onConfirm, onDeny, onAdd }) {
   const { bookings, bookingSearch, setBookingSearch, bookingStatus, setBookingStatus, bookingSort, setBookingSort } = useApp();
@@ -148,6 +148,11 @@ export default function BookingTable({ loading, onView, onConfirm, onDeny, onAdd
                       {b.status === 'Pending' && (
                         <div className="badge badge--neutral" style={{ marginTop: 4, fontSize: 11 }}>
                           needs action
+                        </div>
+                      )}
+                      {b.status === 'Pricing Approved' && (
+                        <div className="badge badge--neutral" style={{ marginTop: 4, fontSize: 11 }}>
+                          awaiting dispatch
                         </div>
                       )}
                     </td>
