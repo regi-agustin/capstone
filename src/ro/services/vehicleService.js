@@ -10,16 +10,19 @@ export const getVehicleStatus = (vehicle, bookings) => {
 export const getCurrentBooking = (vehicle, bookings) =>
   bookings.find((b) => b.status === 'Confirmed' && b.vehicleId === vehicle.id) || null;
 
+// Enriches a vehicle with booking info: status, current client, destination, and driver.
+// Uses optional chaining to safely access nested booking/client/trip properties.
 export const enrichVehicle = (vehicle, bookings) => {
+  if (!vehicle) return null;
   const current = getCurrentBooking(vehicle, bookings);
   return {
     ...vehicle,
     status: getVehicleStatus(vehicle, bookings),
     currentBooking: current ? current.id : null,
-    currentClient: current ? current.client.name : null,
-    currentDestination: current ? current.trip.destination : null,
-    currentTripDate: current ? current.trip.pickupDate : null,
-    driver: current && current.driver ? current.driver : null,
+    currentClient: current?.client?.name || null,
+    currentDestination: current?.trip?.destination || null,
+    currentTripDate: current?.trip?.pickupDate || null,
+    driver: current?.driver || null,
   };
 };
 
@@ -39,11 +42,13 @@ export const fetchVehicles = async () => {
   }));
 };
 
+// Searches vehicles by plate number, type, model, or ID.
+// Converts v.id to String() because it is a number and has no .toLowerCase().
 export const searchVehicles = (vehicles, query = '') => {
   const q = query.trim().toLowerCase();
   if (!q) return vehicles;
   return vehicles.filter((v) =>
-    [v.plateNumber, v.type, v.model, v.id].some((s) => s && s.toLowerCase().includes(q)),
+    [v.plateNumber, v.type, v.model, String(v.id)].some((s) => s && s.toLowerCase().includes(q)),
   );
 };
 

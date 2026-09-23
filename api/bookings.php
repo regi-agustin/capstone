@@ -22,7 +22,7 @@ function booking_shape(array $r): array
         'status' => ucwords(str_replace('_', ' ', (string)$r['status'])),
         'denialReason' => $r['denial_reason'] ?? '',
         'client' => [
-            'name' => $r['company_name'],
+            'name' => $r['contact_person'],
             'contact' => $r['contact_number'],
             'email' => $r['email_address'],
             'company' => $r['company_name'],
@@ -230,15 +230,15 @@ if ($method === 'POST') {
 
         $stmt = $pdo->prepare(
             'INSERT INTO reservations (client_id, vehicle_id, start_date, end_date, pickup_time, return_time,
-                                       trip_purpose, destination, passengers, special_requests, status,
+                                       destination, passengers, special_requests, status,
                                        total_amount, additional_charges)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "pending", ?, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "pending", ?, ?)'
         );
         $stmt->execute([
             $clientId, $vehicleId, $pickupDate, $returnDate,
             $pickupTime !== '' ? $pickupTime . ':00' : null,
             $returnTime !== '' ? $returnTime . ':00' : null,
-            $destination, $destination, $passengers > 0 ? $passengers : null,
+            $destination, $passengers > 0 ? $passengers : null,
             $specialRequests !== '' ? $specialRequests : null,
             $estimatedTotal, $additionalCharges,
         ]);

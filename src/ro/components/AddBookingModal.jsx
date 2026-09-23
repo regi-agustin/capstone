@@ -65,6 +65,7 @@ export default function AddBookingModal({ open, onClose }) {
   const [aiOpen, setAiOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [vehicleSearch, setVehicleSearch] = useState('');
+  const [vehicleListOpen, setVehicleListOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
@@ -316,44 +317,82 @@ export default function AddBookingModal({ open, onClose }) {
                   placeholder="Search vehicle type or plate…"
                   value={vehicleSearch}
                   onChange={(e) => setVehicleSearch(e.target.value)}
+                  onFocus={() => setVehicleListOpen(true)}
+                  onBlur={() => setTimeout(() => setVehicleListOpen(false), 150)}
                 />
               </div>
             </div>
 
-            {candidates.length === 0 ? (
-              <div className="empty-state" style={{ padding: '28px' }}>
-                <XCircle size={30} />
-                <div className="empty-state__title">No vehicles currently available for the selected trip period.</div>
-                <div className="empty-state__sub">Try adjusting the trip dates or visit the Vehicle Availability dashboard.</div>
+            {vehicleListOpen ? (
+              candidates.length === 0 ? (
+                <div className="empty-state" style={{ padding: '28px' }}>
+                  <XCircle size={30} />
+                  <div className="empty-state__title">No vehicles currently available for the selected trip period.</div>
+                  <div className="empty-state__sub">Try adjusting the trip dates or visit the Vehicle Availability dashboard.</div>
+                </div>
+              ) : (
+                <div className="vehicle-picker">
+                  {candidates.map((v) => (
+                    <button
+                      type="button"
+                      key={v.id}
+                      className={`vehicle-option${form.vehicleId === v.id ? ' vehicle-option--selected' : ''}`}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setForm((p) => ({ ...p, vehicleId: v.id }));
+                        setVehicleListOpen(false);
+                        setVehicleSearch('');
+                      }}
+                    >
+                      <div>
+                        <div className="vehicle-option__main">
+                          {v.type} — {v.plateNumber}
+                        </div>
+                        <div className="vehicle-option__sub">
+                          {v.model} · {v.seats} seats · {formatMoney(v.rate)}/day
+                        </div>
+                      </div>
+                      <div className="vehicle-option__meta">
+                        <StatusBadge status={v.status} dot />
+                        {form.vehicleId === v.id && <Check size={18} style={{ color: 'var(--primary)' }} />}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )
+            ) : selectedVehicle ? (
+              <div
+                className="vehicle-option vehicle-option--selected"
+                style={{ cursor: 'default', marginBottom: 8 }}
+              >
+                <div>
+                  <div className="vehicle-option__main">
+                    {selectedVehicle.type} — {selectedVehicle.plateNumber}
+                  </div>
+                  <div className="vehicle-option__sub">
+                    {selectedVehicle.model} · {selectedVehicle.seats} seats · {formatMoney(selectedVehicle.rate)}/day
+                  </div>
+                </div>
+                <div className="vehicle-option__meta">
+                  <StatusBadge status={enrichVehicle(selectedVehicle, bookings).status} dot />
+                  <Check size={18} style={{ color: 'var(--primary)' }} />
+                </div>
               </div>
             ) : (
-              <div className="vehicle-picker">
-                {candidates.map((v) => (
-                  <button
-                    type="button"
-                    key={v.id}
-                    className={`vehicle-option${form.vehicleId === v.id ? ' vehicle-option--selected' : ''}`}
-                    onClick={() => setForm((p) => ({ ...p, vehicleId: v.id }))}
-                  >
-                    <div>
-                      <div className="vehicle-option__main">
-                        {v.type} — {v.plateNumber}
-                      </div>
-                      <div className="vehicle-option__sub">
-                        {v.model} · {v.seats} seats · {formatMoney(v.rate)}/day
-                      </div>
-                    </div>
-                    <div className="vehicle-option__meta">
-                      <StatusBadge status={v.status} dot />
-                      {form.vehicleId === v.id && <Check size={18} style={{ color: 'var(--primary)' }} />}
-                    </div>
-                  </button>
-                ))}
+              <div className="empty-state" style={{ padding: '20px' }}>
+                <Car size={28} />
+                <div className="empty-state__title">No vehicle selected</div>
+                <div className="empty-state__sub">Click the search box to browse available vehicles, or use the AI Assistant.</div>
               </div>
             )}
             <div className="form-hint" style={{ marginTop: 8 }}>
               Vehicles marked <strong>In Use</strong> or <strong>In Maintenance</strong> are not selectable.
-              {Boolean(candidates.length) && datesComplete && (
+              {!vehicleListOpen && Boolean(candidates.length) && datesComplete && (
+                <span style={{ color: 'var(--success)' }}>
+                  {' '}— {candidates.length} free for {range.pickupDate} → {range.returnDate}.
+                </span>
+              )}
+              {vehicleListOpen && Boolean(candidates.length) && datesComplete && (
                 <span style={{ color: 'var(--success)' }}>
                   {' '}— {candidates.length} free for {range.pickupDate} → {range.returnDate}.
                 </span>

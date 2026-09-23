@@ -555,7 +555,6 @@ CREATE TABLE `reservations` (
   `pickup_time` time DEFAULT NULL,
   `return_time` time DEFAULT NULL,
   `special_requests` varchar(500) DEFAULT NULL,
-  `trip_purpose` varchar(255) DEFAULT NULL,
   `destination` varchar(255) DEFAULT NULL,
   `passengers` smallint(5) unsigned DEFAULT NULL,
   `luggage` varchar(100) DEFAULT NULL,

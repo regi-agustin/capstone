@@ -174,8 +174,8 @@ function active_reservation_for_driver(PDO $pdo, int $driver_id): ?array
 {
     $stmt = $pdo->prepare(
         'SELECT r.reservation_id, r.client_id, r.driver_id, r.vehicle_id, r.trip_code,
-                r.start_date, r.trip_purpose, r.destination, r.passengers, r.luggage, r.status,
-                c.company_name AS client_name, c.contact_person, c.contact_number,
+                r.start_date, r.destination, r.passengers, r.luggage, r.status,
+                c.contact_person AS client_name, c.company_name, c.contact_number,
                 v.plate_number, v.model, v.vehicle_type, v.owner_id, v.vehicle_id,
                 tl.start_time
          FROM reservations r

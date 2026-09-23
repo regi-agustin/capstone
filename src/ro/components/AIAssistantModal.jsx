@@ -66,6 +66,7 @@ export default function AIAssistantModal({ open, onClose, client, trip, passenge
                     onClick={() => {
                       onPickVehicle?.(analysis.recommendedVehicle.id);
                       notify?.('info', `${analysis.recommendedVehicle.type} added to your booking.`);
+                      onClose?.();
                     }}
                   >
                     <Check size={15} /> Use this vehicle

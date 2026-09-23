@@ -16,7 +16,7 @@ function AwaitingCard({ a, drivers, vehicles, onAssignDriver }) {
         </div>
         <div className="detail">
           <Icon.mapPin width={12} height={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />
-          {a.trip.destination} &middot; {a.trip.passengers} pax &middot; {a.trip.purpose}
+          {a.trip.destination} &middot; {a.trip.passengers} pax
         </div>
       </div>
       <div className="assign-fleet">
@@ -124,7 +124,7 @@ export default function AssignmentsPage({ assignments, drivers, vehicles, onRele
                 <div className="detail">
                   {a.trip.tripCode} &middot; {a.trip.schedule}
                 </div>
-                <div className="detail"><Icon.mapPin width={12} height={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />{a.trip.destination} &middot; {a.trip.passengers} pax &middot; {a.trip.lugSize} &middot; {a.trip.purpose}</div>
+                <div className="detail"><Icon.mapPin width={12} height={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />{a.trip.destination} &middot; {a.trip.passengers} pax &middot; {a.trip.lugSize}</div>
               </div>
               <div className="assign-fleet">
                 <div className="client-chip">{a.client.name}</div>

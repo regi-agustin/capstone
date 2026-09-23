@@ -47,22 +47,22 @@ export default function BookingDetailsModal({ booking, open, onClose }) {
 
         <Section icon={User} title="Client Information">
           <div className="detail-grid">
-            <Item label="Client Name" value={booking.client.name} />
-            <Item label="Contact Number" value={booking.client.contact} />
-            <Item label="Email" value={booking.client.email} />
-            <Item label="Company / Organization" value={booking.client.company} />
+            <Item label="Client Name" value={booking.client?.name} />
+            <Item label="Contact Number" value={booking.client?.contact} />
+            <Item label="Email" value={booking.client?.email} />
+            <Item label="Company / Organization" value={booking.client?.company} />
           </div>
         </Section>
 
         <Section icon={MapPin} title="Trip Information">
           <div className="detail-grid">
-            <Item label="Destination" value={booking.trip.destination} />
-            <Item label="Pickup Date" value={formatDateLong(booking.trip.pickupDate)} />
-            <Item label="Pickup Time" value={formatTime(booking.trip.pickupTime)} />
-            <Item label="Return Date" value={formatDateLong(booking.trip.returnDate)} />
-            <Item label="Return Time" value={formatTime(booking.trip.returnTime)} />
-            <Item label="Trip Duration" value={booking.trip.durationLabel} />
-            <Item label="Special Requests" value={booking.trip.specialRequests} />
+            <Item label="Destination" value={booking.trip?.destination} />
+            <Item label="Pickup Date" value={formatDateLong(booking.trip?.pickupDate)} />
+            <Item label="Pickup Time" value={formatTime(booking.trip?.pickupTime)} />
+            <Item label="Return Date" value={formatDateLong(booking.trip?.returnDate)} />
+            <Item label="Return Time" value={formatTime(booking.trip?.returnTime)} />
+            <Item label="Trip Duration" value={booking.trip?.durationLabel} />
+            <Item label="Special Requests" value={booking.trip?.specialRequests} />
           </div>
         </Section>
 

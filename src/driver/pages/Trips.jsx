@@ -125,7 +125,7 @@ const Trips = () => {
                   </span>
                 </div>
                 <div className="cell-sub" style={{ marginTop: 6 }}>
-                  Passengers: {trip.passengers} · Luggage: {trip.lugSize || 'None'} · Purpose: {trip.purpose}
+                  Passengers: {trip.passengers} · Luggage: {trip.lugSize || 'None'}
                 </div>
               </div>
               <div className="assign-fleet">{renderActionButtons(trip)}</div>

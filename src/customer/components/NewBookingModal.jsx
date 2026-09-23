@@ -60,6 +60,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
   const [aiOpen, setAiOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [vehicleSearch, setVehicleSearch] = useState('');
+  const [vehicleListOpen, setVehicleListOpen] = useState(false);
   const [form, setForm] = useState(null);
   const [errors, setErrors] = useState({});
 
@@ -82,6 +83,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
     });
     setErrors({});
     setVehicleSearch('');
+    setVehicleListOpen(false);
   }, [open, profile, initialVehicleId]);
 
   if (!form) return null;
@@ -326,67 +328,118 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
                   placeholder="Search vehicle type or plate…"
                   value={vehicleSearch}
                   onChange={(e) => setVehicleSearch(e.target.value)}
+                  onFocus={() => setVehicleListOpen(true)}
+                  onBlur={() => setTimeout(() => setVehicleListOpen(false), 150)}
                 />
               </div>
             </div>
 
-            {candidates.length === 0 ? (
-              <div className="empty-state" style={{ padding: '28px' }}>
-                <XCircle size={30} />
-                <div className="empty-state__title">No vehicles currently available for the selected trip period.</div>
-                <div className="empty-state__sub">Try adjusting the trip dates — or submit without a vehicle and we will assign the best match.</div>
+            {vehicleListOpen ? (
+              candidates.length === 0 ? (
+                <div className="empty-state" style={{ padding: '28px' }}>
+                  <XCircle size={30} />
+                  <div className="empty-state__title">No vehicles currently available for the selected trip period.</div>
+                  <div className="empty-state__sub">Try adjusting the trip dates — or submit without a vehicle and we will assign the best match.</div>
+                </div>
+              ) : (
+                <div className="vehicle-picker">
+                  {candidates.map((v) => (
+                    <button
+                      type="button"
+                      key={v.id}
+                      className={`vehicle-option${form.vehicleId === v.id ? ' vehicle-option--selected' : ''}`}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setForm((p) => ({ ...p, vehicleId: v.id }));
+                        setVehicleListOpen(false);
+                        setVehicleSearch('');
+                      }}
+                    >
+                      <div>
+                        <div className="vehicle-option__main">
+                          {v.type} — {v.plateNumber}
+                        </div>
+                        <div className="vehicle-option__sub">
+                          {v.model} · {v.seats} seats · {formatMoney(v.rate)}/day
+                        </div>
+                      </div>
+                      <div className="vehicle-option__meta">
+                        <StatusBadge status={v.status} dot />
+                        {form.vehicleId === v.id && <Check size={18} style={{ color: 'var(--primary)' }} />}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )
+            ) : selectedVehicle ? (
+              <div
+                className="vehicle-option vehicle-option--selected"
+                style={{ cursor: 'default', marginBottom: 8 }}
+              >
+                <div>
+                  <div className="vehicle-option__main">
+                    {selectedVehicle.type} — {selectedVehicle.plateNumber}
+                  </div>
+                  <div className="vehicle-option__sub">
+                    {selectedVehicle.model} · {selectedVehicle.seats} seats · {formatMoney(selectedVehicle.rate)}/day
+                  </div>
+                </div>
+                <div className="vehicle-option__meta">
+                  <StatusBadge status={enrichVehicle(selectedVehicle, bookings).status} dot />
+                  <Check size={18} style={{ color: 'var(--primary)' }} />
+                </div>
               </div>
             ) : (
-              <div className="vehicle-picker">
-                {candidates.map((v) => (
-                  <button
-                    type="button"
-                    key={v.id}
-                    className={`vehicle-option${form.vehicleId === v.id ? ' vehicle-option--selected' : ''}`}
-                    onClick={() => setForm((p) => ({ ...p, vehicleId: v.id }))}
-                  >
-                    <div>
-                      <div className="vehicle-option__main">
-                        {v.type} — {v.plateNumber}
-                      </div>
-                      <div className="vehicle-option__sub">
-                        {v.model} · {v.seats} seats · {formatMoney(v.rate)}/day
-                      </div>
-                    </div>
-                    <div className="vehicle-option__meta">
-                      <StatusBadge status={v.status} dot />
-                      {form.vehicleId === v.id && <Check size={18} style={{ color: 'var(--primary)' }} />}
-                    </div>
-                  </button>
-                ))}
+              <div className="empty-state" style={{ padding: '20px' }}>
+                <Car size={28} />
+                <div className="empty-state__title">No vehicle selected</div>
+                <div className="empty-state__sub">Click the search box to browse available vehicles, or use the AI Assistant.</div>
               </div>
             )}
             <div className="form-hint" style={{ marginTop: 8 }}>
               Vehicles marked <strong>In Use</strong> or <strong>In Maintenance</strong> are not selectable.
-              {Boolean(candidates.length) && datesComplete && (
+              {!vehicleListOpen && Boolean(candidates.length) && datesComplete && (
+                <span style={{ color: 'var(--success)' }}>
+                  {' '}— {candidates.length} free for {range.pickupDate} → {range.returnDate}.
+                </span>
+              )}
+              {vehicleListOpen && Boolean(candidates.length) && datesComplete && (
                 <span style={{ color: 'var(--success)' }}>
                   {' '}— {candidates.length} free for {range.pickupDate} → {range.returnDate}.
                 </span>
               )}
             </div>
+            {errors.vehicleId && <div className="form-error" style={{ marginTop: 8 }}>{errors.vehicleId}</div>}
           </Section>
 
-          <Section step={4} icon={Wallet} title="Estimated Cost" sub="Estimated Amount — Subject to Final Billing">
+          <Section step={4} icon={Wallet} title="Pre-Billing Estimate" sub="Estimated Amount — Subject to Final Billing">
             <div className="detail-grid">
               <div className="detail-item" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
                 <div className="detail-item__label">Vehicle Rental Rate</div>
-                <div className="detail-item__value">{selectedVehicle ? formatMoney(selectedVehicle.rate) : 'To be assigned'}</div>
+                <div className="detail-item__value">{selectedVehicle ? formatMoney(selectedVehicle.rate) : '—'}</div>
               </div>
               <div className="detail-item" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
                 <div className="detail-item__label">Trip Duration</div>
                 <div className="detail-item__value">{datesComplete && durationLabel ? durationLabel : '—'}</div>
               </div>
+              <div className="form-group" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+                <label className="form-label" htmlFor="cust-charges">Additional Charges (₱)</label>
+                <input id="cust-charges" className="form-input" type="number" min="0" step="50" value={form.additionalCharges} onChange={set('additionalCharges')} />
+              </div>
             </div>
             <div className="mt-16" style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
               <div>
+                <div className="muted" style={{ fontSize: 12 }}>Estimated Rental Fee</div>
+                <div className="cell-main">{selectedVehicle ? formatMoney(preBilling.rentalFee) : '—'}</div>
+              </div>
+              <div>
+                <div className="muted" style={{ fontSize: 12 }}>Additional Charges</div>
+                <div className="cell-main">{formatMoney(preBilling.additionalCharges)}</div>
+              </div>
+              <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
                 <div className="muted" style={{ fontSize: 12 }}>Estimated Total</div>
                 <div className="cell-main" style={{ fontSize: 22 }}>
-                  {selectedVehicle ? formatMoney(preBilling.estimatedTotal) : 'To be assigned'}
+                  {selectedVehicle ? formatMoney(preBilling.estimatedTotal) : '—'}
                 </div>
                 <div className="badge badge--neutral" style={{ marginTop: 4 }}>
                   Estimated Amount — Subject to Final Billing
