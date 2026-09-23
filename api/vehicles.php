@@ -66,6 +66,10 @@ if ($method === 'POST') {
     if (!preg_match('/^[A-Z0-9\s-]{3,}$/', $plate)) {
         json_error('Invalid plate number format.', 422);
     }
+    $allowedTypes = ['AUV', 'SUV', 'L300'];
+    if (!in_array($type, $allowedTypes)) {
+        json_error("Invalid vehicle type. Allowed: " . implode(', ', $allowedTypes), 422);
+    }
 
     $exists = $pdo->prepare('SELECT vehicle_id FROM vehicles WHERE plate_number = ?');
     $exists->execute([$plate]);

@@ -55,7 +55,7 @@ export const analyzeTrip = ({ client, bookings, vehicles, passengers = 0, select
   const best = (datesComplete && ready) ? suggestBestVehicle(vehicles, bookings, { ...trip, passengers }) : null;
 
   const recommendation = best
-    ? `Recommended vehicle: ${best.type} (${best.plateNumber}) because it is currently available${
+    ? `Recommended vehicle: ${best.type} (${best.plate}) because it is currently available${
         passengers >= 1 ? ' and provides sufficient passenger capacity for this booking' : ''
       }.`
     : !ready

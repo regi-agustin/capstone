@@ -2,7 +2,7 @@ import { apiFetch } from '../../services/api.js';
 import { toISODate } from '../utils/format.js';
 
 export const calculatePreBilling = (vehicle, durationDays, additionalCharges = 0) => {
-  const baseRate = vehicle ? vehicle.rate : 0;
+  const baseRate = vehicle ? (vehicle.dailyRate || vehicle.rate || 0) : 0;
   const days = Math.max(1, durationDays);
   const rentalFee = baseRate * days;
   return {

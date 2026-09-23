@@ -1,8 +1,9 @@
 import { apiFetch } from '../../services/api.js';
 import { bookingOverlaps } from './bookingService.js';
 
+// Derives the display status from the vehicle's DB status and active bookings.
 export const getVehicleStatus = (vehicle, bookings) => {
-  if (vehicle.maintenance) return 'In Maintenance';
+  if (vehicle.status === 'Maintenance') return 'In Maintenance';
   const active = bookings.find((b) => b.status === 'Confirmed' && b.vehicleId === vehicle.id);
   return active ? 'In Use' : 'Available';
 };
@@ -11,7 +12,6 @@ export const getCurrentBooking = (vehicle, bookings) =>
   bookings.find((b) => b.status === 'Confirmed' && b.vehicleId === vehicle.id) || null;
 
 // Enriches a vehicle with booking info: status, current client, destination, and driver.
-// Uses optional chaining to safely access nested booking/client/trip properties.
 export const enrichVehicle = (vehicle, bookings) => {
   if (!vehicle) return null;
   const current = getCurrentBooking(vehicle, bookings);
@@ -28,27 +28,30 @@ export const enrichVehicle = (vehicle, bookings) => {
 
 export const enrichVehicles = (vehicles, bookings) => vehicles.map((v) => enrichVehicle(v, bookings));
 
+// Returns the full vehicle shape from the API — same fields as the Fleet Inventory.
 export const fetchVehicles = async () => {
   const rows = await apiFetch('vehicles.php');
   return rows.map((v) => ({
     id: v.id,
-    plateNumber: v.plate,
+    carCode: v.carCode,
+    plate: v.plate,
     type: v.type,
     model: v.model,
     year: v.year,
     seats: v.seats,
-    rate: v.dailyRate,
-    maintenance: v.status === 'Maintenance',
+    dailyRate: v.dailyRate,
+    status: v.status,
+    photoUrl: v.photoUrl,
+    images: v.images,
   }));
 };
 
-// Searches vehicles by plate number, type, model, or ID.
-// Converts v.id to String() because it is a number and has no .toLowerCase().
+// Searches vehicles by plate, car code, type, model, or ID.
 export const searchVehicles = (vehicles, query = '') => {
   const q = query.trim().toLowerCase();
   if (!q) return vehicles;
   return vehicles.filter((v) =>
-    [v.plateNumber, v.type, v.model, String(v.id)].some((s) => s && s.toLowerCase().includes(q)),
+    [v.plate, v.carCode, v.type, v.model, String(v.id)].some((s) => s && s.toLowerCase().includes(q)),
   );
 };
 
@@ -85,7 +88,7 @@ export const suggestBestVehicle = (vehicles, bookings, { pickupDate, returnDate,
     const seatA = a.seats >= passengers;
     const seatB = b.seats >= passengers;
     if (seatA !== seatB) return seatA ? -1 : 1;
-    return a.rate - b.rate;
+    return a.dailyRate - b.dailyRate;
   });
   return sorted[0];
 };

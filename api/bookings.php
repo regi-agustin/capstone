@@ -35,6 +35,8 @@ function booking_shape(array $r): array
             'returnTime' => $r['return_time'] ? date('H:i', strtotime($r['return_time'])) : '',
             'specialRequests' => $r['special_requests'] ?? '',
             'passengers' => (int)($r['passengers'] ?? 0),
+            'needDriver' => $r['need_driver'] ?? null,
+            'driverLicenseImage' => $r['driver_license_image'] ?? null,
             'days' => $days,
             'durationLabel' => $durationLabel,
         ],
@@ -65,7 +67,7 @@ function booking_select(): string
 {
     return 'SELECT r.reservation_id, r.client_id, r.vehicle_id, r.driver_id, r.reservation_date, r.start_date, r.end_date,
                    r.pickup_time, r.return_time, r.special_requests, r.denial_reason, r.status,
-                   r.destination, r.additional_charges, r.total_amount, r.passengers,
+                   r.destination, r.additional_charges, r.total_amount, r.passengers, r.need_driver, r.driver_license_image,
                    c.company_name, c.contact_person, c.contact_number, c.email_address,
                    d.fullname AS driver_name, d.contact_number AS driver_contact,
                    v.plate_number, v.model, v.vehicle_type, v.daily_rate, v.seats
@@ -224,21 +226,25 @@ if ($method === 'POST') {
         }
 
         $passengers = isset($trip['passengers']) ? max(0, (int)$trip['passengers']) : 0;
+        $needDriver = trim((string)($trip['needDriver'] ?? ''));
+        $driverLicenseImage = trim((string)($trip['driverLicenseImage'] ?? ''));
         $pickupTime = trim((string)($trip['pickupTime'] ?? ''));
         $returnTime = trim((string)($trip['returnTime'] ?? ''));
         $specialRequests = trim((string)($trip['specialRequests'] ?? ''));
 
         $stmt = $pdo->prepare(
             'INSERT INTO reservations (client_id, vehicle_id, start_date, end_date, pickup_time, return_time,
-                                       destination, passengers, special_requests, status,
+                                       destination, passengers, need_driver, driver_license_image, special_requests, status,
                                        total_amount, additional_charges)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "pending", ?, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "pending", ?, ?)'
         );
         $stmt->execute([
             $clientId, $vehicleId, $pickupDate, $returnDate,
             $pickupTime !== '' ? $pickupTime . ':00' : null,
             $returnTime !== '' ? $returnTime . ':00' : null,
             $destination, $passengers > 0 ? $passengers : null,
+            $needDriver !== '' ? $needDriver : null,
+            $driverLicenseImage !== '' ? $driverLicenseImage : null,
             $specialRequests !== '' ? $specialRequests : null,
             $estimatedTotal, $additionalCharges,
         ]);

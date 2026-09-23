@@ -86,7 +86,7 @@ export default function AddBookingModal({ open, onClose }) {
     .filter((v) => v.status === 'Available')
     .filter((v) =>
       vehicleSearch.trim()
-        ? `${v.type} ${v.plateNumber} ${v.model}`.toLowerCase().includes(vehicleSearch.trim().toLowerCase())
+        ? `${v.type} ${v.plate} ${v.model}`.toLowerCase().includes(vehicleSearch.trim().toLowerCase())
         : true,
     );
 
@@ -346,10 +346,10 @@ export default function AddBookingModal({ open, onClose }) {
                     >
                       <div>
                         <div className="vehicle-option__main">
-                          {v.type} — {v.plateNumber}
+                          {v.type} — {v.plate}
                         </div>
                         <div className="vehicle-option__sub">
-                          {v.model} · {v.seats} seats · {formatMoney(v.rate)}/day
+                          {v.model} · {v.seats} seats · {formatMoney(v.dailyRate)}/day
                         </div>
                       </div>
                       <div className="vehicle-option__meta">
@@ -367,10 +367,10 @@ export default function AddBookingModal({ open, onClose }) {
               >
                 <div>
                   <div className="vehicle-option__main">
-                    {selectedVehicle.type} — {selectedVehicle.plateNumber}
+                    {selectedVehicle.type} — {selectedVehicle.plate}
                   </div>
                   <div className="vehicle-option__sub">
-                    {selectedVehicle.model} · {selectedVehicle.seats} seats · {formatMoney(selectedVehicle.rate)}/day
+                    {selectedVehicle.model} · {selectedVehicle.seats} seats · {formatMoney(selectedVehicle.dailyRate)}/day
                   </div>
                 </div>
                 <div className="vehicle-option__meta">
@@ -405,7 +405,7 @@ export default function AddBookingModal({ open, onClose }) {
             <div className="detail-grid">
               <div className="detail-item" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
                 <div className="detail-item__label">Vehicle Rental Rate</div>
-                <div className="detail-item__value">{selectedVehicle ? formatMoney(selectedVehicle.rate) : '—'}</div>
+                <div className="detail-item__value">{selectedVehicle ? formatMoney(selectedVehicle.dailyRate) : '—'}</div>
               </div>
               <div className="detail-item" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
                 <div className="detail-item__label">Trip Duration</div>

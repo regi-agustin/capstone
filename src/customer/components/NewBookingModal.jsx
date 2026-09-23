@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { User, MapPin, Car, Wallet, Sparkles, Check, Search, XCircle } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { User, MapPin, Car, Wallet, Sparkles, Check, Search, XCircle, Upload, FileText, X } from 'lucide-react';
 import Modal from '../../ro/components/Modal.jsx';
 import StatusBadge from '../../ro/components/StatusBadge.jsx';
 import AIAssistantModal from '../../ro/components/AIAssistantModal.jsx';
@@ -11,31 +11,41 @@ import { createBooking } from '../services/customerService.js';
 
 const toMyVehicle = (v) => ({
   id: v.id,
-  plateNumber: v.plate,
+  plate: v.plate,
+  carCode: v.carCode,
   type: v.type,
   model: v.model,
   year: v.year,
   seats: v.seats,
-  rate: v.dailyRate,
-  maintenance: v.status === 'Maintenance' || v.status === 'Assigned',
+  dailyRate: v.dailyRate,
+  status: v.status,
   photoUrl: v.photoUrl,
   images: v.images || [],
 });
 
-const validate = (f) => {
-  const errs = {};
-  if (!f.clientName.trim()) errs.clientName = 'Full name is required.';
-  if (!f.contact.trim()) errs.contact = 'Contact number is required.';
-  else if (!/^[0-9+\-()\s]{7,}$/.test(f.contact.trim())) errs.contact = 'Please enter a valid contact number.';
-  if (!f.email.trim()) errs.email = 'Email address is required.';
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) errs.email = 'Please enter a valid email address.';
-  if (!f.destination.trim()) errs.destination = 'Destination is required.';
-  if (!f.pickupDate) errs.pickupDate = 'Pickup date is required.';
-  if (!f.returnDate) errs.returnDate = 'Return date is required.';
-  if (f.pickupDate && f.returnDate && f.returnDate < f.pickupDate)
-    errs.returnDate = 'Return date cannot be earlier than pickup date.';
-  return errs;
-};
+const MAX_IMAGE_DIMENSION = 1280;
+const JPEG_QUALITY = 0.8;
+
+const compressImage = (file) =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', JPEG_QUALITY));
+      } catch (e) { reject(e); }
+      finally { URL.revokeObjectURL(url); }
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
 
 const Section = ({ step, icon: Icon, title, sub, actions, children }) => (
   <div className="form-section">
@@ -63,6 +73,9 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
   const [vehicleListOpen, setVehicleListOpen] = useState(false);
   const [form, setForm] = useState(null);
   const [errors, setErrors] = useState({});
+  const [licenseImage, setLicenseImage] = useState(null);
+  const [licenseDragging, setLicenseDragging] = useState(false);
+  const licenseFileRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
@@ -77,6 +90,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
       returnDate: today,
       returnTime: '',
       passengers: '',
+      needDriver: '',
       specialRequests: '',
       vehicleId: initialVehicleId || '',
       additionalCharges: 0,
@@ -84,11 +98,30 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
     setErrors({});
     setVehicleSearch('');
     setVehicleListOpen(false);
+    setLicenseImage(null);
   }, [open, profile, initialVehicleId]);
 
   if (!form) return null;
 
   const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
+
+  const handleLicensePick = async (files) => {
+    const file = files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const dataUrl = await compressImage(file);
+    setLicenseImage({ name: file.name, dataUrl });
+  };
+
+  const handleLicenseDrop = (e) => {
+    e.preventDefault();
+    setLicenseDragging(false);
+    handleLicensePick(e.dataTransfer.files);
+  };
+
+  const removeLicense = () => {
+    setLicenseImage(null);
+    setForm((p) => ({ ...p, driverLicenseImage: '' }));
+  };
 
   const myVehicles = vehicles.map(toMyVehicle);
 
@@ -107,7 +140,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
     .filter((v) => v.status === 'Available')
     .filter((v) =>
       vehicleSearch.trim()
-        ? `${v.type} ${v.plateNumber} ${v.model}`.toLowerCase().includes(vehicleSearch.trim().toLowerCase())
+        ? `${v.type} ${v.plate} ${v.model}`.toLowerCase().includes(vehicleSearch.trim().toLowerCase())
         : true,
     );
 
@@ -122,6 +155,23 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
     datesComplete ? Math.max(1, duration.days) : 0,
     Number(form.additionalCharges) || 0,
   );
+
+  const validate = (f) => {
+    const errs = {};
+    if (!f.needDriver) errs.needDriver = 'Please select whether you need a driver.';
+    if (f.needDriver === 'no' && !licenseImage) errs.driverLicenseImage = 'Driver\'s license image is required for self-drive.';
+    if (!f.clientName.trim()) errs.clientName = 'Full name is required.';
+    if (!f.contact.trim()) errs.contact = 'Contact number is required.';
+    else if (!/^[0-9+\-()\s]{7,}$/.test(f.contact.trim())) errs.contact = 'Please enter a valid contact number.';
+    if (!f.email.trim()) errs.email = 'Email address is required.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) errs.email = 'Please enter a valid email address.';
+    if (!f.destination.trim()) errs.destination = 'Destination is required.';
+    if (!f.pickupDate) errs.pickupDate = 'Pickup date is required.';
+    if (!f.returnDate) errs.returnDate = 'Return date is required.';
+    if (f.pickupDate && f.returnDate && f.returnDate < f.pickupDate)
+      errs.returnDate = 'Return date cannot be earlier than pickup date.';
+    return errs;
+  };
 
   const handleSubmit = async () => {
     const errs = validate(form);
@@ -152,9 +202,11 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
           returnDate: form.returnDate,
           returnTime: form.returnTime || '18:00',
           passengers: Number(form.passengers) || 0,
+          needDriver: form.needDriver || null,
+          driverLicenseImage: licenseImage?.dataUrl || null,
           specialRequests: form.specialRequests.trim(),
         },
-        estimatedTotal: selectedVehicle ? selectedVehicle.rate * days : 0,
+        estimatedTotal: selectedVehicle ? selectedVehicle.dailyRate * days : 0,
       });
       notify?.('success', 'Reservation submitted! It is now pending approval. Check My Reservations.');
       onClose?.();
@@ -170,6 +222,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
       <Modal
         open={open}
         onClose={onClose}
+        lockClose
         title="Book a Vehicle"
         subtitle="Enter your trip details first, then choose the vehicle — or let the AI assistant help."
         size="xl"
@@ -188,6 +241,60 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
         <div style={{ display: 'grid', gap: 16 }}>
           <Section step={1} icon={User} title="Your Details" sub="Who is this booking for?">
             <div className="form-grid">
+              <div className="form-group full">
+                <label className="form-label">Do you need a driver? <span className="req">*</span></label>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  {[
+                    { value: 'yes', label: 'Yes, with driver' },
+                    { value: 'no', label: 'No, self-drive' },
+                  ].map((opt) => {
+                    const selected = form.needDriver === opt.value;
+                    return (
+                      <label
+                        key={opt.value}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          padding: '12px 16px',
+                          borderRadius: 10,
+                          border: selected ? '2px solid var(--primary)' : '2px solid var(--border)',
+                          background: selected ? 'var(--primary-soft)' : '#fff',
+                          cursor: 'pointer',
+                          fontWeight: selected ? 700 : 500,
+                          fontSize: 14,
+                          color: selected ? 'var(--primary-dark)' : 'var(--text)',
+                          transition: 'all .15s',
+                          userSelect: 'none',
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="needDriver"
+                          value={opt.value}
+                          checked={selected}
+                          onChange={set('needDriver')}
+                          style={{ display: 'none' }}
+                        />
+                        <span
+                          style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: '50%',
+                            border: selected ? '6px solid var(--primary)' : '2px solid var(--muted)',
+                            flexShrink: 0,
+                            transition: 'all .15s',
+                          }}
+                        />
+                        {opt.label}
+                      </label>
+                    );
+                  })}
+                </div>
+                {errors.needDriver && <div className="form-error">{errors.needDriver}</div>}
+              </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="cust-name">Full Name</label>
                 <input id="cust-name" className={`form-input${errors.clientName ? ' is-invalid' : ''}`} type="text" placeholder="Enter full name" value={form.clientName} onChange={set('clientName')} />
@@ -203,6 +310,132 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
                 <input id="cust-email" className={`form-input${errors.email ? ' is-invalid' : ''}`} type="email" placeholder="Enter email address" value={form.email} onChange={set('email')} />
                 {errors.email && <div className="form-error">{errors.email}</div>}
               </div>
+
+              {form.needDriver === 'no' && (
+                <div className="form-group full">
+                  <label className="form-label">Upload Driver's License <span className="req">*</span></label>
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setLicenseDragging(true); }}
+                    onDragLeave={() => setLicenseDragging(false)}
+                    onDrop={handleLicenseDrop}
+                    style={{
+                      border: `2px dashed ${licenseDragging ? '#991b1b' : 'var(--border)'}`,
+                      background: licenseDragging ? 'var(--red-bg)' : '#fbfdff',
+                      borderRadius: 12,
+                      padding: '26px 18px',
+                      textAlign: 'center',
+                      transition: 'border-color .15s, background .15s',
+                    }}
+                  >
+                    <input
+                      ref={licenseFileRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      style={{ display: 'none' }}
+                      onChange={(e) => { handleLicensePick(e.target.files); e.target.value = ''; }}
+                    />
+                    <label htmlFor="cust-license" style={{ cursor: 'pointer', display: 'block' }}>
+                      <span
+                        style={{
+                          width: 58,
+                          height: 58,
+                          borderRadius: '50%',
+                          background: 'var(--red-bg)',
+                          color: '#991b1b',
+                          display: 'grid',
+                          placeItems: 'center',
+                          margin: '0 auto 12px',
+                        }}
+                      >
+                        <Upload size={26} />
+                      </span>
+                      <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>
+                        Drag and drop or{' '}
+                        <span style={{ color: '#991b1b', fontWeight: 700, textDecoration: 'underline' }}>Browse</span>{' '}
+                        to choose a file
+                      </span>
+                    </label>
+                    <input
+                      id="cust-license"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      style={{ display: 'none' }}
+                      onChange={(e) => { handleLicensePick(e.target.files); e.target.value = ''; }}
+                    />
+                  </div>
+                  <span style={{ display: 'block', textAlign: 'center', marginTop: 8, fontSize: 12, color: 'var(--text-faint)' }}>
+                    PNG, JPG and WebP image formats are supported.
+                  </span>
+
+                  {licenseImage && (
+                    <div style={{ marginTop: 14 }}>
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            padding: '8px 10px',
+                            borderRadius: 10,
+                            background: 'var(--red-bg)',
+                            border: '1px solid #991b1b',
+                          }}
+                        >
+                          <FileText size={18} style={{ color: '#991b1b', flexShrink: 0 }} />
+                          <span
+                            style={{
+                              flex: 1,
+                              fontSize: 13,
+                              fontWeight: 600,
+                              color: 'var(--text)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {licenseImage.name}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 800,
+                              color: '#991b1b',
+                              background: '#fff',
+                              borderRadius: 999,
+                              padding: '3px 10px',
+                              border: '1px solid #991b1b',
+                              flexShrink: 0,
+                            }}
+                          >
+                            Uploaded
+                          </span>
+                          <button
+                            type="button"
+                            onClick={removeLicense}
+                            aria-label="Remove license image"
+                            style={{
+                              border: 'none',
+                              background: 'none',
+                              color: 'var(--muted)',
+                              cursor: 'pointer',
+                              display: 'grid',
+                              placeItems: 'center',
+                              padding: 4,
+                              borderRadius: 6,
+                              flexShrink: 0,
+                            }}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {errors.driverLicenseImage && <div className="form-error" style={{ marginTop: 8 }}>{errors.driverLicenseImage}</div>}
+                </div>
+              )}
+
               <div className="form-group full">
                 <label className="form-label" htmlFor="cust-special">Special Requests <span className="req" style={{ color: 'var(--text-faint)' }}>(optional)</span></label>
                 <textarea id="cust-special" className="form-textarea" placeholder="Any special requests or notes for this trip" value={form.specialRequests} onChange={set('specialRequests')} />
@@ -357,10 +590,10 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
                     >
                       <div>
                         <div className="vehicle-option__main">
-                          {v.type} — {v.plateNumber}
+                          {v.type} — {v.plate}
                         </div>
                         <div className="vehicle-option__sub">
-                          {v.model} · {v.seats} seats · {formatMoney(v.rate)}/day
+                          {v.model} · {v.seats} seats · {formatMoney(v.dailyRate)}/day
                         </div>
                       </div>
                       <div className="vehicle-option__meta">
@@ -378,10 +611,10 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
               >
                 <div>
                   <div className="vehicle-option__main">
-                    {selectedVehicle.type} — {selectedVehicle.plateNumber}
+                    {selectedVehicle.type} — {selectedVehicle.plate}
                   </div>
                   <div className="vehicle-option__sub">
-                    {selectedVehicle.model} · {selectedVehicle.seats} seats · {formatMoney(selectedVehicle.rate)}/day
+                    {selectedVehicle.model} · {selectedVehicle.seats} seats · {formatMoney(selectedVehicle.dailyRate)}/day
                   </div>
                 </div>
                 <div className="vehicle-option__meta">
@@ -416,7 +649,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
             <div className="detail-grid">
               <div className="detail-item" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
                 <div className="detail-item__label">Vehicle Rental Rate</div>
-                <div className="detail-item__value">{selectedVehicle ? formatMoney(selectedVehicle.rate) : '—'}</div>
+                <div className="detail-item__value">{selectedVehicle ? formatMoney(selectedVehicle.dailyRate) : '—'}</div>
               </div>
               <div className="detail-item" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
                 <div className="detail-item__label">Trip Duration</div>
