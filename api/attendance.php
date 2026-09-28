@@ -358,7 +358,10 @@ if ($method === 'POST') {
     $imagePath = null;
     $image = (string)($data['image'] ?? '');
     if (preg_match('#^data:image/(png|jpe?g|webp);base64,(.+)$#i', $image, $m)) {
-        $imagePath = $image;
+        $dir = __DIR__ . '/uploads/attendance';
+        if (!is_dir($dir)) mkdir($dir, 0777, true);
+        $imagePath = '/fleetops/api/uploads/attendance/' . date('Ymd_His') . '_' . $driverId . '.' . strtolower($m[1]);
+        file_put_contents($dir . '/' . basename($imagePath), base64_decode($m[2]));
     }
 
     // Get detected plate number from OCR processing

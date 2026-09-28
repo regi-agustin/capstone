@@ -1,10 +1,20 @@
-import { useEffect, useState } from 'react'
-import { Download, Plus, Pencil, UserPlus, History, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Pencil,
+  History,
+  Car,
+  AlertTriangle,
+  UserCog,
+  Save,
+} from 'lucide-react'
 import {
   fetchCarRates,
-  addCarRate,
-  updateCarRate,
-  deleteCarRate,
+  fetchCarRateHistory,
+  fetchCarAssignments,
+  fetchAssignableDrivers,
+  saveCarRate,
+  saveCarAssignment,
+  formatDate,
   formatPeso,
 } from '../services/payrollService.js'
 import SearchBar from '../../ro/components/SearchBar.jsx'
@@ -13,166 +23,199 @@ import Pagination from '../../ro/components/Pagination.jsx'
 import Modal from '../../ro/components/Modal.jsx'
 import { downloadCsv } from '../../ro/utils/csv.js'
 
-// Matches the vehicle types priced in the fleet module.
-const VEHICLE_TYPES = ['AUV', 'SUV', 'L300']
-const PAGE_SIZE = 10
+const PAGE_SIZE = 8
+const today = () => new Date().toISOString().slice(0, 10)
 
-const EMPTY_FORM = { id: null, carCode: '', plate: '', type: 'AUV', model: '', dailyRate: '', ownerId: '' }
+function rateText(rate) {
+  if (rate === null || rate === undefined || rate === '') return '—'
+  return formatPeso(rate)
+}
 
 export default function CarRates() {
-  const [cars, setCars] = useState([])
-  const [owners, setOwners] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [msg, setMsg] = useState('')
+  const [rows, setRows] = useState([])
+  const [drivers, setDrivers] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [msg, setMsg] = useState('')
 
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState(EMPTY_FORM)
-  const [formError, setFormError] = useState('')
-  const [saving, setSaving] = useState(false)
+  // rate editor
+  const [rateFor, setRateFor] = useState(null)
+  const [rateForm, setRateForm] = useState({ dailyRate: '', effectiveFrom: today() })
+  const [rateError, setRateError] = useState('')
+  const [savingRate, setSavingRate] = useState(false)
 
-  const [deleteTarget, setDeleteTarget] = useState(null)
-  const [deleteError, setDeleteError] = useState('')
-  const [deleting, setDeleting] = useState(false)
+  // driver editor
+  const [assignFor, setAssignFor] = useState(null)
+  const [assignForm, setAssignForm] = useState({ driverId: '', effectiveFrom: today() })
+  const [assignError, setAssignError] = useState('')
+  const [savingAssign, setSavingAssign] = useState(false)
 
-  async function load() {
+  // history
+  const [historyFor, setHistoryFor] = useState(null)
+  const [history, setHistory] = useState(null)
+  const [historyLoading, setHistoryLoading] = useState(false)
+
+  const load = useCallback(async (q = '') => {
     try {
-      const data = await fetchCarRates()
-      setCars(data.cars)
-      setOwners(data.owners)
+      const [list, drv] = await Promise.all([fetchCarRates(q), fetchAssignableDrivers()])
+      setRows(list)
+      setDrivers(drv)
       setError('')
     } catch (e) {
       setError(e.message)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [load])
 
-  const filtered = cars.filter((c) => {
-    const q = search.trim().toLowerCase()
-    const matchesSearch =
-      !q ||
-      c.carCode.toLowerCase().includes(q) ||
-      c.plate.toLowerCase().includes(q) ||
-      c.model.toLowerCase().includes(q) ||
-      c.category.toLowerCase().includes(q) ||
-      c.driver.toLowerCase().includes(q)
-    const matchesStatus = statusFilter === 'All' || c.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  // Search is server-side so it also matches the computed car code.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPage(1)
+      load(search)
+    }, 250)
+    return () => clearTimeout(t)
+  }, [search, load])
 
-  const assigned = cars.filter((c) => c.driver).length
-  const unassigned = cars.length - assigned
+  const filtered = useMemo(
+    () => (statusFilter === 'All' ? rows : rows.filter((r) => (statusFilter === 'Active' ? !r.inactive : r.inactive))),
+    [rows, statusFilter]
+  )
 
   const pageCount = Math.ceil(filtered.length / PAGE_SIZE)
   const safePage = Math.min(page, Math.max(1, pageCount))
   const pageData = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  const summary = useMemo(() => {
+    const active = rows.filter((r) => !r.inactive)
+    const withDriver = active.filter((r) => r.assignedDriver)
+    const withRate = active.filter((r) => r.dailyRate > 0)
+    return {
+      total: active.length,
+      withDriver: withDriver.length,
+      unassigned: active.length - withDriver.length,
+      missingRate: active.length - withRate.length,
+    }
+  }, [rows])
 
   function flash(text) {
     setMsg(text)
     setTimeout(() => setMsg(''), 4000)
   }
 
+  function openRate(row) {
+    setRateError('')
+    setRateFor(row)
+    setRateForm({ dailyRate: String(row.dailyRate ?? ''), effectiveFrom: today() })
+  }
+
+  function openAssign(row) {
+    setAssignError('')
+    setAssignFor(row)
+    setAssignForm({
+      driverId: row.assignedDriverId ? String(row.assignedDriverId) : '',
+      effectiveFrom: today(),
+    })
+  }
+
+  async function handleSaveRate(e) {
+    e.preventDefault()
+    setRateError('')
+    const value = Number(rateForm.dailyRate)
+    if (!rateForm.dailyRate.trim() || Number.isNaN(value)) {
+      setRateError('Enter a valid daily rate.')
+      return
+    }
+    if (value <= 0) {
+      setRateError('Daily rate must be greater than zero.')
+      return
+    }
+    if (!rateForm.effectiveFrom) {
+      setRateError('Choose the date this rate takes effect.')
+      return
+    }
+    setSavingRate(true)
+    try {
+      const res = await saveCarRate({
+        vehicleId: rateFor.vehicleId,
+        dailyRate: value,
+        effectiveFrom: rateForm.effectiveFrom,
+      })
+      setRateFor(null)
+      await load(search)
+      flash(`Daily rate for ${rateFor.carCode} set to ${formatPeso(res.dailyRate)} effective ${formatDate(res.effectiveFrom)}.`)
+    } catch (err) {
+      setRateError(err.message)
+    } finally {
+      setSavingRate(false)
+    }
+  }
+
+  async function handleSaveAssign(e) {
+    e.preventDefault()
+    setAssignError('')
+    if (!assignForm.driverId) {
+      setAssignError('Choose a driver to assign to this car.')
+      return
+    }
+    if (!assignForm.effectiveFrom) {
+      setAssignError('Choose the date this assignment takes effect.')
+      return
+    }
+    setSavingAssign(true)
+    try {
+      const res = await saveCarAssignment({
+        vehicleId: assignFor.vehicleId,
+        driverId: Number(assignForm.driverId),
+        effectiveFrom: assignForm.effectiveFrom,
+      })
+      setAssignFor(null)
+      await load(search)
+      flash(`${res.driverName} assigned to ${assignFor.carCode} effective ${formatDate(res.effectiveFrom)}.`)
+    } catch (err) {
+      setAssignError(err.message)
+    } finally {
+      setSavingAssign(false)
+    }
+  }
+
+  async function openHistory(row) {
+    setHistoryFor(row)
+    setHistory(null)
+    setHistoryLoading(true)
+    try {
+      const [rates, assigns] = await Promise.all([
+        fetchCarRateHistory(row.vehicleId),
+        fetchCarAssignments(row.vehicleId),
+      ])
+      setHistory({ rates, assigns })
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
   function handleExport() {
     if (filtered.length === 0) return
     downloadCsv(
       'current-car-rates.csv',
-      ['Car Code', 'Vehicle Type', 'Model', 'Daily Rate', 'Assigned Driver', 'Plate Number', 'Car Owner', 'Status'],
-      filtered.map((c) => [
-        c.carCode, c.category, c.model, c.dailyRate.toFixed(2),
-        c.driver || 'Unassigned', c.plate, c.owner, c.status,
+      ['Car Code', 'Vehicle Type', 'Model', 'Plate Number', 'Daily Rate', 'Assigned Driver', 'Car Owner', 'Status'],
+      filtered.map((r) => [
+        r.carCode, r.vehicleType, r.model, r.plateNumber, r.dailyRate,
+        r.assignedDriver || 'Unassigned', r.carOwner || (r.companyOwned ? 'Company Owned' : ''), r.statusLabel,
       ])
     )
   }
 
-  function openAdd() {
-    setForm(EMPTY_FORM)
-    setFormError('')
-    setShowForm(true)
-  }
-
-  function openEdit(car) {
-    setForm({
-      id: car.id,
-      carCode: car.carCode,
-      plate: car.plate,
-      type: car.category,
-      model: car.model,
-      dailyRate: String(car.dailyRate),
-      ownerId: car.ownerId || '',
-    })
-    setFormError('')
-    setShowForm(true)
-  }
-
-  async function handleSave(e) {
-    e.preventDefault()
-    setFormError('')
-
-    const plate = form.plate.trim()
-    const model = form.model.trim()
-    const dailyRate = Number(String(form.dailyRate).replace(/[^0-9.]/g, ''))
-
-    if (!plate || !model) {
-      setFormError('Plate number and model are required.')
-      return
-    }
-    if (!dailyRate || dailyRate <= 0) {
-      setFormError('Enter a daily rate greater than zero.')
-      return
-    }
-
-    const payload = {
-      plate,
-      type: form.type,
-      model,
-      dailyRate,
-      ownerId: form.ownerId ? Number(form.ownerId) : null,
-    }
-
-    setSaving(true)
-    try {
-      if (form.id) {
-        await updateCarRate({ id: form.id, ...payload })
-        flash(`Car rate for ${plate} updated.`)
-      } else {
-        const created = await addCarRate(payload)
-        flash(`Car rate ${created.carCode} added.`)
-      }
-      setShowForm(false)
-      setForm(EMPTY_FORM)
-      await load()
-    } catch (e) {
-      setFormError(e.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleDelete() {
-    setDeleting(true)
-    setDeleteError('')
-    try {
-      await deleteCarRate(deleteTarget.id)
-      flash(`Car rate ${deleteTarget.carCode} deleted.`)
-      setDeleteTarget(null)
-      await load()
-    } catch (e) {
-      setDeleteError(e.message)
-    } finally {
-      setDeleting(false)
-    }
-  }
-
-  if (error) {
+  if (error && rows.length === 0) {
     return <div className="error-banner">{error}</div>
   }
 
@@ -187,28 +230,49 @@ export default function CarRates() {
         </div>
       </div>
 
+      {msg && <div className="success-banner" style={{ marginBottom: 16 }}>{msg}</div>}
+
       <div className="toolbar" style={{ marginBottom: 18 }}>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search car code, driver, plate..." />
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Search car code, driver, plate..."
+        />
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
           className="form-select"
           style={{ width: 160 }}
+          aria-label="Filter by vehicle status"
         >
           <option>All</option>
-          <option>Available</option>
-          <option>Assigned</option>
-          <option>Maintenance</option>
+          <option>Active</option>
           <option>Inactive</option>
         </select>
-      </div>
-      <div className="toolbar" style={{ justifyContent: 'flex-end', marginBottom: 18 }}>
-        <button onClick={handleExport} className="btn btn--secondary btn--sm" disabled={filtered.length === 0}>
-          <Download size={14} /> Export
+        <button onClick={handleExport} className="btn btn--secondary btn--sm" style={{ marginLeft: 'auto' }}>
+          Export
         </button>
       </div>
 
-      {msg && <div className="success-banner" style={{ marginBottom: 16 }}>{msg}</div>}
+      {summary.missingRate > 0 && (
+        <div
+          className="error-banner"
+          style={{
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            background: 'var(--warning-soft)',
+            color: 'var(--warning)',
+            borderColor: 'var(--warning)',
+          }}
+        >
+          <AlertTriangle size={16} style={{ flexShrink: 0 }} />{' '}
+          {summary.missingRate} active car{summary.missingRate === 1 ? ' has' : 's have'} no daily rate set.
+          Payroll will show ₱0.00{summary.missingRate === 1 ? ' for that car' : ' for those cars'} until a
+          rate is entered.
+        </div>
+      )}
 
       <section className="card">
         <div className="card__header">
@@ -218,25 +282,20 @@ export default function CarRates() {
               <span className="badge badge--neutral">{filtered.length}</span>
             </div>
             <div className="card__sub">
-              {cars.length} active cars &bull; {assigned} assigned &bull; {unassigned} unassigned
+              {summary.total} active car{summary.total === 1 ? '' : 's'} &middot;{' '}
+              {summary.withDriver} assigned &middot; {summary.unassigned} unassigned
             </div>
           </div>
-          <button onClick={openAdd} className="btn btn--primary btn--sm">
-            <Plus size={14} /> Add
-          </button>
         </div>
-
         <div className="card__body">
           {loading ? (
             <div className="empty-state">
-              <div className="empty-state__title">Loading car rates…</div>
+              <div className="empty-state__title">Loading car rates...</div>
             </div>
           ) : filtered.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state__title">No car rates found.</div>
-              <div className="empty-state__sub">
-                {cars.length === 0 ? 'Click Add to register the first car.' : 'Try adjusting your search or filters.'}
-              </div>
+              <div className="empty-state__title">No cars found.</div>
+              <div className="empty-state__sub">Try adjusting your search or filter.</div>
             </div>
           ) : (
             <div className="table-wrap">
@@ -245,7 +304,7 @@ export default function CarRates() {
                   <tr>
                     <th>Car Code</th>
                     <th>Vehicle Type</th>
-                    <th style={{ textAlign: 'right' }}>Daily Rate</th>
+                    <th>Daily Rate</th>
                     <th>Assigned Driver</th>
                     <th>Plate Number</th>
                     <th>Car Owner</th>
@@ -254,59 +313,61 @@ export default function CarRates() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pageData.map((c, idx) => (
-                    <tr key={c.id}>
-                      <td>
-                        <div className="cell-main">{c.carCode}</div>
-                        {c.since && <div className="cell-sub">{c.since}</div>}
+                  {pageData.map((r) => (
+                    <tr key={r.vehicleId}>
+                      <td className="cell-main">
+                        {r.carCode}
+                        {r.hasHistory && (
+                          <span className="cell-sub" style={{ display: 'block' }}>
+                            since {formatDate(r.rateFrom)}
+                          </span>
+                        )}
                       </td>
                       <td>
-                        <div className="cell-main">{c.category}</div>
-                        <div className="cell-sub">{c.model}</div>
+                        {r.vehicleType}
+                        <span className="cell-sub" style={{ display: 'block' }}>{r.model}</span>
                       </td>
-                      <td className="cell-main" style={{ textAlign: 'right' }}>
-                        {formatPeso(c.dailyRate)}
+                      <td className="cell-main">{rateText(r.dailyRate)}</td>
+                      <td>
+                        {r.assignedDriver || <span className="cell-muted">Unassigned</span>}
+                        {r.assignedFrom && (
+                          <span className="cell-sub" style={{ display: 'block' }}>
+                            since {formatDate(r.assignedFrom)}
+                          </span>
+                        )}
+                      </td>
+                      <td>{r.plateNumber}</td>
+                      <td>
+                        {r.carOwner || <span className="cell-muted">Company Owned</span>}
                       </td>
                       <td>
-                        {c.driver ? c.driver : <span className="cell-muted">Unassigned</span>}
-                      </td>
-                      <td>{c.plate}</td>
-                      <td className="cell-muted">{c.owner}</td>
-                      <td>
-                        <StatusBadge status={c.status === 'Maintenance' ? 'In Maintenance' : c.status} />
+                        <StatusBadge status={r.statusLabel} />
                       </td>
                       <td>
                         <div className="actions-row" style={{ justifyContent: 'center' }}>
                           <button
+                            onClick={() => openRate(r)}
                             className="btn btn--icon"
-                            title="Edit car rate"
-                            onClick={() => openEdit(c)}
+                            title="Change daily rate"
+                            aria-label={`Change daily rate for ${r.carCode}`}
                           >
                             <Pencil size={16} />
                           </button>
                           <button
+                            onClick={() => openAssign(r)}
                             className="btn btn--icon"
-                            disabled
-                            title="Assign a driver from the Reservations module"
+                            title="Change assigned driver"
+                            aria-label={`Change assigned driver for ${r.carCode}`}
                           >
-                            <UserPlus size={16} />
+                            <UserCog size={16} />
                           </button>
                           <button
+                            onClick={() => openHistory(r)}
                             className="btn btn--icon"
-                            disabled
-                            title="Rate history is not tracked yet"
+                            title="View rate history"
+                            aria-label={`View rate history for ${r.carCode}`}
                           >
                             <History size={16} />
-                          </button>
-                          <button
-                            className="btn btn--icon"
-                            title="Delete car rate"
-                            onClick={() => {
-                              setDeleteTarget(c)
-                              setDeleteError('')
-                            }}
-                          >
-                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>
@@ -316,156 +377,229 @@ export default function CarRates() {
               </table>
             </div>
           )}
-
           <Pagination
             page={safePage}
             pageCount={pageCount}
             onPage={setPage}
             total={filtered.length}
-            label={`Showing ${pageData.length} of ${filtered.length} records`}
+            label={`Showing ${pageData.length} of ${filtered.length} cars`}
           />
         </div>
       </section>
 
-      {/* Add / Edit car rate */}
+      {/* ---- Change daily rate ------------------------------------------- */}
       <Modal
-        open={showForm}
-        onClose={() => setShowForm(false)}
-        title={form.id ? 'Edit Car Rate' : 'Add Car Rate'}
-        subtitle={form.id ? form.carCode : 'The car code is generated when the record is saved'}
-        size="lg"
+        open={!!rateFor}
+        onClose={() => setRateFor(null)}
+        title="Change Daily Rate"
+        subtitle={rateFor ? `${rateFor.carCode} · ${rateFor.plateNumber}` : ''}
         footer={
           <>
-            <button type="button" className="btn btn--secondary" onClick={() => setShowForm(false)} disabled={saving}>
+            <button type="button" className="btn btn--secondary" onClick={() => setRateFor(null)}>
               Cancel
             </button>
-            <button type="submit" form="car-rate-form" className="btn btn--primary" disabled={saving}>
-              <Plus size={16} /> {saving ? 'Saving…' : form.id ? 'Save Changes' : 'Add'}
+            <button type="submit" form="car-rate-form" className="btn btn--primary" disabled={savingRate}>
+              <Save size={16} /> {savingRate ? 'Saving...' : 'Save Rate'}
             </button>
           </>
         }
       >
-        <form id="car-rate-form" onSubmit={handleSave} style={{ display: 'grid', gap: 14 }}>
-          <div className="form-grid">
+        {rateFor && (
+          <form id="car-rate-form" onSubmit={handleSaveRate} style={{ display: 'grid', gap: 14 }}>
             <div className="form-group">
-              <label className="form-label" htmlFor="cr-code">Car Code</label>
-              <input
-                id="cr-code"
-                className="form-input"
-                disabled
-                value={form.carCode}
-                placeholder="Generated on save"
-              />
-              <div className="form-hint">Built from the vehicle type and record ID.</div>
+              <label className="form-label" htmlFor="cr-current">Current Daily Rate</label>
+              <div className="form-input" style={{ background: 'var(--surface-2, #f6f7f9)' }}>
+                {rateText(rateFor.dailyRate)}
+              </div>
+              <span className="form-hint">
+                {rateFor.rateCount > 1
+                  ? `${rateFor.rateCount} rates on record for this car.`
+                  : 'No rate changes recorded yet.'}
+              </span>
+              {rateFor.rateCount > 1 && rateFor.dailyRate !== rateFor.stagedRate && (
+                <p className="form-hint" style={{ marginTop: 6 }}>
+                  A rate of {formatPeso(rateFor.stagedRate)} is already scheduled for{' '}
+                  {formatDate(rateFor.stagedFrom)}. Saving here will replace that schedule.
+                </p>
+              )}
             </div>
-
             <div className="form-group">
-              <label className="form-label" htmlFor="cr-type">Vehicle Type <span className="req">*</span></label>
-              <select
-                id="cr-type"
-                className="form-select"
-                value={form.type}
-                disabled={Boolean(form.id)}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-              >
-                {VEHICLE_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-              {form.id && <div className="form-hint">Locked, because it forms the car code.</div>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="cr-model">Model <span className="req">*</span></label>
-              <input
-                id="cr-model"
-                className="form-input"
-                placeholder="e.g. Toyota Innova"
-                value={form.model}
-                onChange={(e) => setForm({ ...form, model: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="cr-rate">Daily Rate (₱) <span className="req">*</span></label>
+              <label className="form-label" htmlFor="cr-rate">New Daily Rate <span className="req">*</span></label>
               <input
                 id="cr-rate"
                 className="form-input"
+                type="number"
+                step="0.01"
+                min="0.01"
                 inputMode="decimal"
                 placeholder="e.g. 2500.00"
-                value={form.dailyRate}
-                onChange={(e) => setForm({ ...form, dailyRate: e.target.value })}
+                value={rateForm.dailyRate}
+                onChange={(e) => setRateForm({ ...rateForm, dailyRate: e.target.value })}
               />
             </div>
-
             <div className="form-group">
-              <label className="form-label" htmlFor="cr-plate">Plate Number <span className="req">*</span></label>
+              <label className="form-label" htmlFor="cr-from">Effective From <span className="req">*</span></label>
               <input
-                id="cr-plate"
+                id="cr-from"
                 className="form-input"
-                placeholder="e.g. ABC 1234"
-                value={form.plate}
-                onChange={(e) => setForm({ ...form, plate: e.target.value })}
+                type="date"
+                value={rateForm.effectiveFrom}
+                onChange={(e) => setRateForm({ ...rateForm, effectiveFrom: e.target.value })}
               />
+              <span className="form-hint">
+                Past payrolls keep the rate that applied on each day they were computed. This change only
+                affects periods on or after the effective date.
+              </span>
             </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="cr-owner">Car Owner</label>
-              <select
-                id="cr-owner"
-                className="form-select"
-                value={form.ownerId}
-                onChange={(e) => setForm({ ...form, ownerId: e.target.value })}
-              >
-                <option value="">Company Owned</option>
-                {owners.map((o) => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <p className="form-hint">
-            The assigned driver is not set here — it appears in this list automatically once a booking
-            assigns the car in the Reservations module.
-          </p>
-
-          {formError && <div className="error-banner">{formError}</div>}
-        </form>
+            {rateError && <div className="error-banner">{rateError}</div>}
+          </form>
+        )}
       </Modal>
 
-      {/* Delete confirmation */}
+      {/* ---- Change assigned driver -------------------------------------- */}
       <Modal
-        open={Boolean(deleteTarget)}
-        onClose={() => setDeleteTarget(null)}
-        title="Delete Car Rate?"
-        size="sm"
-        lockClose={deleting}
+        open={!!assignFor}
+        onClose={() => setAssignFor(null)}
+        title="Change Assigned Driver"
+        subtitle={assignFor ? `${assignFor.carCode} · ${assignFor.plateNumber}` : ''}
         footer={
           <>
-            <button
-              type="button"
-              className="btn btn--secondary"
-              onClick={() => setDeleteTarget(null)}
-              disabled={deleting}
-            >
+            <button type="button" className="btn btn--secondary" onClick={() => setAssignFor(null)}>
               Cancel
             </button>
-            <button type="button" className="btn btn--danger" onClick={handleDelete} disabled={deleting}>
-              <Trash2 size={16} /> {deleting ? 'Deleting…' : 'Delete'}
+            <button type="submit" form="car-assign-form" className="btn btn--primary" disabled={savingAssign}>
+              <UserCog size={16} /> {savingAssign ? 'Saving...' : 'Save Assignment'}
             </button>
           </>
         }
       >
-        <p style={{ fontSize: 14 }}>
-          Are you sure you want to delete this car rate? This action cannot be undone.
-        </p>
-        {deleteTarget && (
-          <p className="cell-sub" style={{ marginTop: 8 }}>
-            {deleteTarget.carCode} &bull; {deleteTarget.category} {deleteTarget.model} &bull; {deleteTarget.plate}
-          </p>
+        {assignFor && (
+          <form id="car-assign-form" onSubmit={handleSaveAssign} style={{ display: 'grid', gap: 14 }}>
+            <div className="form-group">
+              <label className="form-label" htmlFor="ca-current">Currently Assigned</label>
+              <div className="form-input" style={{ background: 'var(--surface-2, #f6f7f9)' }}>
+                {assignFor.assignedDriver || 'Unassigned'}
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="ca-driver">Driver <span className="req">*</span></label>
+              <select
+                id="ca-driver"
+                className="form-select"
+                value={assignForm.driverId}
+                onChange={(e) => setAssignForm({ ...assignForm, driverId: e.target.value })}
+              >
+                <option value="">Select a driver...</option>
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} {d.contact ? `(${d.contact})` : ''}
+                  </option>
+                ))}
+              </select>
+              <span className="form-hint">Only active drivers are listed.</span>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="ca-from">Effective From <span className="req">*</span></label>
+              <input
+                id="ca-from"
+                className="form-input"
+                type="date"
+                value={assignForm.effectiveFrom}
+                onChange={(e) => setAssignForm({ ...assignForm, effectiveFrom: e.target.value })}
+              />
+            </div>
+            {assignError && <div className="error-banner">{assignError}</div>}
+          </form>
         )}
-        {deleteError && <div className="error-banner" style={{ marginTop: 12 }}>{deleteError}</div>}
+      </Modal>
+
+      {/* ---- Rate + assignment history ----------------------------------- */}
+      <Modal
+        open={!!historyFor}
+        onClose={() => setHistoryFor(null)}
+        title="Rate & Assignment History"
+        subtitle={historyFor ? `${historyFor.carCode} · ${historyFor.plateNumber}` : ''}
+        footer={
+          <button type="button" className="btn btn--secondary" onClick={() => setHistoryFor(null)}>
+            Close
+          </button>
+        }
+      >
+        {historyLoading ? (
+          <div className="empty-state">
+            <div className="empty-state__title">Loading history...</div>
+          </div>
+        ) : history ? (
+          <div style={{ display: 'grid', gap: 20 }}>
+            <div>
+              <div className="card__title" style={{ marginBottom: 10 }}>
+                <Car size={16} /> Daily Rate History
+              </div>
+              {history.rates.length === 0 ? (
+                <p className="cell-muted">No rate on record for this car.</p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Daily Rate</th>
+                        <th>Effective From</th>
+                        <th>Effective To</th>
+                        <th>Updated By</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {history.rates.map((h) => (
+                        <tr key={h.rateId}>
+                          <td className="cell-main">{formatPeso(h.dailyRate)}</td>
+                          <td>{formatDate(h.effectiveFrom)}</td>
+                          <td>{h.isCurrent ? <span className="badge badge--confirmed">Current</span>
+                            : h.isScheduled ? <span className="badge badge--pending">Scheduled</span>
+                            : formatDate(h.effectiveTo)}</td>
+                          <td className="cell-muted">{h.updatedBy}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="card__title" style={{ marginBottom: 10 }}>
+                <UserCog size={16} /> Driver Assignment History
+              </div>
+              {history.assigns.length === 0 ? (
+                <p className="cell-muted">This car has never been assigned to a driver.</p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Driver</th>
+                        <th>Effective From</th>
+                        <th>Effective To</th>
+                        <th>Updated By</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {history.assigns.map((a) => (
+                        <tr key={a.assignmentId}>
+                          <td className="cell-main">{a.driverName}</td>
+                          <td>{formatDate(a.effectiveFrom)}</td>
+                          <td>{a.isCurrent ? <span className="badge badge--confirmed">Current</span>
+                            : a.isScheduled ? <span className="badge badge--pending">Scheduled</span>
+                            : formatDate(a.effectiveTo)}</td>
+                          <td className="cell-muted">{a.updatedBy}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
       </Modal>
     </div>
   )

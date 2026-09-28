@@ -110,6 +110,10 @@ function payroll_row_shape(array $p): array
     foreach ($earnings as $k => $v) $earnings[$k] = (float)$v;
     foreach ($deductions as $k => $v) $deductions[$k] = (float)$v;
 
+    // The frozen rate inputs for this period, kept verbatim so the payslip can
+    // show what each car was billed at even after rates change.
+    $snapshot = isset($p['car_rate_snapshot']) ? json_decode((string)$p['car_rate_snapshot'], true) : null;
+
     return [
         'id' => (int)$p['payroll_id'],
         'driverId' => (int)$p['driver_id'],
@@ -127,6 +131,7 @@ function payroll_row_shape(array $p): array
         'status' => $p['status'],
         'earnings' => $earnings,
         'deductions' => $deductions,
+        'carRateSnapshot' => is_array($snapshot) ? $snapshot : null,
         'totalEarnings' => (float)$p['total_earnings'],
         'totalDeductions' => (float)$p['total_deductions'],
         'totalReceivable' => (float)$p['total_receivable'],
@@ -476,6 +481,7 @@ if ($method === 'GET') {
                 'logId' => (int)$t['log_id'],
                 'date' => $t['trip_date'],
                 'tripCode' => $t['trip_code'] ?? '',
+                'vehicleId' => (int)$t['vehicle_id'],
                 'carCode' => vehicle_car_code($t),
                 'plateNumber' => $t['plate_number'],
                 'model' => $t['model'],
@@ -624,12 +630,21 @@ if ($method === 'POST') {
         $earningsJson = json_encode($calc['earnings'], JSON_UNESCAPED_UNICODE);
         $deductionsJson = json_encode($calc['deductions'], JSON_UNESCAPED_UNICODE);
 
+        // Freeze the car-rental calculation for this period. It is recomputed
+        // here rather than trusted from the client, so a later rate or
+        // assignment change can never rewrite what a payroll already paid.
+        $carSnapshot = car_rental_breakdown($pdo, $driverId, $cutoffStart, $cutoffEnd);
+        $carSnapshot['cutoffStart'] = $cutoffStart;
+        $carSnapshot['cutoffEnd'] = $cutoffEnd;
+        $carSnapshot['capturedAt'] = date('Y-m-d H:i:s');
+        $carSnapshotJson = json_encode($carSnapshot, JSON_UNESCAPED_UNICODE);
+
         if ($action === 'update') {
             $stmt = $pdo->prepare(
                 'UPDATE payroll
                  SET driver_id = ?, vehicle_id = ?, car_code = ?, plate_number = ?, vehicle_type = ?, car_owner = ?,
                      cutoff_start = ?, cutoff_end = ?, payroll_date = ?,
-                     earnings_json = ?, deductions_json = ?,
+                     earnings_json = ?, deductions_json = ?, car_rate_snapshot = ?,
                      total_earnings = ?, total_deductions = ?, total_receivable = ?,
                      payroll_remarks = ?
                  WHERE payroll_id = ?'
@@ -637,7 +652,7 @@ if ($method === 'POST') {
             $stmt->execute([
                 $driverId, $vehicleId, $carCode, $plateNumber, $vehicleType, $carOwner,
                 $cutoffStart, $cutoffEnd, $payrollDate,
-                $earningsJson, $deductionsJson,
+                $earningsJson, $deductionsJson, $carSnapshotJson,
                 $calc['totalEarnings'], $calc['totalDeductions'], $calc['totalReceivable'],
                 $remarks, $id,
             ]);
@@ -647,15 +662,15 @@ if ($method === 'POST') {
             $stmt = $pdo->prepare(
                 'INSERT INTO payroll (driver_id, vehicle_id, car_code, plate_number, vehicle_type, car_owner,
                                       cutoff_start, cutoff_end, payroll_date, status,
-                                      earnings_json, deductions_json,
+                                      earnings_json, deductions_json, car_rate_snapshot,
                                       total_earnings, total_deductions, total_receivable,
                                       payroll_remarks, created_by)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "draft", ?, ?, ?, ?, ?, ?, ?)'
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "draft", ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([
                 $driverId, $vehicleId, $carCode, $plateNumber, $vehicleType, $carOwner,
                 $cutoffStart, $cutoffEnd, $payrollDate,
-                $earningsJson, $deductionsJson,
+                $earningsJson, $deductionsJson, $carSnapshotJson,
                 $calc['totalEarnings'], $calc['totalDeductions'], $calc['totalReceivable'],
                 $remarks, (int)$user['user_id'],
             ]);
