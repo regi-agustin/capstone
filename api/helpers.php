@@ -219,6 +219,213 @@ function cancel_reservation(PDO $pdo, int $reservationId): void
     $pdo->prepare('UPDATE vehicles SET status = "available" WHERE vehicle_id = ?')->execute([$res['vehicle_id']]);
 }
 
+/*
+ * ---------------------------------------------------------------------------
+ * Current Car Rates  (car rate management + payroll car-rental calculation)
+ * ---------------------------------------------------------------------------
+ * The rate a payroll pays for a car is whatever was in effect on the day the
+ * car was actually used, so these helpers are shared by the Current Car Rates
+ * screen and the payroll wizard to keep both on exactly one calculation.
+ */
+
+/**
+ * The daily rate in effect for a vehicle on a given date.
+ * Falls back to vehicles.daily_rate when no history row covers the date, which
+ * keeps every pre-migration vehicle working without changing any amount.
+ */
+function vehicle_rate_on(PDO $pdo, int $vehicleId, string $date): array
+{
+    $stmt = $pdo->prepare(
+        'SELECT daily_rate, effective_from
+           FROM vehicle_rate_history
+          WHERE vehicle_id = ?
+            AND effective_from <= ?
+            AND (effective_to IS NULL OR effective_to >= ?)
+          ORDER BY effective_from DESC
+          LIMIT 1'
+    );
+    $stmt->execute([$vehicleId, $date, $date]);
+    $row = $stmt->fetch();
+
+    if ($row) {
+        return ['rate' => (float)$row['daily_rate'], 'source' => 'history', 'from' => $row['effective_from']];
+    }
+
+    $fallback = $pdo->prepare('SELECT daily_rate FROM vehicles WHERE vehicle_id = ?');
+    $fallback->execute([$vehicleId]);
+    $cur = $fallback->fetchColumn();
+    if ($cur === false) return ['rate' => 0.0, 'source' => 'none', 'from' => null];
+
+    return ['rate' => (float)$cur, 'source' => 'vehicle', 'from' => null];
+}
+
+/**
+ * The driver currently assigned to a vehicle (optionally as of a date).
+ * Returns null when the car has never been assigned.
+ */
+function vehicle_assignment_on(PDO $pdo, int $vehicleId, ?string $date = null): ?array
+{
+    $date = $date ?: date('Y-m-d');
+    $stmt = $pdo->prepare(
+        'SELECT a.driver_id, d.fullname, a.effective_from
+           FROM vehicle_driver_assignments a
+           JOIN drivers d ON d.driver_id = a.driver_id
+          WHERE a.vehicle_id = ?
+            AND a.effective_from <= ?
+            AND (a.effective_to IS NULL OR a.effective_to >= ?)
+          ORDER BY a.effective_from DESC
+          LIMIT 1'
+    );
+    $stmt->execute([$vehicleId, $date, $date]);
+    $row = $stmt->fetch();
+    if (!$row) return null;
+
+    return [
+        'driverId' => (int)$row['driver_id'],
+        'name' => $row['fullname'],
+        'effectiveFrom' => $row['effective_from'],
+    ];
+}
+
+/**
+ * Car Rental breakdown for one driver's payroll period.
+ *
+ * Every eligible completed trip contributes the vehicle and the calendar date
+ * it was actually used. Repeated use of the same car on the same day counts
+ * once, and each distinct (car, day) is priced at the rate that was in effect
+ * on that day. Summing per car means a driver who used a single car gets
+ * exactly daily_rate x unique use days, while a driver who rotated cars is
+ * paid each car's own rate for its own days.
+ */
+function car_rental_breakdown(PDO $pdo, int $driverId, string $start, string $end): array
+{
+    $stmt = $pdo->prepare(
+        'SELECT tl.trip_date, tl.vehicle_id, v.plate_number, v.model, v.vehicle_type,
+                v.owner_id, v.daily_rate
+           FROM trip_logs tl
+           JOIN reservations r ON r.reservation_id = tl.reservation_id
+           JOIN vehicles v ON v.vehicle_id = tl.vehicle_id
+          WHERE tl.driver_id = ? AND r.status = "completed" AND tl.trip_date BETWEEN ? AND ?
+          ORDER BY tl.trip_date ASC, tl.log_id ASC'
+    );
+    $stmt->execute([$driverId, $start, $end]);
+    $trips = $stmt->fetchAll();
+
+    if (!$trips) {
+        return [
+            'segments' => [],
+            'tripCount' => 0,
+            'useDays' => 0,
+            'total' => 0.0,
+            'noTrips' => true,
+            'missingRate' => false,
+            'unassigned' => false,
+        ];
+    }
+
+    // One rate-history fetch for every vehicle involved, instead of per trip.
+    $vehicleIds = array_values(array_unique(array_map(fn($t) => (int)$t['vehicle_id'], $trips)));
+    $in = implode(',', array_fill(0, count($vehicleIds), '?'));
+    $hist = $pdo->prepare(
+        "SELECT vehicle_id, daily_rate, effective_from, effective_to
+           FROM vehicle_rate_history
+          WHERE vehicle_id IN ($in)
+          ORDER BY effective_from ASC"
+    );
+    $hist->execute($vehicleIds);
+    $history = [];
+    foreach ($hist->fetchAll() as $h) {
+        $history[(int)$h['vehicle_id']][] = $h;
+    }
+
+    $rateFor = function (int $vehicleId, string $date) use ($history, $trips) {
+        // Newest effective_from wins, so a handoff day is billed at the new
+        // rate. This matches vehicle_rate_on() exactly.
+        foreach (array_reverse($history[$vehicleId] ?? []) as $h) {
+            if ($h['effective_from'] <= $date && ($h['effective_to'] === null || $h['effective_to'] >= $date)) {
+                return ['rate' => (float)$h['daily_rate'], 'source' => 'history'];
+            }
+        }
+        $fallback = 0.0;
+        foreach ($trips as $t) {
+            if ((int)$t['vehicle_id'] === $vehicleId) { $fallback = (float)$t['daily_rate']; break; }
+        }
+        return ['rate' => $fallback, 'source' => 'vehicle'];
+    };
+
+    // Group by car AND rate: a period that spans a rate change becomes two
+    // priced segments for the same car instead of one blended figure.
+    $groups = [];
+    $order = [];
+    foreach ($trips as $t) {
+        $vehicleId = (int)$t['vehicle_id'];
+        $date = (string)$t['trip_date'];
+        $r = $rateFor($vehicleId, $date);
+        $key = $vehicleId . '|' . number_format($r['rate'], 2, '.', '');
+
+        if (!isset($groups[$key])) {
+            $order[] = $key;
+            $groups[$key] = [
+                'vehicleId' => $vehicleId,
+                'carCode' => vehicle_car_code($t),
+                'plateNumber' => $t['plate_number'],
+                'vehicleType' => $t['vehicle_type'],
+                'model' => $t['model'],
+                'dailyRate' => $r['rate'],
+                'rateSource' => $r['source'],
+                'dates' => [],
+            ];
+        }
+        $groups[$key]['dates'][$date] = true; // de-duplicates repeated car/days
+    }
+
+    $segments = [];
+    $total = 0.0;
+    $useDays = 0;
+    $missingRate = false;
+    $unassigned = false;
+
+    foreach ($order as $key) {
+        $g = $groups[$key];
+        $days = count($g['dates']);
+        $amount = round($g['dailyRate'] * $days, 2);
+
+        $assignment = vehicle_assignment_on($pdo, $g['vehicleId'], $start);
+        if ($assignment === null) $unassigned = true;
+        if ($g['dailyRate'] <= 0) $missingRate = true;
+
+        $total += $amount;
+        $useDays += $days;
+
+        $dates = array_keys($g['dates']);
+        sort($dates);
+
+        $segments[] = [
+            'carCode' => $g['carCode'],
+            'vehicleId' => $g['vehicleId'],
+            'plateNumber' => $g['plateNumber'],
+            'vehicleType' => $g['vehicleType'],
+            'model' => $g['model'],
+            'dailyRate' => round($g['dailyRate'], 2),
+            'rateSource' => $g['rateSource'],
+            'useDays' => $days,
+            'dates' => $dates,
+            'amount' => $amount,
+            'assignedDriver' => $assignment ? $assignment['name'] : null,
+        ];
+    }
+
+    return [
+        'segments' => $segments,
+        'tripCount' => count($trips),
+        'useDays' => $useDays,
+        'total' => round($total, 2),
+        'noTrips' => false,
+        'missingRate' => $missingRate,
+        'unassigned' => $unassigned,
+    ];
+}
+
 // ----------------------------------------------------------------------------
 //  Security / sessions / preferences (customer + payroll dashboards)
 // ----------------------------------------------------------------------------

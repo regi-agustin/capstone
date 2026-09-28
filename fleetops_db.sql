@@ -186,7 +186,7 @@ CREATE TABLE `drivers` (
 
 LOCK TABLES `drivers` WRITE;
 /*!40000 ALTER TABLE `drivers` DISABLE KEYS */;
-INSERT INTO `drivers` VALUES (6,NULL,'Juan Dela Cruz','0917 111 2222','N01-23-456789','2027-05-10',NULL,'active',0,'2022-03-01'),(7,NULL,'Pedro Santos','0918 222 3333','N02-23-456790','2026-11-20',NULL,'active',0,'2022-07-15'),(8,NULL,'Ana Cruz','0919 333 4444','N03-23-456791','2028-01-30',NULL,'active',0,'2023-02-01'),(9,NULL,'Miguel Lopez','0920 444 5555','N04-23-456792','2026-09-25',NULL,'active',0,'2023-06-12'),(10,NULL,'Rosa Mendoza','0921 555 6666','N05-23-456793','2027-12-05',NULL,'active',0,'2024-01-08');
+INSERT INTO `drivers` VALUES (6,NULL,'Juan Dela Cruz','0917 111 2222','N01-23-456789','2027-05-10',NULL,'active',0,'2022-03-01'),(7,NULL,'Pedro Santos','0918 222 3333','N02-23-456790','2026-11-20',NULL,'active',0,'2022-07-15'),(8,NULL,'Ana Cruz','0919 333 4444','N03-23-456791','2028-01-30',NULL,'active',0,'2023-02-01'),(9,NULL,'Miguel Lopez','0920 444 5555','N04-23-456792','2026-09-25',NULL,'active',0,'2023-06-12'),(10,NULL,'Rosa Mendoza','0921 555 6666','N05-23-456793','2027-12-05',NULL,'active',0,'2024-01-08'),(11,NULL,'Sherwin Aspa','0917 888 7777','N06-23-456794','2028-06-15','Angeles City, Pampanga','active',0,'2022-08-01');
 /*!40000 ALTER TABLE `drivers` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -250,6 +250,7 @@ CREATE TABLE `loans` (
 
 LOCK TABLES `loans` WRITE;
 /*!40000 ALTER TABLE `loans` DISABLE KEYS */;
+INSERT INTO `loans` VALUES (1,11,'Cooperative Loan',30000.00,0.00,'2026-01-01',2500.00,15000.00,'active');
 /*!40000 ALTER TABLE `loans` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -381,25 +382,49 @@ UNLOCK TABLES;
 -- Table structure for table `payroll`
 --
 
+DROP TABLE IF EXISTS `payroll_reports`;
+DROP TABLE IF EXISTS `payroll_trips`;
 DROP TABLE IF EXISTS `payroll`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `payroll` (
   `payroll_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `driver_id` int(10) unsigned NOT NULL,
+  `vehicle_id` int(10) unsigned DEFAULT NULL,
+  `car_code` varchar(30) NOT NULL DEFAULT 'Additional',
+  `plate_number` varchar(20) DEFAULT NULL,
+  `vehicle_type` varchar(30) DEFAULT NULL,
+  `car_owner` varchar(255) DEFAULT NULL,
+  `cutoff_start` date NOT NULL,
+  `cutoff_end` date NOT NULL,
   `payroll_date` date NOT NULL,
-  `basic_salary` decimal(12,2) NOT NULL,
-  `allowances` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `deductions` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `net_salary` decimal(12,2) NOT NULL,
-  `loan_id` int(10) unsigned DEFAULT NULL,
-  `status` enum('pending','paid','unpaid') NOT NULL DEFAULT 'pending',
+  `status` enum('draft','for_review','approved','paid','cancelled') NOT NULL DEFAULT 'draft',
+  `earnings_json` longtext DEFAULT NULL,
+  `deductions_json` longtext DEFAULT NULL,
+  `car_rate_snapshot` longtext DEFAULT NULL,
+  `total_earnings` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `total_deductions` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `total_receivable` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `payroll_remarks` varchar(500) DEFAULT NULL,
+  `payment_method` varchar(20) DEFAULT NULL,
+  `amount_paid` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `date_paid` date DEFAULT NULL,
+  `reference_number` varchar(100) DEFAULT NULL,
+  `submitted_by` int(10) unsigned DEFAULT NULL,
+  `approved_by` int(10) unsigned DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `created_by` int(10) unsigned DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`payroll_id`),
   KEY `idx_payroll_driver` (`driver_id`),
-  KEY `idx_payroll_loan` (`loan_id`),
+  KEY `idx_payroll_status` (`status`),
   CONSTRAINT `fk_payroll_driver` FOREIGN KEY (`driver_id`) REFERENCES `drivers` (`driver_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_payroll_loan` FOREIGN KEY (`loan_id`) REFERENCES `loans` (`loan_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  CONSTRAINT `fk_payroll_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_payroll_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_payroll_submitted_by` FOREIGN KEY (`submitted_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_payroll_approved_by` FOREIGN KEY (`approved_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -408,8 +433,94 @@ CREATE TABLE `payroll` (
 
 LOCK TABLES `payroll` WRITE;
 /*!40000 ALTER TABLE `payroll` DISABLE KEYS */;
-INSERT INTO `payroll` VALUES (1,6,'2026-08-14',12000.00,1500.00,1000.00,12500.00,NULL,'paid'),(2,7,'2026-08-14',12000.00,1500.00,500.00,13000.00,NULL,'pending'),(3,8,'2026-08-14',12000.00,1000.00,500.00,12500.00,NULL,'pending');
+INSERT INTO `payroll` (`payroll_id`, `driver_id`, `vehicle_id`, `car_code`, `plate_number`, `vehicle_type`, `cutoff_start`, `cutoff_end`, `payroll_date`, `status`, `earnings_json`, `deductions_json`, `total_earnings`, `total_deductions`, `total_receivable`, `payroll_remarks`, `payment_method`, `amount_paid`, `date_paid`, `reference_number`, `submitted_by`, `approved_by`, `approved_at`, `created_by`) VALUES
+(6,11,11,'Additional','NBX8012','AUV','2026-07-01','2026-07-15','2026-07-30','paid','{\"car_rental\":14630.00,\"fuel_subsidy\":0,\"excess_gas\":0,\"overnight_allowance\":0,\"overtime\":540.00,\"misc\":1174.00,\"time_hazard\":0,\"dispute\":0}','{\"advance\":0,\"penalty\":0,\"no_line_up\":0,\"absent_leave\":0,\"wtax\":34.28,\"membership\":0,\"cash_bond\":0,\"coop_savings\":1000.00,\"coop_loan\":2500.00,\"others\":0}',16344.00,3534.28,12809.72,'July 1-15, 2026 payroll','Bank Transfer',12809.72,'2026-07-30','TRF-2026-0711',8,1,'2026-07-28 10:00:00',8);
 /*!40000 ALTER TABLE `payroll` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `payroll_trips`
+--
+-- Snapshot of the driver trips included in each payroll. Stored on the payroll
+-- (not the live reservations) so historical payrolls stay stable even if the
+-- original reservation, rental rate, or trip log is later edited.
+--
+
+DROP TABLE IF EXISTS `payroll_trips`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `payroll_trips` (
+  `payroll_trip_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_id` int(10) unsigned NOT NULL,
+  `reservation_id` int(10) unsigned NOT NULL,
+  `log_id` int(10) unsigned DEFAULT NULL,
+  `trip_date` date NOT NULL,
+  `car_code` varchar(30) DEFAULT NULL,
+  `plate_number` varchar(20) DEFAULT NULL,
+  `vehicle_model` varchar(100) DEFAULT NULL,
+  `rental_rate` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `requested_time` time DEFAULT NULL,
+  `time_out` time DEFAULT NULL,
+  `work_hours` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `excess_km` decimal(8,2) NOT NULL DEFAULT 0.00,
+  `excess_gas` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `overnight_rate` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `ot_hours` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `ot_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `dime` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `hazard` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `toll` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `parking` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `advance` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  PRIMARY KEY (`payroll_trip_id`),
+  KEY `idx_payroll_trips_payroll` (`payroll_id`),
+  CONSTRAINT `fk_pt_payroll` FOREIGN KEY (`payroll_id`) REFERENCES `payroll` (`payroll_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_pt_reservation` FOREIGN KEY (`reservation_id`) REFERENCES `reservations` (`reservation_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `payroll_trips`
+--
+
+LOCK TABLES `payroll_trips` WRITE;
+/*!40000 ALTER TABLE `payroll_trips` DISABLE KEYS */;
+INSERT INTO `payroll_trips` (`payroll_trip_id`, `payroll_id`, `reservation_id`, `log_id`, `trip_date`, `car_code`, `plate_number`, `vehicle_model`, `rental_rate`, `requested_time`, `time_out`, `work_hours`, `excess_km`, `excess_gas`, `overnight_rate`, `ot_hours`, `ot_amount`, `dime`, `hazard`, `toll`, `parking`, `advance`, `total_amount`) VALUES
+(1,6,11,11,'2026-07-01','HD-AUV-12','NNA 1006','Toyota Adventure','1900.00','08:00:00','17:00:00','9.00',0.00,0.00,0.00,0.00,0.00,0.00,0.00,'146.00',0.00,0.00,'2046.00'),
+(2,6,12,12,'2026-07-03','HD-AUV-13','NNA 1004','Mitsubishi Adventure','1765.00','09:00:00','18:00:00','9.00',0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,'1765.00'),
+(3,6,13,13,'2026-07-07','HD-AUV-14','NNA 1001','Toyota Adventure','1800.00','08:00:00','17:00:00','9.00',0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,'1800.00'),
+(4,6,14,14,'2026-07-08','HD-AUV-15','NNA 1002','Toyota Adventure','1800.00','08:00:00','17:00:00','9.00',0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,'50.00',0.00,'1850.00'),
+(5,6,15,15,'2026-07-09','HD-AUV-16','NNA 1007','Toyota Adventure','1800.00','06:00:00','18:30:00','12.50',0.00,0.00,0.00,4.50,'315.00',0.00,0.00,'382.00',0.00,0.00,'2497.00'),
+(6,6,16,16,'2026-07-10','HD-AUV-17','NNA 2002','Hyundai Starex','1865.00','08:00:00','18:00:00','10.00',0.00,0.00,0.00,1.50,'90.00',0.00,0.00,0.00,'50.00',0.00,'1955.00'),
+(7,6,17,17,'2026-07-14','HD-AUV-15','NNA 1002','Toyota Adventure','1800.00','08:00:00','18:30:00','10.50',0.00,0.00,0.00,2.50,'135.00',0.00,0.00,'596.00',0.00,0.00,'2531.00'),
+(8,6,18,18,'2026-07-15','HD-AUV-12','NNA 1006','Toyota Adventure','1900.00','08:00:00','17:00:00','9.00',0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,'1900.00');
+/*!40000 ALTER TABLE `payroll_trips` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `app_settings`
+--
+
+DROP TABLE IF EXISTS `app_settings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `app_settings` (
+  `setting_key` varchar(100) NOT NULL,
+  `setting_value` varchar(500) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `app_settings`
+--
+
+LOCK TABLES `app_settings` WRITE;
+/*!40000 ALTER TABLE `app_settings` DISABLE KEYS */;
+INSERT INTO `app_settings` (`setting_key`, `setting_value`) VALUES ('company_name', 'HOLY TRANSPORT SERVICES OPC');
+/*!40000 ALTER TABLE `app_settings` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -521,7 +632,7 @@ CREATE TABLE `reservations` (
 
 LOCK TABLES `reservations` WRITE;
 /*!40000 ALTER TABLE `reservations` DISABLE KEYS */;
-INSERT INTO `reservations` VALUES (2,2,NULL,3,'BK-2026-0001','2026-08-14 12:14:11','2026-08-17','2026-08-20','08:00:00','17:00:00',NULL,'Family trip','Clark Freeport Zone, Pampanga',7,NULL,'pending',NULL,7500.00,0.00),(4,2,NULL,NULL,'BK-2026-0004','2026-08-14 19:59:41','2026-08-16','2026-08-17','09:00:00','17:00:00','verify-cancel','Clark Freeport Zone','Clark Freeport Zone',2,NULL,'cancelled',NULL,5000.00,0.00),(5,2,NULL,NULL,'BK-2026-0005','2026-08-14 20:00:03','2026-08-16','2026-08-17','09:00:00','17:00:00','verify-cancel','Clark Freeport Zone','Clark Freeport Zone',2,NULL,'cancelled',NULL,5000.00,0.00);
+INSERT INTO `reservations` VALUES (2,2,NULL,3,'BK-2026-0001','2026-08-14 12:14:11','2026-08-17','2026-08-20','08:00:00','17:00:00',NULL,'Family trip','Clark Freeport Zone, Pampanga',7,NULL,'pending',NULL,7500.00,0.00),(4,2,NULL,NULL,'BK-2026-0004','2026-08-14 19:59:41','2026-08-16','2026-08-17','09:00:00','17:00:00','verify-cancel','Clark Freeport Zone','Clark Freeport Zone',2,NULL,'cancelled',NULL,5000.00,0.00),(5,2,NULL,NULL,'BK-2026-0005','2026-08-14 20:00:03','2026-08-16','2026-08-17','09:00:00','17:00:00','verify-cancel','Clark Freeport Zone','Clark Freeport Zone',2,NULL,'cancelled',NULL,5000.00,0.00),(10,2,11,12,'BK-2026-0010','2026-06-30 09:00:00','2026-06-30','2026-06-30','08:00:00','17:00:00',NULL,'Corporate transfer','Clark Freeport Zone, Pampanga',5,NULL,'completed',NULL,1900.00,0.00),(11,2,11,13,'BK-2026-0011','2026-07-01 09:00:00','2026-07-01','2026-07-01','08:00:00','17:00:00',NULL,'Airport transfer','Clark International Airport',6,NULL,'completed',NULL,1900.00,0.00),(12,2,11,14,'BK-2026-0012','2026-07-03 09:00:00','2026-07-03','2026-07-03','09:00:00','18:00:00',NULL,'City tour','Angeles City, Pampanga',7,NULL,'completed',NULL,1765.00,0.00),(13,2,11,15,'BK-2026-0013','2026-07-07 09:00:00','2026-07-07','2026-07-07','08:00:00','17:00:00',NULL,'Event shuttle','San Fernando, Pampanga',8,NULL,'completed',NULL,1800.00,0.00),(14,2,11,16,'BK-2026-0014','2026-07-08 09:00:00','2026-07-08','2026-07-08','08:00:00','17:00:00',NULL,'Field visit','Porac, Pampanga',6,NULL,'completed',NULL,1800.00,0.00),(15,2,11,17,'BK-2026-0015','2026-07-09 08:00:00','2026-07-09','2026-07-09','06:00:00','18:30:00',NULL,'Provincial transfer','Bataan',9,NULL,'completed',NULL,1800.00,0.00),(16,2,11,18,'BK-2026-0016','2026-07-10 09:00:00','2026-07-10','2026-07-10','08:00:00','18:00:00',NULL,'Site visit','Tarlac City',7,NULL,'completed',NULL,1865.00,0.00),(17,2,11,15,'BK-2026-0017','2026-07-14 09:00:00','2026-07-14','2026-07-14','08:00:00','18:30:00',NULL,'Board meeting','Subic, Zambales',6,NULL,'completed',NULL,1800.00,0.00),(18,2,11,12,'BK-2026-0018','2026-07-15 09:00:00','2026-07-15','2026-07-15','08:00:00','17:00:00',NULL,'Airport transfer','Clark International Airport',5,NULL,'completed',NULL,1900.00,0.00),(19,2,11,13,'BK-2026-0019','2026-07-16 09:00:00','2026-07-16','2026-07-16','08:00:00','17:00:00',NULL,'Corporate run','Balanga, Bataan',6,NULL,'completed',NULL,1765.00,0.00);
 /*!40000 ALTER TABLE `reservations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -596,6 +707,17 @@ CREATE TABLE `trip_logs` (
 
 LOCK TABLES `trip_logs` WRITE;
 /*!40000 ALTER TABLE `trip_logs` DISABLE KEYS */;
+INSERT INTO `trip_logs` (`log_id`, `driver_id`, `vehicle_id`, `reservation_id`, `trip_date`, `start_time`, `end_time`, `start_location`, `end_location`, `gps_data`, `trip_distance`, `expenses`, `remarks`) VALUES
+(10,11,12,10,'2026-06-30','08:00:00','17:00:00','Hollydot Depot, Pasig','Clark Freeport Zone, Pampanga',NULL,120.00,0.00,'Trip completed'),
+(11,11,12,11,'2026-07-01','08:00:00','17:00:00','Hollydot Depot, Pasig','Clark International Airport',NULL,110.00,0.00,'Trip completed'),
+(12,11,13,12,'2026-07-03','09:00:00','18:00:00','Hollydot Depot, Pasig','Angeles City, Pampanga',NULL,95.00,0.00,'Trip completed'),
+(13,11,14,13,'2026-07-07','08:00:00','17:00:00','Hollydot Depot, Pasig','San Fernando, Pampanga',NULL,90.00,0.00,'Trip completed'),
+(14,11,15,14,'2026-07-08','08:00:00','17:00:00','Hollydot Depot, Pasig','Porac, Pampanga',NULL,130.00,0.00,'Trip completed'),
+(15,11,16,15,'2026-07-09','06:00:00','18:30:00','Hollydot Depot, Pasig','Bataan',NULL,310.00,0.00,'Trip completed'),
+(16,11,17,16,'2026-07-10','08:00:00','18:00:00','Hollydot Depot, Pasig','Tarlac City',NULL,240.00,0.00,'Trip completed'),
+(17,11,15,17,'2026-07-14','08:00:00','18:30:00','Hollydot Depot, Pasig','Subic, Zambales',NULL,290.00,0.00,'Trip completed'),
+(18,11,12,18,'2026-07-15','08:00:00','17:00:00','Hollydot Depot, Pasig','Clark International Airport',NULL,110.00,0.00,'Trip completed'),
+(19,11,13,19,'2026-07-16','08:00:00','17:00:00','Hollydot Depot, Pasig','Balanga, Bataan',NULL,150.00,0.00,'Trip completed');
 /*!40000 ALTER TABLE `trip_logs` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -686,9 +808,34 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'admin','240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9','System Administrator',NULL,NULL,'superadmin','active',1,'2026-08-13 14:26:54'),(2,'miggy.basina','845979227e62e26330f60f62a762b1cb5da65af27d120cac7cf99b1c4b5f4078','Miggy Basina','basina.mi.bsinfotech@gmail.com','09492549864','driver_management_head','inactive',1,'2026-08-13 14:26:54'),(3,'elena.reyes','04ef8cc3a64588a48373bc2553524c78e0f8dc09b41992c0b587e39a59749316','Elena Reyes',NULL,NULL,'reservation_officer','inactive',1,'2026-08-13 14:26:54'),(4,'macasinag','e007fbdc563042ac6aa9dcdfc979b2a8233938d600c412c2b2ad00a273ddd0d1','Macasinag',NULL,NULL,'billing_officer','inactive',1,'2026-08-13 14:26:54'),(8,'maria.santos','ae73ed7baa283dcfb004d4b855041c27f8d913bc4bd9ffc9929f176e86343498','Maria Santos','maria.santos@hollydot.com','0917 555 1234','payroll_officer','inactive',1,'2026-08-14 04:14:11'),(9,'charles.buque','a2b629e293f5efea6939928836e8482520a804d68586919fd58d98cee36a4d5b','Charles John Buque','charles.buque@email.com','0912 345 6789','customer','inactive',1,'2026-08-14 04:14:11'),(10,'miggy basina','845979227e62e26330f60f62a762b1cb5da65af27d120cac7cf99b1c4b5f4078','Miguel Iñigo S. Basina','basinamigo@gmail.com','09492549864','payroll_officer','inactive',1,'2026-08-14 11:27:18');
+INSERT INTO `users` VALUES (1,'admin','240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9','System Administrator',NULL,NULL,'superadmin','active',1,'2026-08-13 14:26:54'),(2,'miggy.basina','845979227e62e26330f60f62a762b1cb5da65af27d120cac7cf99b1c4b5f4078','Miggy Basina','basina.mi.bsinfotech@gmail.com','09492549864','driver_management_head','inactive',1,'2026-08-13 14:26:54'),(3,'elena.reyes','04ef8cc3a64588a48373bc2553524c78e0f8dc09b41992c0b587e39a59749316','Elena Reyes',NULL,NULL,'reservation_officer','inactive',1,'2026-08-13 14:26:54'),(4,'macasinag','e007fbdc563042ac6aa9dcdfc979b2a8233938d600c412c2b2ad00a273ddd0d1','Macasinag',NULL,NULL,'billing_officer','inactive',1,'2026-08-13 14:26:54'),(8,'maria.santos','ae73ed7baa283dcfb004d4b855041c27f8d913bc4bd9ffc9929f176e86343498','Maria Santos','maria.santos@hollydot.com','0917 555 1234','payroll_officer','active',1,'2026-08-14 04:14:11'),(9,'charles.buque','a2b629e293f5efea6939928836e8482520a804d68586919fd58d98cee36a4d5b','Charles John Buque','charles.buque@email.com','0912 345 6789','customer','inactive',1,'2026-08-14 04:14:11'),(10,'miggy basina','845979227e62e26330f60f62a762b1cb5da65af27d120cac7cf99b1c4b5f4078','Miguel Iñigo S. Basina','basinamigo@gmail.com','09492549864','payroll_officer','inactive',1,'2026-08-14 11:27:18');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `vehicle_driver_assignments`
+--
+
+DROP TABLE IF EXISTS `vehicle_driver_assignments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vehicle_driver_assignments` (
+  `assignment_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `vehicle_id` int(10) unsigned NOT NULL,
+  `driver_id` int(10) unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `created_by` int(10) unsigned DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`assignment_id`),
+  KEY `idx_vda_vehicle` (`vehicle_id`,`effective_from`),
+  KEY `idx_vda_driver` (`driver_id`,`effective_from`),
+  CONSTRAINT `fk_vda_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_vda_driver` FOREIGN KEY (`driver_id`) REFERENCES `drivers` (`driver_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_vda_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `vehicle_owners`
@@ -746,6 +893,34 @@ INSERT INTO `vehicle_pricing` VALUES ('AUV',2500.00,0.00,0.00,'2026-08-13 14:26:
 UNLOCK TABLES;
 
 --
+-- Table structure for table `vehicle_rate_history`
+--
+-- Effective-dated daily rate per vehicle. The open-ended row (effective_to IS
+-- NULL) is the vehicle's current rate; earlier rows are kept so a payroll
+-- period can always be priced at the rate that applied on each use day.
+--
+
+DROP TABLE IF EXISTS `vehicle_rate_history`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vehicle_rate_history` (
+  `rate_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `vehicle_id` int(10) unsigned NOT NULL,
+  `daily_rate` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `created_by` int(10) unsigned DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`rate_id`),
+  KEY `idx_vrh_vehicle` (`vehicle_id`,`effective_from`),
+  KEY `idx_vrh_range` (`vehicle_id`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_vrh_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`vehicle_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_vrh_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `vehicles`
 --
 
@@ -777,7 +952,7 @@ CREATE TABLE `vehicles` (
 
 LOCK TABLES `vehicles` WRITE;
 /*!40000 ALTER TABLE `vehicles` DISABLE KEYS */;
-INSERT INTO `vehicles` VALUES (3,'ABC 1234','Toyota Innova','MPV',2500.00,7,2021,NULL,NULL,'available','2022-01-15'),(4,'BCD 2345','Mitsubishi Xpander','MPV',2300.00,7,2022,NULL,NULL,'available','2022-06-20'),(5,'CDE 3456','Toyota Veloz','MPV',2300.00,7,2023,NULL,NULL,'available','2023-03-10'),(6,'DEF 4567','Toyota Fortuner','SUV',3800.00,7,2021,NULL,NULL,'available','2021-11-05'),(7,'EFG 5678','Honda City','Sedan',1800.00,5,2022,NULL,NULL,'available','2022-09-01'),(8,'FGH 6789','Nissan Urban','Van',4000.00,15,2020,NULL,NULL,'available','2020-05-15'),(9,'GHI 7890','Hyundai Starex','Van',3500.00,12,2019,NULL,NULL,'available','2019-08-22'),(10,'HIJ 8901','Toyota Hiace','Van',4200.00,15,2022,NULL,NULL,'available','2022-02-14');
+INSERT INTO `vehicles` VALUES (3,'ABC 1234','Toyota Innova','MPV',2500.00,7,2021,NULL,NULL,'available','2022-01-15'),(4,'BCD 2345','Mitsubishi Xpander','MPV',2300.00,7,2022,NULL,NULL,'available','2022-06-20'),(5,'CDE 3456','Toyota Veloz','MPV',2300.00,7,2023,NULL,NULL,'available','2023-03-10'),(6,'DEF 4567','Toyota Fortuner','SUV',3800.00,7,2021,NULL,NULL,'available','2021-11-05'),(7,'EFG 5678','Honda City','Sedan',1800.00,5,2022,NULL,NULL,'available','2022-09-01'),(8,'FGH 6789','Nissan Urban','Van',4000.00,15,2020,NULL,NULL,'available','2020-05-15'),(9,'GHI 7890','Hyundai Starex','Van',3500.00,12,2019,NULL,NULL,'available','2019-08-22'),(10,'HIJ 8901','Toyota Hiace','Van',4200.00,15,2022,NULL,NULL,'available','2022-02-14'),(11,'NBX8012','Toyota Adventure','AUV',1900.00,10,2020,'White',NULL,'available','2020-08-01'),(12,'NNA 1006','Toyota Adventure','AUV',1900.00,10,2020,NULL,NULL,'available','2021-03-10'),(13,'NNA 1004','Mitsubishi Adventure','AUV',1765.00,10,2019,NULL,NULL,'available','2020-11-12'),(14,'NNA 1001','Toyota Adventure','AUV',1800.00,10,2021,NULL,NULL,'available','2021-05-05'),(15,'NNA 1002','Toyota Adventure','AUV',1800.00,10,2021,NULL,NULL,'available','2021-05-05'),(16,'NNA 1007','Toyota Adventure','AUV',1800.00,10,2021,NULL,NULL,'available','2021-06-18'),(17,'NNA 2002','Hyundai Starex','AUV',1865.00,12,2018,NULL,NULL,'available','2019-01-20');
 /*!40000 ALTER TABLE `vehicles` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

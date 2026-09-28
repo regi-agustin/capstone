@@ -8,14 +8,16 @@ import {
   User,
   ShieldCheck,
   HelpCircle,
+  Banknote,
 } from 'lucide-react'
 import AppShell from '../../components/AppShell.jsx'
 import NotificationsBell from '../../components/NotificationsBell.jsx'
 
 const TITLES = {
   '/dashboard': { title: 'Payroll Dashboard', crumb: 'FleetOps / Payroll Desk' },
-  '/payroll': { title: 'Payroll Management', crumb: 'FleetOps / Payroll Desk' },
+  '/payroll': { title: 'Payroll Processing', crumb: 'FleetOps / Payroll Desk' },
   '/drivers': { title: 'Driver Records', crumb: 'FleetOps / Payroll Desk' },
+  '/current-car-rates': { title: 'Current Car Rates', crumb: 'FleetOps / Payroll Desk' },
   '/attendance': { title: 'Driver Attendance', crumb: 'FleetOps / Payroll Desk' },
   '/notifications': { title: 'Notifications', crumb: 'FleetOps / Alerts' },
   '/profile': { title: 'My Profile', crumb: 'FleetOps / Account' },
@@ -25,8 +27,9 @@ const TITLES = {
 
 const NAV_PAYROLL = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/payroll', label: 'Payroll Management', icon: FileText },
+  { to: '/payroll', label: 'Payroll Processing', icon: FileText },
   { to: '/drivers', label: 'Driver Records', icon: Users },
+  { to: '/current-car-rates', label: 'Current Car Rates', icon: Banknote },
   { to: '/attendance', label: 'Driver Attendance', icon: UserCheck },
   { to: '/notifications', label: 'Notifications', icon: Bell },
 ]
