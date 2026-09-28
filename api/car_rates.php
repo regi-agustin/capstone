@@ -32,10 +32,21 @@ if ($method === 'GET') {
         json_error('Forbidden: your account cannot view current car rates.', 403);
     }
 
+    // ---- Active car owners for the Add form --------------------------------
+    if ($action === 'owners') {
+        $owners = $pdo->query(
+            'SELECT owner_id, owner_name FROM vehicle_owners WHERE status = "active" ORDER BY owner_name'
+        )->fetchAll();
+        json_out(array_map(fn($o) => [
+            'id' => (int)$o['owner_id'],
+            'name' => $o['owner_name'],
+        ], $owners));
+    }
+
     // ---- Flat list for the Current Car Rates table -------------------------
     if ($action === '' || $action === 'list') {
         $rows = $pdo->query(
-            'SELECT v.vehicle_id, v.plate_number, v.model, v.vehicle_type, v.daily_rate,
+            'SELECT v.vehicle_id, v.car_code, v.plate_number, v.model, v.vehicle_type, v.daily_rate,
                     v.owner_id, v.status,
                     vo.owner_name,
                     hr.daily_rate AS history_rate, hr.rate_id, hr.effective_from AS rate_from,
@@ -326,6 +337,141 @@ if ($method === 'POST') {
             'Assigned ' . $drv['fullname'] . ' (driver ' . $driverId . ') to vehicle ' . $vehicleId . ' effective ' . $effectiveFrom);
 
         json_out(['ok' => true, 'driverId' => $driverId, 'driverName' => $drv['fullname'], 'effectiveFrom' => $effectiveFrom]);
+    }
+
+    // ---- Register a new vehicle (and optionally assign its driver) -----------
+    if ($action === 'add_vehicle') {
+        $plate = strtoupper(trim((string)($data['plate'] ?? '')));
+        $type = trim((string)($data['type'] ?? 'AUV'));
+        $model = trim((string)($data['model'] ?? ''));
+        $carCode = strtoupper(trim((string)($data['carCode'] ?? '')));
+        $dailyRate = max(0, round((float)($data['dailyRate'] ?? 0), 2));
+        $ownerId = (int)($data['ownerId'] ?? 0);
+        $driverId = (int)($data['driverId'] ?? 0);
+
+        if ($plate === '' || $model === '') {
+            json_error('Plate number and model are required.', 422);
+        }
+        if (!preg_match('/^[A-Z0-9\s-]{3,}$/', $plate)) {
+            json_error('Invalid plate number format.', 422);
+        }
+        if ($carCode !== '' && !preg_match('/^[A-Z0-9-]{2,20}$/', $carCode)) {
+            json_error('Car code may only contain letters, numbers and hyphens (max 20 characters).', 422);
+        }
+        $allowedTypes = ['AUV', 'SUV', 'L300'];
+        if (!in_array($type, $allowedTypes, true)) {
+            json_error('Invalid vehicle type. Allowed: ' . implode(', ', $allowedTypes), 422);
+        }
+        if ($dailyRate <= 0) {
+            json_error('Enter a daily rate greater than zero.', 422);
+        }
+
+        $exists = $pdo->prepare('SELECT vehicle_id FROM vehicles WHERE plate_number = ?');
+        $exists->execute([$plate]);
+        if ($exists->fetch()) {
+            json_error('A vehicle with this plate number already exists.', 422);
+        }
+
+        if ($carCode !== '') {
+            $codeExists = $pdo->prepare('SELECT vehicle_id FROM vehicles WHERE car_code = ?');
+            $codeExists->execute([$carCode]);
+            if ($codeExists->fetch()) {
+                json_error('A vehicle with this car code already exists.', 422);
+            }
+        }
+
+        if ($ownerId > 0) {
+            $own = $pdo->prepare('SELECT owner_id FROM vehicle_owners WHERE owner_id = ? AND status = "active"');
+            $own->execute([$ownerId]);
+            if (!$own->fetch()) json_error('Selected car owner is not available.', 422);
+        }
+
+        $driverName = null;
+        if ($driverId > 0) {
+            $d = $pdo->prepare('SELECT driver_id, fullname, status FROM drivers WHERE driver_id = ?');
+            $d->execute([$driverId]);
+            $drv = $d->fetch();
+            if (!$drv) json_error('Driver not found.', 404);
+            if ($drv['status'] === 'inactive') json_error('That driver is inactive and cannot be assigned.', 422);
+            $driverName = $drv['fullname'];
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare(
+                'INSERT INTO vehicles (car_code, plate_number, model, year, vehicle_type, daily_rate, seats, owner_id, status, purchase_date)
+                 VALUES (?, ?, ?, ?, ?, ?, 5, ?, "available", CURDATE())'
+            )->execute([$carCode !== '' ? $carCode : null, $plate, $model, date('Y'), $type, $dailyRate, $ownerId > 0 ? $ownerId : null]);
+            $id = (int)$pdo->lastInsertId();
+
+            $pdo->prepare(
+                'INSERT INTO vehicle_rate_history (vehicle_id, daily_rate, effective_from, effective_to, created_by)
+                 VALUES (?, ?, CURDATE(), NULL, ?)'
+            )->execute([$id, $dailyRate, $userId]);
+
+            if ($driverId > 0) {
+                $pdo->prepare(
+                    'INSERT INTO vehicle_driver_assignments (vehicle_id, driver_id, effective_from, effective_to, created_by)
+                     VALUES (?, ?, CURDATE(), NULL, ?)'
+                )->execute([$id, $driverId, $userId]);
+            }
+
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            json_error('Could not add the vehicle. Please try again.', 500);
+        }
+
+        $row = $pdo->query(
+            "SELECT v.vehicle_id, v.car_code, v.plate_number, v.model, v.vehicle_type, v.owner_id FROM vehicles v WHERE v.vehicle_id = $id"
+        )->fetch();
+
+        log_action($pdo, $userId, 'CarRate', 'Added vehicle ' . $plate . ' (' . $type . ') at ' . number_format($dailyRate, 2));
+
+        json_out([
+            'id' => $id,
+            'carCode' => vehicle_car_code($row),
+            'plate' => $row['plate_number'],
+            'type' => $row['vehicle_type'],
+            'model' => $row['model'],
+            'dailyRate' => $dailyRate,
+            'driverName' => $driverName,
+        ], 201);
+    }
+
+    // ---- Remove a vehicle that has no live bookings ------------------------
+    if ($action === 'delete_vehicle') {
+        $vehicleId = (int)($data['vehicleId'] ?? 0);
+        if ($vehicleId <= 0) json_error('Vehicle is required.', 422);
+
+        $v = $pdo->prepare('SELECT vehicle_id, plate_number FROM vehicles WHERE vehicle_id = ?');
+        $v->execute([$vehicleId]);
+        $veh = $v->fetch();
+        if (!$veh) json_error('Vehicle not found.', 404);
+
+        $live = $pdo->prepare(
+            'SELECT reservation_id FROM reservations
+             WHERE vehicle_id = ? AND status IN ("pending", "pricing_approved", "confirmed", "on_trip") LIMIT 1'
+        );
+        $live->execute([$vehicleId]);
+        if ($live->fetch()) {
+            json_error('This car has a live booking and cannot be deleted. Complete or cancel the trip first.', 422);
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('DELETE FROM vehicle_rate_history WHERE vehicle_id = ?')->execute([$vehicleId]);
+            $pdo->prepare('DELETE FROM vehicle_driver_assignments WHERE vehicle_id = ?')->execute([$vehicleId]);
+            $pdo->prepare('DELETE FROM vehicles WHERE vehicle_id = ?')->execute([$vehicleId]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            json_error('Could not delete the car. It is referenced by existing records.', 422);
+        }
+
+        log_action($pdo, $userId, 'CarRate', 'Deleted vehicle ' . $veh['plate_number'] . ' (id ' . $vehicleId . ')');
+
+        json_out(['ok' => true, 'id' => $vehicleId]);
     }
 
     json_error('Unknown action.', 404);

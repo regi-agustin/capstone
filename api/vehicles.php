@@ -9,7 +9,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'GET') {
     require_role($user, ['superadmin', 'admin', 'driver_management_head', 'reservation_officer', 'customer']);
     $rows = $pdo->query(
-        'SELECT v.vehicle_id, v.plate_number, v.model, v.year, v.vehicle_type, v.owner_id, v.status,
+        'SELECT v.vehicle_id, v.car_code, v.plate_number, v.model, v.year, v.vehicle_type, v.owner_id, v.status,
                 v.daily_rate, v.seats, v.vehicle_image
          FROM vehicles v
          ORDER BY v.vehicle_id'
@@ -95,7 +95,7 @@ if ($method === 'POST') {
         }
     }
 
-    $row = $pdo->query("SELECT v.vehicle_id, v.plate_number, v.model, v.year, v.vehicle_type, v.owner_id, v.status, v.daily_rate, v.seats, v.vehicle_image FROM vehicles v WHERE v.vehicle_id = $id")->fetch();
+    $row = $pdo->query("SELECT v.vehicle_id, v.car_code, v.plate_number, v.model, v.year, v.vehicle_type, v.owner_id, v.status, v.daily_rate, v.seats, v.vehicle_image FROM vehicles v WHERE v.vehicle_id = $id")->fetch();
 
     json_out([
         'id' => $id,

@@ -209,7 +209,7 @@ input, select, textarea { font-family: inherit; }
 
 /* ---------- Tables ---------- */
 .table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
 
 /* Pin the last (actions) column so it stays visible while scrolling. */
 thead th:last-child,

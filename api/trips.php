@@ -52,7 +52,7 @@ if ($method === 'GET') {
                 r.destination, r.passengers, r.special_requests,
                 r.luggage, r.status,
                 c.contact_person AS client_name, c.contact_number, c.email_address,
-                v.plate_number, v.model, v.vehicle_type, v.seats, v.owner_id, v.vehicle_id,
+                v.plate_number, v.model, v.vehicle_type, v.seats, v.owner_id, v.vehicle_id, v.car_code,
                 tl.start_time
          FROM reservations r
          JOIN clients c ON c.client_id = r.client_id

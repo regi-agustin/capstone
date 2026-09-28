@@ -6,14 +6,19 @@ import {
   AlertTriangle,
   UserCog,
   Save,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 import {
   fetchCarRates,
   fetchCarRateHistory,
   fetchCarAssignments,
   fetchAssignableDrivers,
+  fetchCarOwners,
   saveCarRate,
   saveCarAssignment,
+  addCarRate,
+  deleteCarRate,
   formatDate,
   formatPeso,
 } from '../services/payrollService.js'
@@ -58,11 +63,24 @@ export default function CarRates() {
   const [history, setHistory] = useState(null)
   const [historyLoading, setHistoryLoading] = useState(false)
 
+  // add car
+  const [showAdd, setShowAdd] = useState(false)
+  const [owners, setOwners] = useState([])
+  const [addForm, setAddForm] = useState({ carCode: '', type: 'AUV', model: '', plate: '', dailyRate: '', ownerId: '', driverId: '' })
+  const [addError, setAddError] = useState('')
+  const [savingAdd, setSavingAdd] = useState(false)
+
+  // delete car
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteError, setDeleteError] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
   const load = useCallback(async (q = '') => {
     try {
-      const [list, drv] = await Promise.all([fetchCarRates(q), fetchAssignableDrivers()])
+      const [list, drv, own] = await Promise.all([fetchCarRates(q), fetchAssignableDrivers(), fetchCarOwners()])
       setRows(list)
       setDrivers(drv)
+      setOwners(own)
       setError('')
     } catch (e) {
       setError(e.message)
@@ -186,8 +204,7 @@ export default function CarRates() {
     }
   }
 
-  async function openHistory(row) {
-    setHistoryFor(row)
+  async function openHistory(row) {    setHistoryFor(row)
     setHistory(null)
     setHistoryLoading(true)
     try {
@@ -200,6 +217,61 @@ export default function CarRates() {
       setError(e.message)
     } finally {
       setHistoryLoading(false)
+    }
+  }
+
+  function openAdd() {
+    setAddForm({ carCode: '', type: 'AUV', model: '', plate: '', dailyRate: '', ownerId: '', driverId: '' })
+    setAddError('')
+    setShowAdd(true)
+  }
+
+  async function handleAdd(e) {
+    e.preventDefault()
+    setAddError('')
+    if (!addForm.plate.trim() || !addForm.model.trim()) {
+      setAddError('Plate number and model are required.')
+      return
+    }
+    const rate = Number(addForm.dailyRate)
+    if (!addForm.dailyRate.trim() || Number.isNaN(rate) || rate <= 0) {
+      setAddError('Enter a daily rate greater than zero.')
+      return
+    }
+    setSavingAdd(true)
+    try {
+      const created = await addCarRate({
+        carCode: addForm.carCode.trim(),
+        type: addForm.type,
+        model: addForm.model.trim(),
+        plate: addForm.plate.trim(),
+        dailyRate: rate,
+        ownerId: addForm.ownerId ? Number(addForm.ownerId) : null,
+        driverId: addForm.driverId ? Number(addForm.driverId) : null,
+      })
+      setShowAdd(false)
+      await load(search)
+      flash(`Car rate ${created.carCode} added.`)
+    } catch (err) {
+      setAddError(err.message)
+    } finally {
+      setSavingAdd(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await deleteCarRate(deleteTarget.vehicleId)
+      setDeleteTarget(null)
+      await load(search)
+      flash(`Car rate ${deleteTarget.carCode} deleted.`)
+    } catch (err) {
+      setDeleteError(err.message)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -286,6 +358,9 @@ export default function CarRates() {
               {summary.withDriver} assigned &middot; {summary.unassigned} unassigned
             </div>
           </div>
+          <button onClick={openAdd} className="btn btn--primary btn--sm">
+            <Plus size={14} /> Add
+          </button>
         </div>
         <div className="card__body">
           {loading ? (
@@ -368,6 +443,14 @@ export default function CarRates() {
                             aria-label={`View rate history for ${r.carCode}`}
                           >
                             <History size={16} />
+                          </button>
+                          <button
+                            onClick={() => { setDeleteTarget(r); setDeleteError('') }}
+                            className="btn btn--icon"
+                            title="Delete car rate"
+                            aria-label={`Delete car rate for ${r.carCode}`}
+                          >
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>
@@ -600,6 +683,149 @@ export default function CarRates() {
             </div>
           </div>
         ) : null}
+      </Modal>
+
+      {/* ---- Add car ------------------------------------------------------- */}
+      <Modal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="Add Car Rate"
+        subtitle="Type a car code or leave it blank to auto-generate one"
+        footer={
+          <>
+            <button type="button" className="btn btn--secondary" onClick={() => setShowAdd(false)} disabled={savingAdd}>
+              Cancel
+            </button>
+            <button type="submit" form="car-add-form" className="btn btn--primary" disabled={savingAdd}>
+              <Plus size={16} /> {savingAdd ? 'Adding...' : 'Add'}
+            </button>
+          </>
+        }
+      >
+        <form id="car-add-form" onSubmit={handleAdd} style={{ display: 'grid', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ca-code">Car Code</label>
+            <input
+              id="ca-code"
+              className="form-input"
+              placeholder="e.g. HD-AUV-021 (blank = auto)"
+              value={addForm.carCode}
+              onChange={(e) => setAddForm({ ...addForm, carCode: e.target.value.toUpperCase() })}
+            />
+            <span className="form-hint">Letters, numbers and hyphens only.</span>
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ca-type">Vehicle Type <span className="req">*</span></label>
+            <select
+              id="ca-type"
+              className="form-select"
+              value={addForm.type}
+              onChange={(e) => setAddForm({ ...addForm, type: e.target.value })}
+            >
+              {['AUV', 'SUV', 'L300'].map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ca-model">Model <span className="req">*</span></label>
+            <input
+              id="ca-model"
+              className="form-input"
+              placeholder="e.g. Toyota Innova"
+              value={addForm.model}
+              onChange={(e) => setAddForm({ ...addForm, model: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ca-plate">Plate Number <span className="req">*</span></label>
+            <input
+              id="ca-plate"
+              className="form-input"
+              placeholder="e.g. ABC 1234"
+              value={addForm.plate}
+              onChange={(e) => setAddForm({ ...addForm, plate: e.target.value.toUpperCase() })}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ca-rate">Daily Rate (₱) <span className="req">*</span></label>
+            <input
+              id="ca-rate"
+              className="form-input"
+              type="number"
+              step="0.01"
+              min="0.01"
+              inputMode="decimal"
+              placeholder="e.g. 2500.00"
+              value={addForm.dailyRate}
+              onChange={(e) => setAddForm({ ...addForm, dailyRate: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ca-owner">Car Owner</label>
+            <select
+              id="ca-owner"
+              className="form-select"
+              value={addForm.ownerId}
+              onChange={(e) => setAddForm({ ...addForm, ownerId: e.target.value })}
+            >
+              <option value="">Company Owned</option>
+              {owners.map((o) => (
+                <option key={o.id} value={o.id}>{o.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ca-driver">Assigned Driver</label>
+            <select
+              id="ca-driver"
+              className="form-select"
+              value={addForm.driverId}
+              onChange={(e) => setAddForm({ ...addForm, driverId: e.target.value })}
+            >
+              <option value="">Unassigned</option>
+              {drivers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} {d.contact ? `(${d.contact})` : ''}
+                </option>
+              ))}
+            </select>
+            <span className="form-hint">Optional — a driver can also be assigned later.</span>
+          </div>
+          {addError && <div className="error-banner">{addError}</div>}
+        </form>
+      </Modal>
+
+      {/* ---- Delete car ---------------------------------------------------- */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete Car Rate?"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
+              Cancel
+            </button>
+            <button type="button" className="btn btn--danger" onClick={handleDelete} disabled={deleting}>
+              <Trash2 size={16} /> {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </>
+        }
+      >
+        <p style={{ fontSize: 14 }}>
+          Are you sure you want to delete this car rate? This action cannot be undone.
+        </p>
+        {deleteTarget && (
+          <p className="cell-sub" style={{ marginTop: 8 }}>
+            {deleteTarget.carCode} &bull; {deleteTarget.vehicleType} {deleteTarget.model} &bull; {deleteTarget.plateNumber}
+          </p>
+        )}
+        {deleteError && <div className="error-banner" style={{ marginTop: 12 }}>{deleteError}</div>}
       </Modal>
     </div>
   )

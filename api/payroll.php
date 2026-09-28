@@ -210,7 +210,7 @@ function payroll_car_rate_select(): string
 {
     // Assigned driver comes from the live booking, not a stored column, so the
     // list always agrees with the Reservations module.
-    return 'SELECT v.vehicle_id, v.plate_number, v.model, v.vehicle_type, v.owner_id,
+    return 'SELECT v.vehicle_id, v.car_code, v.plate_number, v.model, v.vehicle_type, v.owner_id,
                    v.status, v.daily_rate, v.purchase_date, vo.owner_name,
                    (SELECT d.fullname FROM reservations r
                       JOIN drivers d ON d.driver_id = r.driver_id
@@ -415,7 +415,8 @@ if ($method === 'GET') {
 
         $out = array_map(function ($d) use ($pdo, $cutoffStart, $cutoffEnd) {
             $vq = $pdo->prepare(
-                'SELECT v.plate_number, v.model, v.vehicle_type, v.owner_id, v.vehicle_id, v.daily_rate
+                'SELECT v.plate_number, v.model, v.vehicle_type, v.owner_id, v.vehicle_id, v.daily_rate,
+                        v.car_code
                  FROM trip_logs tl
                  JOIN vehicles v ON v.vehicle_id = tl.vehicle_id
                  JOIN reservations r ON r.reservation_id = tl.reservation_id
@@ -460,7 +461,8 @@ if ($method === 'GET') {
         $stmt = $pdo->prepare(
             'SELECT tl.log_id, tl.trip_date, tl.start_time, tl.end_time,
                     r.reservation_id, r.trip_code, r.pickup_time, r.return_time,
-                    v.vehicle_id, v.plate_number, v.model, v.vehicle_type, v.owner_id, v.daily_rate
+                    v.vehicle_id, v.plate_number, v.model, v.vehicle_type, v.owner_id, v.daily_rate,
+                    v.car_code
              FROM trip_logs tl
              JOIN reservations r ON r.reservation_id = tl.reservation_id
              JOIN vehicles v ON v.vehicle_id = tl.vehicle_id

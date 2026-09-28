@@ -66,3 +66,22 @@ SELECT v.vehicle_id, v.daily_rate, '1970-01-01', NULL, NULL
  WHERE NOT EXISTS (
        SELECT 1 FROM `vehicle_rate_history` h WHERE h.vehicle_id = v.vehicle_id
  );
+
+-- 5. Storable car code: the Add form can set it; otherwise the app keeps
+--    deriving it from owner/type/id. Freeze existing rows so their codes
+--    never shift when other cars are added or deleted.
+SET @has_car_code := (
+  SELECT COUNT(*) FROM information_schema.COLUMNS
+   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'vehicles' AND COLUMN_NAME = 'car_code'
+);
+SET @sql := IF(@has_car_code = 0,
+  'ALTER TABLE `vehicles` ADD COLUMN `car_code` varchar(20) DEFAULT NULL AFTER `vehicle_id`, ADD UNIQUE INDEX `idx_vehicles_car_code` (`car_code`)',
+  'DO 0');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+UPDATE `vehicles`
+   SET `car_code` = CONCAT(IF(`owner_id` IS NULL OR `owner_id` = 0, 'HD', 'SC'),
+                           '-', `vehicle_type`, '-', LPAD(`vehicle_id`, 3, '0'))
+ WHERE `car_code` IS NULL;

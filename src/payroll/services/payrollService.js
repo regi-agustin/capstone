@@ -67,6 +67,8 @@ export const fetchCarAssignments = (vehicleId) =>
 
 export const fetchAssignableDrivers = () => apiFetch('car_rates.php?action=drivers')
 
+export const fetchCarOwners = () => apiFetch('car_rates.php?action=owners')
+
 export const saveCarRate = (payload) =>
   apiFetch('car_rates.php', { method: 'POST', body: JSON.stringify({ action: 'save_rate', ...payload }) })
 
@@ -74,6 +76,18 @@ export const saveCarAssignment = (payload) =>
   apiFetch('car_rates.php', {
     method: 'POST',
     body: JSON.stringify({ action: 'save_assignment', ...payload }),
+  })
+
+export const addCarRate = (payload) =>
+  apiFetch('car_rates.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'add_vehicle', ...payload }),
+  })
+
+export const deleteCarRate = (vehicleId) =>
+  apiFetch('car_rates.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'delete_vehicle', vehicleId }),
   })
 
 // Car-rental quote for a payroll period: daily rate x unique use days per car.

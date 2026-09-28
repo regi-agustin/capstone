@@ -156,7 +156,8 @@ function vehicle_gui_status(string $status): string
 
 function vehicle_car_code(array $vehicle): string
 {
-    $prefix = $vehicle['owner_id'] ? 'SC' : 'HD';
+    if (!empty($vehicle['car_code'])) return (string)$vehicle['car_code'];
+    $prefix = !empty($vehicle['owner_id']) ? 'SC' : 'HD';
     return sprintf('%s-%s-%03d', $prefix, $vehicle['vehicle_type'], $vehicle['vehicle_id']);
 }
 
@@ -176,7 +177,7 @@ function active_reservation_for_driver(PDO $pdo, int $driver_id): ?array
         'SELECT r.reservation_id, r.client_id, r.driver_id, r.vehicle_id, r.trip_code,
                 r.start_date, r.destination, r.passengers, r.luggage, r.status,
                 c.contact_person AS client_name, c.company_name, c.contact_number,
-                v.plate_number, v.model, v.vehicle_type, v.owner_id, v.vehicle_id,
+                v.plate_number, v.model, v.vehicle_type, v.owner_id, v.vehicle_id, v.car_code,
                 tl.start_time
          FROM reservations r
          JOIN clients c ON c.client_id = r.client_id
@@ -330,7 +331,7 @@ function car_rental_breakdown(PDO $pdo, int $driverId, string $start, string $en
 {
     $stmt = $pdo->prepare(
         'SELECT tl.trip_date, tl.vehicle_id, v.plate_number, v.model, v.vehicle_type,
-                v.owner_id, v.daily_rate
+                v.owner_id, v.daily_rate, v.car_code
            FROM trip_logs tl
            JOIN reservations r ON r.reservation_id = tl.reservation_id
            JOIN vehicles v ON v.vehicle_id = tl.vehicle_id

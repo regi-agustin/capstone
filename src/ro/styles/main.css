@@ -888,7 +888,7 @@ svg { flex-shrink: 0; }
   background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
-.ro-app .table { width: 100%; border-collapse: collapse; min-width: 1120px; }
+.ro-app .table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1120px; }
 .ro-app .table th {
   text-align: left;
   font-size: 11.5px;
