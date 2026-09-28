@@ -15,6 +15,7 @@ const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [todayAttendance, setTodayAttendance] = useState(null);
 
   // Ensure modal is closed on page load and clear any stale errors
   useEffect(() => {
@@ -26,12 +27,10 @@ const Dashboard = () => {
   useEffect(() => {
     apiFetch('driver/profile.php')
       .then((p) => {
-        console.log('Profile data from API:', p);
-        console.log('clockedIn:', p.clockedIn, 'hasCompletedToday:', p.hasCompletedToday);
         setProfile(p);
         setIsClockedIn(Boolean(p.clockedIn));
         setHasCompletedToday(Boolean(p.hasCompletedToday));
-        
+
         // Quick check: if backend says completed, ensure both states are correct
         if (p.hasCompletedToday) {
           setHasCompletedToday(true);
@@ -40,6 +39,17 @@ const Dashboard = () => {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+  }, []);
+
+  // Fetch today's attendance data for lateness status
+  useEffect(() => {
+    apiFetch('attendance.php')
+      .then((records) => {
+        const today = new Date().toISOString().split('T')[0];
+        const todayRecord = records.find(record => record.date === today);
+        setTodayAttendance(todayRecord || null);
+      })
+      .catch((e) => console.error('Failed to fetch attendance:', e));
   }, []);
 
   // Add refresh function to manually reload clocked-in status
@@ -224,8 +234,9 @@ const Dashboard = () => {
   const statCards = [
     { title: 'Attendance This Month', value: stats.totalAttendanceThisMonth, icon: CalendarDays, tone: { bg: '#dbeafe', fg: '#2563eb' } },
     { title: 'Present Days', value: stats.presentDays, icon: CheckCircle2, tone: { bg: '#dcfce7', fg: '#16a34a' } },
+    { title: 'Late Days', value: stats.lateDays, icon: AlertCircle, tone: { bg: '#fef3c7', fg: '#d97706' } },
     { title: 'Absent Days', value: stats.absentDays, icon: XCircle, tone: { bg: '#fee2e2', fg: '#dc2626' } },
-    { title: 'Latest Payroll', value: stats.latestPayrollStatus, icon: Wallet, tone: { bg: '#fef3c7', fg: '#d97706' } },
+    { title: 'Latest Payroll', value: stats.latestPayrollStatus, icon: Wallet, tone: { bg: '#e0e7ff', fg: '#4f46e5' } },
   ];
 
   return (
@@ -261,6 +272,13 @@ const Dashboard = () => {
                 {hasCompletedToday ? 'Attendance Already Recorded Today' : (isClockedIn ? 'Currently Timed In' : 'Not Yet Timed In')}
               </span>
             </div>
+            {todayAttendance && todayAttendance.timeIn && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', marginBottom: 12 }}>
+                <span className={`status ${todayAttendance.isLate ? 'unavailable' : 'available'}`} style={{ background: todayAttendance.isLate ? 'rgba(251,191,36,.9)' : 'rgba(220,252,231,.9)', padding: '6px 12px', borderRadius: 8 }}>
+                  {todayAttendance.isLate ? 'Late' : 'On Time'}
+                </span>
+              </div>
+            )}
             {!hasCompletedToday && !isClockedIn ? (
               <button className="btn btn-accent-solid" style={{ width: '100%', minWidth: 120 }} onClick={handleTimeInClick}>
                 <Clock width={15} height={15} /> Time In
@@ -358,6 +376,16 @@ const Dashboard = () => {
                 {currentTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
+            {todayAttendance && todayAttendance.timeIn && (
+              <div className="assign-card">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)' }}>
+                  <AlertCircle width={15} height={15} /> Today's Lateness Status
+                </span>
+                <span className={`status ${todayAttendance.isLate ? 'unavailable' : 'available'}`} style={{ marginLeft: 'auto' }}>
+                  {todayAttendance.isLate ? 'Late' : 'On Time'}
+                </span>
+              </div>
+            )}
             <div className="assign-card">
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)' }}>
                 <Clock width={15} height={15} /> Current Date
@@ -376,8 +404,8 @@ const Dashboard = () => {
                   <Clock width={15} height={15} /> Time Out
                 </button>
               ) : hasCompletedToday ? (
-                <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleTimeInClick}>
-                  <Clock width={15} height={15} /> Time In
+                <button className="btn" style={{ width: '100%', justifyContent: 'center' }} disabled>
+                  <Clock width={15} height={15} /> Completed
                 </button>
               ) : null}
             </div>

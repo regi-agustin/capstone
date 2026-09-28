@@ -60,6 +60,7 @@ const Attendance = () => {
     Pending: 'pending',
     Rejected: 'unavailable',
   }[status] || 'neutral');
+  const latenessClass = (isLate) => (isLate ? 'unavailable' : 'available');
 
   const presentCount = records.filter((r) => r.status === 'Present').length;
 
@@ -117,6 +118,7 @@ const Attendance = () => {
                   <th>Vehicle</th>
                   <th>Plate Number</th>
                   <th>Attendance Status</th>
+                  <th>Lateness Status</th>
                   <th>Time In</th>
                   <th>Time Out</th>
                   <th>Total Hours</th>
@@ -131,6 +133,7 @@ const Attendance = () => {
                     <td className="cell-strong">{attendance.vehicle}</td>
                     <td className="mono">{attendance.plateNumber || '—'}</td>
                     <td><span className={`status ${statusClass(attendance.status)}`}>{attendance.status}</span></td>
+                    <td><span className={`status ${latenessClass(attendance.isLate)}`}>{attendance.isLate ? 'Late' : 'On Time'}</span></td>
                     <td>{attendance.timeIn}</td>
                     <td>{attendance.timeOut}</td>
                     <td className="cell-strong">{attendance.totalHours || '—'}</td>
@@ -181,6 +184,12 @@ const Attendance = () => {
                   </span>
                 </div>
               ))}
+              <div className="assign-card">
+                <span className="cell-sub" style={{ flex: 1 }}>Lateness Status</span>
+                <span className="cell-strong" style={{ textAlign: 'right' }}>
+                  <span className={`status ${latenessClass(viewRecord.isLate)}`}>{viewRecord.isLate ? 'Late' : 'On Time'}</span>
+                </span>
+              </div>
               {viewRecord.detectedPlateNumber && (
                 <div className="assign-card" style={{ background: '#f8fafc' }}>
                   <span className="cell-sub" style={{ flex: 1 }}>Detected Plate (OCR)</span>

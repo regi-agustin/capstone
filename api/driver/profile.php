@@ -200,6 +200,13 @@ function driver_profile_payload(PDO $pdo, array $driver, int $userId): array
         ? round(((int)$onTimeRow['on_time']) / (int)$onTimeRow['total'] * 100) . '%'
         : '0%';
 
+    $lateDays = $pdo->prepare(
+        'SELECT COALESCE(SUM(time_in > "08:00:00"), 0) AS late_days
+         FROM attendance WHERE driver_id = ? AND time_in IS NOT NULL'
+    );
+    $lateDays->execute([$driverId]);
+    $lateDaysCount = (int)$lateDays->fetchColumn();
+
     // Use CURDATE() for consistent date handling across the attendance system
     // Get today's date from database to ensure consistency with attendance.php
     $todayStmt = $pdo->query('SELECT CURDATE() as today');
@@ -247,6 +254,7 @@ function driver_profile_payload(PDO $pdo, array $driver, int $userId): array
             'totalAttendanceThisMonth' => $presentDays,
             'presentDays' => $presentDays,
             'absentDays' => 0,
+            'lateDays' => $lateDaysCount,
             'latestPayrollStatus' => $payrollStatus ?: 'None',
             'totalHoursThisMonth' => $hours,
             'averageRating' => $rating,

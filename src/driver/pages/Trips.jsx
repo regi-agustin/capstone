@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../services/api.js';
-import { Truck, MapPin, User, Check, X, Clock, Navigation } from 'lucide-react';
+import { Truck, MapPin, User, Check, X, Clock, Navigation, Eye } from 'lucide-react';
 
 const STATUS_STYLES = {
   confirmed: 'confirmed',
@@ -21,6 +21,8 @@ const Trips = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(null);
+  const [selectedTrip, setSelectedTrip] = useState(null);
+  const [showTripModal, setShowTripModal] = useState(false);
 
   useEffect(() => {
     apiFetch('trips.php')
@@ -52,22 +54,28 @@ const Trips = () => {
     if (trip.status === 'confirmed') {
       return (
         <div className="actions-row">
+          <button type="button" className="btn sm" onClick={() => { setSelectedTrip(trip); setShowTripModal(true); }} disabled={disabled}>
+            <Eye size={15} /> View
+          </button>
           <button className="btn btn-primary sm" onClick={() => act(trip, 'accept', 'Accept')} disabled={disabled}>
-            <Check width={14} height={14} /> Accept
+            <Check size={14} /> Accept
           </button>
           <button className="btn btn-danger-ghost sm" onClick={() => act(trip, 'cancel', 'Cancel')} disabled={disabled}>
-            <X width={14} height={14} /> Cancel
+            <X size={14} /> Cancel
           </button>
         </div>
       );
     }
     return (
       <div className="actions-row">
+        <button type="button" className="btn sm" onClick={() => { setSelectedTrip(trip); setShowTripModal(true); }} disabled={disabled}>
+          <Eye size={15} /> View
+        </button>
         <button className="btn btn-primary sm" onClick={() => act(trip, 'done', 'Complete')} disabled={disabled}>
-          <Check width={14} height={14} /> Trip Done
+          <Check size={14} /> Trip Done
         </button>
         <button className="btn btn-danger-ghost sm" onClick={() => act(trip, 'cancel', 'Cancel')} disabled={disabled}>
-          <X width={14} height={14} /> Cancel
+          <X size={14} /> Cancel
         </button>
       </div>
     );
@@ -77,7 +85,7 @@ const Trips = () => {
     return (
       <div className="panel">
         <div className="empty">
-          <Truck width={46} height={46} />
+          <Truck size={46} />
           <div className="help">Loading trips...</div>
         </div>
       </div>
@@ -98,7 +106,7 @@ const Trips = () => {
         </div>
         {data.active.length === 0 ? (
           <div className="empty">
-            <Truck width={40} height={40} />
+            <Truck size={40} />
             <div className="help" style={{ marginTop: 6 }}>No active trips. New dispatches from Fleet Management will appear here.</div>
           </div>
         ) : (
@@ -112,16 +120,16 @@ const Trips = () => {
                 </div>
                 <div className="detail" style={{ display: 'grid', gap: 3, marginTop: 6, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <User width={13} height={13} /> {trip.client.name} · {trip.client.contact}
+                    <User size={13} /> {trip.client.name} · {trip.client.contact}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Clock width={13} height={13} /> {trip.schedule}
+                    <Clock size={13} /> {trip.schedule}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <MapPin width={13} height={13} /> {trip.destination}
+                    <MapPin size={13} /> {trip.destination}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Truck width={13} height={13} /> {trip.vehicle.carCode} · {trip.vehicle.model} · {trip.vehicle.plate}
+                    <Truck size={13} /> {trip.vehicle.carCode} · {trip.vehicle.model} · {trip.vehicle.plate}
                   </span>
                 </div>
                 <div className="cell-sub" style={{ marginTop: 6 }}>
@@ -142,7 +150,7 @@ const Trips = () => {
         </div>
         {data.history.length === 0 ? (
           <div className="empty">
-            <Navigation width={40} height={40} />
+            <Navigation size={40} />
             <div className="help" style={{ marginTop: 6 }}>No completed or cancelled trips yet.</div>
           </div>
         ) : (
@@ -156,6 +164,7 @@ const Trips = () => {
                   <th>Destination</th>
                   <th>Vehicle</th>
                   <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -169,6 +178,11 @@ const Trips = () => {
                     <td>
                       <span className={`status ${STATUS_STYLES[trip.status]}`}>{STATUS_LABELS[trip.status]}</span>
                     </td>
+                    <td>
+                      <button type="button" className="btn sm" onClick={() => { setSelectedTrip(trip); setShowTripModal(true); }}>
+                        <Eye size={15} /> View
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -176,6 +190,66 @@ const Trips = () => {
           </div>
         )}
       </div>
+
+      {/* Trip Details Modal */}
+      {showTripModal && selectedTrip && (
+        <div className="overlay" onClick={() => setShowTripModal(false)}>
+          <div className="modal" style={{ maxWidth: 500 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Trip Details</h3>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'grid', gap: 16 }}>
+                <div>
+                  <div className="label" style={{ marginBottom: 4 }}>Trip Code</div>
+                  <div className="cell-strong mono">{selectedTrip.tripCode}</div>
+                </div>
+                <div>
+                  <div className="label" style={{ marginBottom: 4 }}>Client Information</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <User size={14} />
+                    <span>{selectedTrip.client.name} · {selectedTrip.client.contact}</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="label" style={{ marginBottom: 4 }}>Schedule</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Clock size={14} />
+                    <span>{selectedTrip.schedule}</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="label" style={{ marginBottom: 4 }}>Destination</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <MapPin size={14} />
+                    <span>{selectedTrip.destination}</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="label" style={{ marginBottom: 4 }}>Vehicle Information</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Truck size={14} />
+                    <span>{selectedTrip.vehicle.carCode} · {selectedTrip.vehicle.model} · {selectedTrip.vehicle.plate}</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="label" style={{ marginBottom: 4 }}>Trip Details</div>
+                  <div className="cell-sub">
+                    Passengers: {selectedTrip.passengers} · Luggage: {selectedTrip.lugSize || 'None'} · Purpose: {selectedTrip.purpose}
+                  </div>
+                </div>
+                <div>
+                  <div className="label" style={{ marginBottom: 4 }}>Status</div>
+                  <span className={`status ${STATUS_STYLES[selectedTrip.status]}`}>{STATUS_LABELS[selectedTrip.status]}</span>
+                </div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-primary" onClick={() => setShowTripModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
