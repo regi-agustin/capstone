@@ -914,6 +914,22 @@ svg { flex-shrink: 0; }
 
 .ro-app .actions-row { display: flex; gap: 6px; flex-wrap: wrap; }
 
+/* Keep row actions on one line inside scrollable tables… */
+.ro-app .table td .actions-row { flex-wrap: nowrap; }
+
+/* …and pin the Actions column so it stays visible while scrolling. */
+.ro-app .table th:last-child,
+.ro-app .table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+}
+.ro-app .table th:last-child { background: var(--surface-2); }
+.ro-app .table td:last-child {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+}
+
 /* ---------------- Tabs / pills inside table header ---------------- */
 .ro-app .sort-select {
   border: 1px solid var(--border-strong);
@@ -1170,16 +1186,19 @@ svg { flex-shrink: 0; }
 @media (max-width: 1200px) {
 .ro-app .stats-grid { grid-template-columns: repeat(2, 1fr); }
 .ro-app .stats-grid--five { grid-template-columns: repeat(3, 1fr); }
+.ro-app .stats-grid--six { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 860px) {
 .ro-app .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .ro-app .stats-grid--five { grid-template-columns: repeat(2, 1fr); }
+.ro-app .stats-grid--six { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 560px) {
 .ro-app .stats-grid { grid-template-columns: 1fr; }
 .ro-app .stats-grid--five { grid-template-columns: 1fr; }
+.ro-app .stats-grid--six { grid-template-columns: 1fr; }
 .ro-app .modal-backdrop { padding: 0; align-items: stretch; }
 .ro-app .modal { max-width: none; max-height: 100vh; height: 100vh; border-radius: 0; }
 .ro-app .filter-tabs { width: 100%; }

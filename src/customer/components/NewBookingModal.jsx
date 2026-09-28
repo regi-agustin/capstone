@@ -170,6 +170,9 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
     if (!f.returnDate) errs.returnDate = 'Return date is required.';
     if (f.pickupDate && f.returnDate && f.returnDate < f.pickupDate)
       errs.returnDate = 'Return date cannot be earlier than pickup date.';
+    if (f.pickupDate && f.returnDate && f.returnDate === f.pickupDate &&
+        f.pickupTime && f.returnTime && f.returnTime < f.pickupTime)
+      errs.returnTime = 'Drop-off time cannot be earlier than pickup time on the same day.';
     return errs;
   };
 
@@ -509,6 +512,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
                       value={form.returnTime}
                       onSelect={(v) => setForm((p) => ({ ...p, returnTime: v }))}
                     />
+                    {errors.returnTime && <div className="form-error">{errors.returnTime}</div>}
                     <div className="form-hint">Defaults to 6:00 PM</div>
                   </div>
                 </div>

@@ -38,10 +38,17 @@ export const analyzeTrip = ({ client, bookings, vehicles, passengers = 0, select
   if (!trip.returnDate) missing.push({ field: 'Return Date', message: 'Return date is required.' });
   if (trip.pickupDate && trip.returnDate && trip.pickupDate > trip.returnDate)
     missing.push({ field: 'Trip Dates', message: 'Return date cannot be earlier than pickup date.' });
+  if (trip.pickupDate && trip.returnDate && trip.pickupDate === trip.returnDate &&
+      trip.pickupTime && trip.returnTime && trip.returnTime < trip.pickupTime)
+    missing.push({ field: 'Trip Times', message: 'Drop-off time cannot be earlier than pickup time on the same day.' });
+
+  // Recommendation still works without drop-off details by assuming a same-day return.
+  const dropoffAssumed = !trip.returnDate && Boolean(trip.pickupDate);
+  const effectiveTrip = { ...trip, returnDate: trip.returnDate || trip.pickupDate };
 
   const warnings = [];
   if (selectedVehicleId) {
-    const conflicts = conflictsForVehicle(bookings, selectedVehicleId, trip);
+    const conflicts = conflictsForVehicle(bookings, selectedVehicleId, effectiveTrip);
     conflicts.forEach((b) =>
       warnings.push(
         `Selected vehicle has an overlapping booking (${b.id}) for ${b.trip.pickupDate} → ${b.trip.returnDate} (${b.status}).`,
@@ -49,16 +56,18 @@ export const analyzeTrip = ({ client, bookings, vehicles, passengers = 0, select
     );
   }
 
-  const duplicates = bookings.filter((b) => isDuplicateBooking(b, client, trip));
-  const datesComplete = trip.pickupDate && trip.returnDate && trip.pickupDate <= trip.returnDate;
+  const duplicates = bookings.filter((b) => isDuplicateBooking(b, client, effectiveTrip));
+  const datesComplete = Boolean(effectiveTrip.pickupDate && effectiveTrip.returnDate) &&
+    effectiveTrip.pickupDate <= effectiveTrip.returnDate;
   const ready = hasRequired(client, trip);
-  const best = (datesComplete && ready) ? suggestBestVehicle(vehicles, bookings, { ...trip, passengers }) : null;
+  const recommendable = hasRequired(client, effectiveTrip);
+  const best = (datesComplete && recommendable) ? suggestBestVehicle(vehicles, bookings, { ...effectiveTrip, passengers }) : null;
 
   const recommendation = best
     ? `Recommended vehicle: ${best.type} (${best.plate}) because it is currently available${
         passengers >= 1 ? ' and provides sufficient passenger capacity for this booking' : ''
-      }.`
-    : !ready
+      }.${dropoffAssumed ? ' (Assuming a same-day return — add the drop-off date to refine this.)' : ''}`
+    : !recommendable
       ? 'Complete the client details and trip dates above to receive a vehicle recommendation.'
       : datesComplete
         ? 'No vehicles are currently available for the selected trip dates.'

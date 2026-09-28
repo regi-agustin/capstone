@@ -183,6 +183,12 @@ if ($method === 'POST') {
         if ($returnDate < $pickupDate) {
             json_error('Return date cannot be earlier than pickup date.', 422);
         }
+        $earlyPickupTime = trim((string)(($trip['pickupTime'] ?? '')));
+        $earlyReturnTime = trim((string)(($trip['returnTime'] ?? '')));
+        if ($returnDate === $pickupDate && $earlyPickupTime !== '' && $earlyReturnTime !== '' &&
+            strcmp($earlyReturnTime, $earlyPickupTime) < 0) {
+            json_error('Drop-off time cannot be earlier than pickup time on the same day.', 422);
+        }
 
         if ($vehicleId > 0) {
             $stmt = $pdo->prepare('SELECT vehicle_id FROM vehicles WHERE vehicle_id = ?');

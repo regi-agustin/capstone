@@ -21,6 +21,9 @@ const validate = (f) => {
   if (!f.returnDate) errs.returnDate = 'Return date is required.';
   if (f.pickupDate && f.returnDate && f.returnDate < f.pickupDate)
     errs.returnDate = 'Return date cannot be earlier than pickup date.';
+  if (f.pickupDate && f.returnDate && f.returnDate === f.pickupDate &&
+      f.pickupTime && f.returnTime && f.returnTime < f.pickupTime)
+    errs.returnTime = 'Drop-off time cannot be earlier than pickup time on the same day.';
   if (!f.vehicleId) errs.vehicleId = 'Please select a vehicle.';
   return errs;
 };
@@ -265,6 +268,7 @@ export default function AddBookingModal({ open, onClose }) {
                       value={form.returnTime}
                       onSelect={(v) => setForm((p) => ({ ...p, returnTime: v }))}
                     />
+                    {errors.returnTime && <div className="form-error">{errors.returnTime}</div>}
                     <div className="form-hint">Defaults to 6:00 PM</div>
                   </div>
                 </div>

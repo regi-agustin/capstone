@@ -114,19 +114,32 @@ const Trips = () => {
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <User width={13} height={13} /> {trip.client.name} · {trip.client.contact}
                   </span>
+                  {trip.client.email && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <User width={13} height={13} /> {trip.client.email}
+                    </span>
+                  )}
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Clock width={13} height={13} /> {trip.schedule}
+                    <Clock width={13} height={13} /> Dispatch: {trip.schedule}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                    <Clock width={13} height={13} /> Client request: {trip.startDate}{trip.pickupTime ? ` ${trip.pickupTime}` : ''} → {trip.endDate}{trip.returnTime ? ` ${trip.returnTime}` : ''}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <MapPin width={13} height={13} /> {trip.destination}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Truck width={13} height={13} /> {trip.vehicle.carCode} · {trip.vehicle.model} · {trip.vehicle.plate}
+                    <Truck width={13} height={13} /> {trip.vehicle.carCode} · {trip.vehicle.model} · {trip.vehicle.plate}{trip.vehicle.type ? ` · ${trip.vehicle.type}` : ''}{trip.vehicle.seats ? ` · ${trip.vehicle.seats} seats` : ''}
                   </span>
                 </div>
                 <div className="cell-sub" style={{ marginTop: 6 }}>
                   Passengers: {trip.passengers} · Luggage: {trip.lugSize || 'None'}
                 </div>
+                {trip.specialRequests && (
+                  <div className="cell-sub" style={{ marginTop: 4 }}>
+                    Special requests: {trip.specialRequests}
+                  </div>
+                )}
               </div>
               <div className="assign-fleet">{renderActionButtons(trip)}</div>
             </div>
@@ -148,30 +161,30 @@ const Trips = () => {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead>
-                <tr>
-                  <th>Trip Code</th>
-                  <th>Client</th>
-                  <th>Schedule</th>
-                  <th>Destination</th>
-                  <th>Vehicle</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.history.map((trip) => (
-                  <tr key={trip.id}>
-                    <td className="cell-strong mono">{trip.tripCode}</td>
-                    <td>{trip.client.name}</td>
-                    <td>{trip.schedule}</td>
-                    <td>{trip.destination}</td>
-                    <td>{trip.vehicle.carCode}</td>
-                    <td>
-                      <span className={`status ${STATUS_STYLES[trip.status]}`}>{STATUS_LABELS[trip.status]}</span>
-                    </td>
+                <thead>
+                  <tr>
+                    <th>Trip Code</th>
+                    <th>Client</th>
+                    <th>Client Request</th>
+                    <th>Destination</th>
+                    <th>Vehicle</th>
+                    <th>Status</th>
                   </tr>
-                ))}
-              </tbody>
+                </thead>
+                <tbody>
+                  {data.history.map((trip) => (
+                    <tr key={trip.id}>
+                      <td className="cell-strong mono">{trip.tripCode}</td>
+                      <td>{trip.client.name}<br /><span className="cell-sub">{trip.client.contact}</span></td>
+                      <td>{trip.startDate}{trip.pickupTime ? ` ${trip.pickupTime}` : ''} → {trip.endDate}{trip.returnTime ? ` ${trip.returnTime}` : ''}</td>
+                      <td>{trip.destination}</td>
+                      <td>{trip.vehicle.carCode}</td>
+                      <td>
+                        <span className={`status ${STATUS_STYLES[trip.status]}`}>{STATUS_LABELS[trip.status]}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
             </table>
           </div>
         )}

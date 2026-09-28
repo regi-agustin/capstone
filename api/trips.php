@@ -22,6 +22,11 @@ function trip_shape(PDO $pdo, array $r): array
         'id' => (int)$r['reservation_id'],
         'tripCode' => $r['trip_code'],
         'schedule' => $r['trip_code'] ? date('Y-m-d H:i', strtotime($r['start_date'] . ($r['start_time'] ? ' ' . $r['start_time'] : ''))) : '',
+        'startDate' => $r['start_date'],
+        'endDate' => $r['end_date'],
+        'pickupTime' => $r['pickup_time'] ? date('H:i', strtotime($r['pickup_time'])) : '',
+        'returnTime' => $r['return_time'] ? date('H:i', strtotime($r['return_time'])) : '',
+        'specialRequests' => $r['special_requests'] ?? '',
         'destination' => $r['destination'],
         'passengers' => (int)$r['passengers'],
         'lugSize' => $r['luggage'] ?? '',
@@ -29,21 +34,25 @@ function trip_shape(PDO $pdo, array $r): array
         'client' => [
             'name' => $r['client_name'],
             'contact' => $r['contact_number'],
+            'email' => $r['email_address'] ?? '',
         ],
         'vehicle' => [
             'carCode' => vehicle_car_code($r),
             'plate' => $r['plate_number'],
             'model' => $r['model'],
+            'type' => $r['vehicle_type'] ?? '',
+            'seats' => isset($r['seats']) ? (int)$r['seats'] : 0,
         ],
     ];
 }
 
 if ($method === 'GET') {
     $rows = $pdo->prepare(
-        'SELECT r.reservation_id, r.trip_code, r.start_date, r.destination, r.passengers,
+        'SELECT r.reservation_id, r.trip_code, r.start_date, r.end_date, r.pickup_time, r.return_time,
+                r.destination, r.passengers, r.special_requests,
                 r.luggage, r.status,
-                c.contact_person AS client_name, c.contact_number,
-                v.plate_number, v.model, v.vehicle_type, v.owner_id, v.vehicle_id,
+                c.contact_person AS client_name, c.contact_number, c.email_address,
+                v.plate_number, v.model, v.vehicle_type, v.seats, v.owner_id, v.vehicle_id,
                 tl.start_time
          FROM reservations r
          JOIN clients c ON c.client_id = r.client_id
