@@ -103,6 +103,12 @@ export const markAllNotificationsRead = () =>
     body: JSON.stringify({ action: 'mark_read' }),
   })
 
+export const clearReadNotifications = () =>
+  apiFetch('notifications.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'clear_read' }),
+  })
+
 export const addDriver = (payload) =>
   apiFetch('drivers.php', {
     method: 'POST',

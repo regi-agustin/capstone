@@ -60,11 +60,11 @@ export default function DMHApp({ user, onLogout, onSwitchToAdmin }) {
     )
   }
 
-  function addVehicle({ plate, type, model, year, seats, dailyRate }) {
+  function addVehicle({ plate, type, model, year, seats, dailyRate, images }) {
     return run(() =>
       apiFetch('vehicles.php', {
         method: 'POST',
-        body: JSON.stringify({ plate, type, model, year: Number(year), seats: Number(seats), dailyRate: Number(dailyRate) })
+        body: JSON.stringify({ plate, type, model, year: Number(year), seats: Number(seats), dailyRate: Number(dailyRate), images: Array.isArray(images) ? images : undefined })
       })
     )
   }
@@ -83,6 +83,12 @@ export default function DMHApp({ user, onLogout, onSwitchToAdmin }) {
 
   function release(id) {
     return run(() => apiFetch(`assignments.php?id=${id}`, { method: 'DELETE' }))
+  }
+
+  function assignDriverToBooking(id, driverId) {
+    return run(() =>
+      apiFetch('assignments.php', { method: 'POST', body: JSON.stringify({ action: 'assign_driver', id, driverId }) })
+    )
   }
 
   const pageMeta = {
@@ -142,7 +148,7 @@ export default function DMHApp({ user, onLogout, onSwitchToAdmin }) {
             />
           )}
           {page === 'assignments' && (
-            <AssignmentsPage assignments={assignments} drivers={drivers} vehicles={vehicles} onRelease={release} />
+            <AssignmentsPage assignments={assignments} drivers={drivers} vehicles={vehicles} onRelease={release} onAssignDriver={assignDriverToBooking} />
           )}
 {page === 'fleet' && <FleetPage vehicles={vehicles} onAddVehicle={addVehicle} />}
           </>

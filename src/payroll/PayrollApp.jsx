@@ -3,8 +3,8 @@ import '../ro/styles/main.css'
 import AppLayout from './components/AppLayout.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import PayrollManagement from './pages/PayrollManagement.jsx'
-import DriverRecords from './pages/DriverRecords.jsx'
 import CarRates from './pages/CarRates.jsx'
+import DriverRecords from './pages/DriverRecords.jsx'
 import Attendance from './pages/Attendance.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Profile from './pages/Profile.jsx'
@@ -20,8 +20,8 @@ function PayrollApp({ user, onLogout, onSwitchToAdmin }) {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/payroll" element={<PayrollManagement />} />
+            <Route path="/car-rates" element={<CarRates />} />
             <Route path="/drivers" element={<DriverRecords />} />
-            <Route path="/current-car-rates" element={<CarRates />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/profile" element={<Profile />} />

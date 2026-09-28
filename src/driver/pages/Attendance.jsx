@@ -41,7 +41,9 @@ const Attendance = () => {
         (attendance) =>
           attendance.vehicle.toLowerCase().includes(term) ||
           attendance.status.toLowerCase().includes(term) ||
-          attendance.verificationStatus.toLowerCase().includes(term)
+          attendance.verificationStatus.toLowerCase().includes(term) ||
+          (attendance.plateNumber && attendance.plateNumber.toLowerCase().includes(term)) ||
+          (attendance.detectedPlateNumber && attendance.detectedPlateNumber.toLowerCase().includes(term))
       );
     }
 
@@ -70,7 +72,7 @@ const Attendance = () => {
               <Search width={15} height={15} />
               <input
                 type="text"
-                placeholder="Search by vehicle, status, or verification..."
+                placeholder="Search by vehicle, plate number, status, or verification..."
                 value={searchTerm}
                 onChange={handleSearch}
                 style={{ width: '100%' }}
@@ -113,9 +115,11 @@ const Attendance = () => {
                 <tr>
                   <th>Date</th>
                   <th>Vehicle</th>
+                  <th>Plate Number</th>
                   <th>Attendance Status</th>
                   <th>Time In</th>
                   <th>Time Out</th>
+                  <th>Total Hours</th>
                   <th>Verification Status</th>
                   <th>Action</th>
                 </tr>
@@ -125,9 +129,11 @@ const Attendance = () => {
                   <tr key={attendance.id}>
                     <td>{attendance.date}</td>
                     <td className="cell-strong">{attendance.vehicle}</td>
+                    <td className="mono">{attendance.plateNumber || '—'}</td>
                     <td><span className={`status ${statusClass(attendance.status)}`}>{attendance.status}</span></td>
                     <td>{attendance.timeIn}</td>
                     <td>{attendance.timeOut}</td>
+                    <td className="cell-strong">{attendance.totalHours || '—'}</td>
                     <td><span className={`status ${verificationClass(attendance.verificationStatus)}`}>{attendance.verificationStatus}</span></td>
                     <td>
                       <button className="btn sm" onClick={() => setViewRecord(attendance)}>
@@ -161,9 +167,11 @@ const Attendance = () => {
               {[
                 ['Date', viewRecord.date],
                 ['Vehicle', viewRecord.vehicle],
+                ['Plate Number', viewRecord.plateNumber],
                 ['Attendance Status', viewRecord.status],
                 ['Time In', viewRecord.timeIn],
                 ['Time Out', viewRecord.timeOut],
+                ['Total Hours', viewRecord.totalHours],
                 ['Verification Status', viewRecord.verificationStatus],
               ].map(([label, value]) => (
                 <div className="assign-card" key={label}>
@@ -173,6 +181,14 @@ const Attendance = () => {
                   </span>
                 </div>
               ))}
+              {viewRecord.detectedPlateNumber && (
+                <div className="assign-card" style={{ background: '#f8fafc' }}>
+                  <span className="cell-sub" style={{ flex: 1 }}>Detected Plate (OCR)</span>
+                  <span className="cell-strong mono" style={{ textAlign: 'right' }}>
+                    {viewRecord.detectedPlateNumber}
+                  </span>
+                </div>
+              )}
               {viewRecord.rejectionReason && (
                 <div className="error-msg" style={{ marginTop: 10 }}>
                   Rejection reason: {viewRecord.rejectionReason}

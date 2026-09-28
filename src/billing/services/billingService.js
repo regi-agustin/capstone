@@ -15,3 +15,17 @@ export const recordPayment = async ({ id, amountPaid, method, reference }) =>
     method: 'POST',
     body: JSON.stringify({ action: 'payment', id, amountPaid, method, reference }),
   });
+
+export const fetchBookings = async () => apiFetch('bookings.php');
+
+export const approveBookingPricing = async ({ id, additionalCharges }) =>
+  apiFetch('bookings.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'approve_pricing', id, additionalCharges }),
+  });
+
+export const denyBooking = async ({ id, reason }) =>
+  apiFetch('bookings.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'deny', id, reason }),
+  });

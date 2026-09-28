@@ -80,9 +80,16 @@ All demo accounts (see `fleetops_db.sql`):
 | `macasinag` | `billing2026` | Billing Officer |
 | `maria.santos` | `payroll2026` | Payroll Officer |
 | `charles.buque` | `customer2026` | Customer |
+| `juan.driver` | `driver123` | Driver |
+| `pedro.santos` | `driver123` | Driver |
+| `ana.cruz` | `driver123` | Driver |
+| `miguel.lopez` | `driver123` | Driver |
+| `rosa.mendoza` | `driver123` | Driver |
+| `sherwin.aspa` | `driver123` | Driver |
 
 Note: the latest SQL dump marks most demo accounts as archived (inactive). Log in as
-`admin` / `admin123` and use the **Archive** dashboard to restore them.
+`admin` / `admin123` and use the **Archive** dashboard to restore them. Each driver record
+in the DMH **Drivers** page has a matching login account above (password `driver123`).
 
 ## Payroll module (workflow demo)
 

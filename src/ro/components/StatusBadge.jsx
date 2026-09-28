@@ -5,6 +5,7 @@ const COLORS = {
   Available: 'badge--available',
   'In Use': 'badge--in-use',
   'In Maintenance': 'badge--in-maintenance',
+  'Pricing Approved': 'badge--confirmed',
   Paid: 'badge--available',
   Unpaid: 'badge--denied',
   Partial: 'badge--in-use',

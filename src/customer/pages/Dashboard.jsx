@@ -35,7 +35,7 @@ export default function Dashboard({ user }) {
   }, [])
 
   const availableVehicles = vehicles.filter((v) => v.status === 'Available').length
-  const pending = bookings.filter((b) => b.status === 'Pending').length
+  const pending = bookings.filter((b) => b.status === 'Pending' || b.status === 'Pricing Approved').length
   const active = bookings.filter((b) => b.status === 'On trip' || b.status === 'Confirmed').length
   const completed = bookings.filter((b) => b.status === 'Completed').length
   const latest = bookings[0] || null
@@ -54,7 +54,7 @@ export default function Dashboard({ user }) {
 
       <div className="card" style={{ marginBottom: 22, background: 'linear-gradient(90deg, var(--navy), #16335f)', border: 'none' }}>
         <div className="card__body">
-          <h1 style={{ fontSize: 20, color: '#fff' }}>Welcome, {firstName} 🚗</h1>
+          <h1 style={{ fontSize: 20, color: '#fff' }}>Welcome, {firstName}</h1>
           <p style={{ color: '#fde68a', marginTop: 4 }}>Good day! Ready for another great journey with Hollydot?</p>
         </div>
       </div>

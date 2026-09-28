@@ -10,14 +10,26 @@ if ($method === 'GET') {
     require_role($user, ['superadmin', 'admin', 'driver_management_head', 'reservation_officer', 'customer']);
     $rows = $pdo->query(
         'SELECT v.vehicle_id, v.plate_number, v.model, v.year, v.vehicle_type, v.owner_id, v.status,
-                v.daily_rate, v.seats
+                v.daily_rate, v.seats, v.vehicle_image
          FROM vehicles v
          ORDER BY v.vehicle_id'
     )->fetchAll();
 
-    $out = array_map(function ($v) {
+    // Load every vehicle image once, grouped by vehicle, ordered by sort_order.
+    $allImages = [];
+    $imgStmt = $pdo->query(
+        'SELECT vi.vehicle_id, vi.image_url
+         FROM vehicle_images vi
+         ORDER BY vi.vehicle_id, vi.sort_order, vi.image_id'
+    );
+    foreach ($imgStmt as $vi) {
+        $allImages[(int)$vi['vehicle_id']][] = $vi['image_url'];
+    }
+
+    $out = array_map(function ($v) use ($allImages) {
+        $id = (int)$v['vehicle_id'];
         return [
-            'id' => (int)$v['vehicle_id'],
+            'id' => $id,
             'carCode' => vehicle_car_code($v),
             'plate' => $v['plate_number'],
             'type' => $v['vehicle_type'],
@@ -26,6 +38,10 @@ if ($method === 'GET') {
             'seats' => (int)$v['seats'],
             'dailyRate' => (float)$v['daily_rate'],
             'status' => vehicle_gui_status($v['status']),
+            'photoUrl' => $v['vehicle_image'],
+            'images' => !empty($allImages[$id])
+                ? $allImages[$id]
+                : ($v['vehicle_image'] ? [$v['vehicle_image']] : []),
         ];
     }, $rows);
 
@@ -50,6 +66,10 @@ if ($method === 'POST') {
     if (!preg_match('/^[A-Z0-9\s-]{3,}$/', $plate)) {
         json_error('Invalid plate number format.', 422);
     }
+    $allowedTypes = ['AUV', 'SUV', 'L300'];
+    if (!in_array($type, $allowedTypes)) {
+        json_error("Invalid vehicle type. Allowed: " . implode(', ', $allowedTypes), 422);
+    }
 
     $exists = $pdo->prepare('SELECT vehicle_id FROM vehicles WHERE plate_number = ?');
     $exists->execute([$plate]);
@@ -57,14 +77,25 @@ if ($method === 'POST') {
         json_error('A vehicle with this plate number already exists.', 422);
     }
 
+    $imageUrls = save_vehicle_images($data);
+    $primary = $imageUrls[0] ?? null;
+
     $stmt = $pdo->prepare(
-        'INSERT INTO vehicles (plate_number, model, year, vehicle_type, daily_rate, seats, status, purchase_date)
-         VALUES (?, ?, ?, ?, ?, ?, "available", CURDATE())'
+        'INSERT INTO vehicles (plate_number, model, year, vehicle_type, daily_rate, seats, status, vehicle_image, purchase_date)
+         VALUES (?, ?, ?, ?, ?, ?, "available", ?, CURDATE())'
     );
-    $stmt->execute([$plate, $model, $year, $type, $dailyRate, $seats]);
+    $stmt->execute([$plate, $model, $year, $type, $dailyRate, $seats, $primary]);
 
     $id = (int)$pdo->lastInsertId();
-    $row = $pdo->query("SELECT v.vehicle_id, v.plate_number, v.model, v.year, v.vehicle_type, v.owner_id, v.status, v.daily_rate, v.seats FROM vehicles v WHERE v.vehicle_id = $id")->fetch();
+
+    if ($imageUrls) {
+        $ins = $pdo->prepare('INSERT INTO vehicle_images (vehicle_id, image_url, sort_order) VALUES (?, ?, ?)');
+        foreach ($imageUrls as $i => $url) {
+            $ins->execute([$id, $url, $i]);
+        }
+    }
+
+    $row = $pdo->query("SELECT v.vehicle_id, v.plate_number, v.model, v.year, v.vehicle_type, v.owner_id, v.status, v.daily_rate, v.seats, v.vehicle_image FROM vehicles v WHERE v.vehicle_id = $id")->fetch();
 
     json_out([
         'id' => $id,
@@ -76,6 +107,8 @@ if ($method === 'POST') {
         'seats' => (int)$row['seats'],
         'dailyRate' => (float)$row['daily_rate'],
         'status' => 'Available',
+        'photoUrl' => $row['vehicle_image'],
+        'images' => $imageUrls,
     ], 201);
 }
 

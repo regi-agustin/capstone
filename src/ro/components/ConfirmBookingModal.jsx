@@ -48,16 +48,16 @@ export default function ConfirmBookingModal({ booking, open, onClose, onConfirm 
           <div className="detail-grid">
             <div className="detail-item">
               <div className="detail-item__label">Client</div>
-              <div className="detail-item__value">{booking.client.name}</div>
+              <div className="detail-item__value">{booking.client?.name}</div>
             </div>
             <div className="detail-item">
               <div className="detail-item__label">Destination</div>
-              <div className="detail-item__value">{booking.trip.destination}</div>
+              <div className="detail-item__value">{booking.trip?.destination}</div>
             </div>
             <div className="detail-item">
               <div className="detail-item__label">Trip</div>
               <div className="detail-item__value">
-                {formatDate(booking.trip.pickupDate)} → {formatDate(booking.trip.returnDate)}
+                {formatDate(booking.trip?.pickupDate)} → {formatDate(booking.trip?.returnDate)}
               </div>
             </div>
             <div className="detail-item">

@@ -55,7 +55,7 @@ function payroll_numbers(array $raw, array $blank): array
 
 // Recompute totals AND the 2% withholding tax on miscellaneous charges.
 // WTAX base = overtime + miscellaneous (toll + parking), matching the workbook:
-// e.g. 2% Ã— (P540.00 overtime + P1,174.00 misc) = P34.28.
+// e.g. 2% × (P540.00 overtime + P1,174.00 misc) = P34.28.
 function payroll_recompute(array $earnings, array $deductions): array
 {
     $wtaxBase = $earnings['overtime'] + $earnings['misc'];
@@ -200,6 +200,85 @@ function payroll_hours_between(?string $start, ?string $end): float
 
 /*
  * ---------------------------------------------------------------------------
+ *  Current Car Rates
+ *  A "car rate" is a fleet vehicle as payroll sees it: the derived car code,
+ *  its daily rate, plate, owner and the driver currently assigned to it.
+ * ---------------------------------------------------------------------------
+ */
+
+function payroll_car_rate_select(): string
+{
+    // Assigned driver comes from the live booking, not a stored column, so the
+    // list always agrees with the Reservations module.
+    return 'SELECT v.vehicle_id, v.plate_number, v.model, v.vehicle_type, v.owner_id,
+                   v.status, v.daily_rate, v.purchase_date, vo.owner_name,
+                   (SELECT d.fullname FROM reservations r
+                      JOIN drivers d ON d.driver_id = r.driver_id
+                     WHERE r.vehicle_id = v.vehicle_id
+                       AND r.status IN ("confirmed", "on_trip")
+                     ORDER BY r.start_date DESC, r.reservation_id DESC
+                     LIMIT 1) AS assigned_driver
+              FROM vehicles v
+              LEFT JOIN vehicle_owners vo ON vo.owner_id = v.owner_id';
+}
+
+function payroll_car_rate_shape(array $v): array
+{
+    return [
+        'id' => (int)$v['vehicle_id'],
+        'carCode' => vehicle_car_code($v),
+        'category' => $v['vehicle_type'],
+        'model' => $v['model'],
+        'plate' => $v['plate_number'],
+        'owner' => $v['owner_name'] ?: 'Company Owned',
+        'ownerId' => $v['owner_id'] ? (int)$v['owner_id'] : null,
+        'dailyRate' => (float)$v['daily_rate'],
+        'driver' => $v['assigned_driver'] ?: '',
+        'since' => $v['purchase_date'] ? date('M j, Y', strtotime($v['purchase_date'])) : '',
+        'status' => vehicle_gui_status($v['status']),
+    ];
+}
+
+function payroll_car_rate_row(PDO $pdo, int $id): array
+{
+    $stmt = $pdo->prepare(payroll_car_rate_select() . ' WHERE v.vehicle_id = ?');
+    $stmt->execute([$id]);
+    $row = $stmt->fetch();
+    if (!$row) json_error('Car rate not found.', 404);
+    return payroll_car_rate_shape($row);
+}
+
+// Shared payload validation for car rate add/update. Returns cleaned fields.
+function payroll_car_rate_payload(array $data): array
+{
+    $plate = strtoupper(trim((string)($data['plate'] ?? '')));
+    $type = trim((string)($data['type'] ?? ''));
+    $model = trim((string)($data['model'] ?? ''));
+    $dailyRate = round(max(0, (float)($data['dailyRate'] ?? 0)), 2);
+    $ownerId = (int)($data['ownerId'] ?? 0);
+
+    if ($plate === '' || $model === '') json_error('Plate number and model are required.', 422);
+    if (!preg_match('/^[A-Z0-9\s-]{3,}$/', $plate)) json_error('Invalid plate number format.', 422);
+
+    // Mirrors api/vehicles.php so both entries produce identical fleet records.
+    $allowedTypes = ['AUV', 'SUV', 'L300'];
+    if (!in_array($type, $allowedTypes, true)) {
+        json_error('Invalid vehicle type. Allowed: ' . implode(', ', $allowedTypes), 422);
+    }
+    if ($dailyRate <= 0) json_error('Daily rate must be greater than zero.', 422);
+
+    return [
+        'plate' => $plate,
+        'type' => $type,
+        'model' => mb_substr($model, 0, 100),
+        'dailyRate' => $dailyRate,
+        'ownerId' => $ownerId ?: null,
+    ];
+}
+
+
+/*
+ * ---------------------------------------------------------------------------
  * GET endpoints
  * ---------------------------------------------------------------------------
  */
@@ -213,6 +292,24 @@ if ($method === 'GET') {
     if ($action === 'settings') {
         json_out([
             'companyName' => app_setting($pdo, 'company_name', 'FleetOps Car Rental'),
+        ]);
+    }
+
+    // ---- Current Car Rates: the car codes payroll bills against ---------
+    if ($action === 'carrates') {
+        if (!$isPayroll) json_error('Forbidden.', 403);
+
+        $rows = $pdo->query(payroll_car_rate_select() . ' ORDER BY v.vehicle_id')->fetchAll();
+        $owners = $pdo->query(
+            'SELECT owner_id, owner_name FROM vehicle_owners WHERE status = "active" ORDER BY owner_name'
+        )->fetchAll();
+
+        json_out([
+            'cars' => array_map('payroll_car_rate_shape', $rows),
+            'owners' => array_map(fn($o) => [
+                'id' => (int)$o['owner_id'],
+                'name' => $o['owner_name'],
+            ], $owners),
         ]);
     }
 
@@ -568,7 +665,7 @@ if ($method === 'POST') {
                                       earnings_json, deductions_json, car_rate_snapshot,
                                       total_earnings, total_deductions, total_receivable,
                                       payroll_remarks, created_by)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "draft", ?, ?, ?, ?, ?, ?, ?)'
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "draft", ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([
                 $driverId, $vehicleId, $carCode, $plateNumber, $vehicleType, $carOwner,
@@ -579,6 +676,18 @@ if ($method === 'POST') {
             ]);
             $id = (int)$pdo->lastInsertId();
             log_action($pdo, (int)$user['user_id'], 'Payroll', 'Created payroll ' . $id . ' for driver ' . $driverId . ' (cut-off ' . $cutoffStart . ' to ' . $cutoffEnd . ')');
+
+            // Create notification for driver that payroll is available
+            $driverUserId = get_user_id_by_driver($pdo, $driverId);
+            if ($driverUserId) {
+                create_notification(
+                    $pdo,
+                    $driverUserId,
+                    'payroll_released',
+                    'Payroll Available',
+                    'Your payroll for ' . $payrollDate . ' is now available. Status: Draft. Amount: PHP ' . number_format($calc['totalReceivable'], 2)
+                );
+            }
         }
 
         // Snapshot the included trips.
@@ -708,7 +817,7 @@ if ($method === 'POST') {
         $id = (int)($data['id'] ?? 0);
         if ($id <= 0) json_error('Payroll id is required.', 422);
 
-        $stmt = $pdo->prepare('SELECT status, total_receivable FROM payroll WHERE payroll_id = ?');
+        $stmt = $pdo->prepare('SELECT status, total_receivable, driver_id, payroll_date FROM payroll WHERE payroll_id = ?');
         $stmt->execute([$id]);
         $p = $stmt->fetch();
         if (!$p) json_error('Payroll record not found.', 404);
@@ -730,6 +839,19 @@ if ($method === 'POST') {
         )->execute([$method, $amountPaid, $datePaid, $reference, $id]);
 
         log_action($pdo, (int)$user['user_id'], 'Payroll', 'Marked payroll ' . $id . ' as paid (' . $method . ', ' . $amountPaid . ')');
+
+        // Create notification for driver when payroll is released/paid
+        $driverUserId = get_user_id_by_driver($pdo, (int)$p['driver_id']);
+        if ($driverUserId) {
+            create_notification(
+                $pdo,
+                $driverUserId,
+                'payroll_released',
+                'Payroll Released',
+                'Your payroll for ' . $p['payroll_date'] . ' has been released. Amount: PHP ' . number_format($amountPaid, 2)
+            );
+        }
+
         json_out(['ok' => true, 'id' => $id, 'status' => 'paid']);
     }
 
@@ -751,7 +873,92 @@ if ($method === 'POST') {
         json_out(['ok' => true]);
     }
 
-    json_error('Action must be one of: create, update, submit, approve, return, cancel, pay, delete.', 422);
+    // ---- Add a car rate (creates the vehicle payroll bills against) -----
+    if ($action === 'car_rate_add') {
+        $fields = payroll_car_rate_payload($data);
+
+        $dup = $pdo->prepare('SELECT vehicle_id FROM vehicles WHERE plate_number = ?');
+        $dup->execute([$fields['plate']]);
+        if ($dup->fetch()) json_error('A car with this plate number already exists.', 422);
+
+        if ($fields['ownerId'] !== null) {
+            $own = $pdo->prepare('SELECT owner_id FROM vehicle_owners WHERE owner_id = ? AND status = "active"');
+            $own->execute([$fields['ownerId']]);
+            if (!$own->fetch()) json_error('Car owner not found.', 422);
+        }
+
+        $stmt = $pdo->prepare(
+            'INSERT INTO vehicles (plate_number, model, year, vehicle_type, daily_rate, seats, owner_id, status, purchase_date)
+             VALUES (?, ?, ?, ?, ?, ?, ?, "available", CURDATE())'
+        );
+        $stmt->execute([
+            $fields['plate'], $fields['model'], (int)date('Y'), $fields['type'],
+            $fields['dailyRate'], 5, $fields['ownerId'],
+        ]);
+
+        $id = (int)$pdo->lastInsertId();
+        log_action($pdo, (int)$user['user_id'], 'Payroll', 'Added car rate ' . $fields['plate']);
+        json_out(payroll_car_rate_row($pdo, $id), 201);
+    }
+
+    // ---- Edit a car rate (rate, plate, model, owner) ---------------------
+    if ($action === 'car_rate_update') {
+        $id = (int)($data['id'] ?? 0);
+        if ($id <= 0) json_error('Car rate id is required.', 422);
+
+        $exists = $pdo->prepare('SELECT vehicle_id FROM vehicles WHERE vehicle_id = ?');
+        $exists->execute([$id]);
+        if (!$exists->fetch()) json_error('Car rate not found.', 404);
+
+        $fields = payroll_car_rate_payload($data);
+
+        $dup = $pdo->prepare('SELECT vehicle_id FROM vehicles WHERE plate_number = ? AND vehicle_id <> ?');
+        $dup->execute([$fields['plate'], $id]);
+        if ($dup->fetch()) json_error('A car with this plate number already exists.', 422);
+
+        if ($fields['ownerId'] !== null) {
+            $own = $pdo->prepare('SELECT owner_id FROM vehicle_owners WHERE owner_id = ? AND status = "active"');
+            $own->execute([$fields['ownerId']]);
+            if (!$own->fetch()) json_error('Car owner not found.', 422);
+        }
+
+        // vehicle_type stays put: it forms part of the car code (HD-AUV-003)
+        // that every past payroll row is filed under.
+        $pdo->prepare(
+            'UPDATE vehicles SET plate_number = ?, model = ?, daily_rate = ?, owner_id = ? WHERE vehicle_id = ?'
+        )->execute([$fields['plate'], $fields['model'], $fields['dailyRate'], $fields['ownerId'], $id]);
+
+        log_action($pdo, (int)$user['user_id'], 'Payroll', 'Updated car rate ' . $fields['plate']);
+        json_out(payroll_car_rate_row($pdo, $id));
+    }
+
+    // ---- Delete a car rate ----------------------------------------------
+    if ($action === 'car_rate_delete') {
+        $id = (int)($data['id'] ?? 0);
+        if ($id <= 0) json_error('Car rate id is required.', 422);
+
+        $stmt = $pdo->prepare('SELECT vehicle_id, plate_number FROM vehicles WHERE vehicle_id = ?');
+        $stmt->execute([$id]);
+        $car = $stmt->fetch();
+        if (!$car) json_error('Car rate not found.', 404);
+
+        // Reservations and trips reference the car; dropping it would orphan or
+        // wipe that history, so refuse and let the desk clear it first.
+        $ref = $pdo->prepare(
+            'SELECT (SELECT COUNT(*) FROM reservations WHERE vehicle_id = ?)
+                  + (SELECT COUNT(*) FROM trip_logs WHERE vehicle_id = ?)'
+        );
+        $ref->execute([$id, $id]);
+        if ((int)$ref->fetchColumn() > 0) {
+            json_error('This car has existing reservations or trip records and cannot be deleted.', 422);
+        }
+
+        $pdo->prepare('DELETE FROM vehicles WHERE vehicle_id = ?')->execute([$id]);
+        log_action($pdo, (int)$user['user_id'], 'Payroll', 'Deleted car rate ' . $car['plate_number']);
+        json_out(['ok' => true, 'id' => $id]);
+    }
+
+    json_error('Action must be one of: create, update, submit, approve, return, cancel, pay, delete, car_rate_add, car_rate_update, car_rate_delete.', 422);
 }
 
 json_error('Method not allowed.', 405);

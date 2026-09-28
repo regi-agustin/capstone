@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 
-export default function Modal({ open, onClose, title, subtitle, size, children, footer, className }) {
+export default function Modal({ open, onClose, title, subtitle, size, children, footer, className, lockClose = false }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose?.();
+      if (e.key === 'Escape' && !lockClose) onClose?.();
     };
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
@@ -13,7 +13,7 @@ export default function Modal({ open, onClose, title, subtitle, size, children, 
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
     };
-  }, [open, onClose]);
+  }, [open, onClose, lockClose]);
 
   if (!open) return null;
 
@@ -21,7 +21,7 @@ export default function Modal({ open, onClose, title, subtitle, size, children, 
     <div
       className="modal-backdrop"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose?.();
+        if (!lockClose && e.target === e.currentTarget) onClose?.();
       }}
     >
       <div

@@ -3,6 +3,7 @@ import { AppProvider } from './context/AppContext.jsx';
 import AppLayout from './components/AppLayout.jsx';
 import BookingDashboard from './pages/BookingDashboard.jsx';
 import VehicleAvailability from './pages/VehicleAvailability.jsx';
+import Notification from './components/Notification.jsx';
 import './styles/main.css';
 
 function ROApp({ user, onLogout, onSwitchToAdmin }) {
@@ -10,6 +11,7 @@ function ROApp({ user, onLogout, onSwitchToAdmin }) {
     <div className="ro-app">
       <Router>
         <AppProvider initialUser={user} onLogout={onLogout} onSwitchToAdmin={onSwitchToAdmin}>
+          <Notification />
           <Routes>
             <Route element={<AppLayout />}>
               <Route index element={<Navigate to="/dashboard" replace />} />

@@ -17,7 +17,12 @@ export default defineConfig({
     host: true,
     port: 5173,
     open: true,
+    allowedHosts: true,
     proxy: {
+      '/fleetops/api': {
+        target: 'http://localhost',
+        changeOrigin: true
+      },
       '/api': {
         target: 'http://localhost',
         changeOrigin: true,

@@ -3,6 +3,7 @@ import { BillingProvider } from './context/BillingContext.jsx';
 import AppLayout from './components/AppLayout.jsx';
 import BillingDashboard from './pages/BillingDashboard.jsx';
 import PaymentsPage from './pages/PaymentsPage.jsx';
+import BookingReview from './pages/BookingReview.jsx';
 import '../ro/styles/main.css';
 
 function BillingApp({ user, onLogout, onSwitchToAdmin }) {
@@ -12,11 +13,12 @@ function BillingApp({ user, onLogout, onSwitchToAdmin }) {
         <BillingProvider initialUser={user} onLogout={onLogout} onSwitchToAdmin={onSwitchToAdmin}>
           <Routes>
             <Route element={<AppLayout />}>
-              <Route index element={<Navigate to="/invoices" replace />} />
+              <Route index element={<Navigate to="/reviews" replace />} />
+              <Route path="/reviews" element={<BookingReview />} />
               <Route path="/invoices" element={<BillingDashboard />} />
               <Route path="/payments" element={<PaymentsPage />} />
             </Route>
-            <Route path="*" element={<Navigate to="/invoices" replace />} />
+            <Route path="*" element={<Navigate to="/reviews" replace />} />
           </Routes>
         </BillingProvider>
       </Router>

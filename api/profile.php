@@ -4,27 +4,173 @@ require_once __DIR__ . '/helpers.php';
 $user = require_login();
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
+$userId = (int)$user['user_id'];
+
+function driver_for_user(PDO $pdo, int $userId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT d.*, u.email AS user_email, u.contact_number AS user_contact
+         FROM drivers d
+         JOIN users u ON u.user_id = d.user_id
+         WHERE d.user_id = ?'
+    );
+    $stmt->execute([$userId]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function validate_contact_number(string $contact): ?string
+{
+    $contact = trim($contact);
+    if ($contact === '') {
+        return 'Contact number is required.';
+    }
+    if (mb_strlen($contact) > 20) {
+        return 'Contact number must be 20 characters or fewer.';
+    }
+    $digits = preg_replace('/\D/', '', $contact);
+    if ($digits === null || strlen($digits) < 7 || strlen($digits) > 15) {
+        return 'Please provide a valid contact number (7–15 digits).';
+    }
+    return null;
+}
+
+function validate_email_field(string $email): ?string
+{
+    $email = trim($email);
+    if ($email === '') {
+        return 'Email address is required.';
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return 'Please provide a valid email address.';
+    }
+    if (mb_strlen($email) > 100) {
+        return 'Email address must be 100 characters or fewer.';
+    }
+    return null;
+}
+
+function driver_has_profile_image_column(PDO $pdo): bool
+{
+    static $has = null;
+    if ($has === null) {
+        $has = (bool)$pdo->query("SHOW COLUMNS FROM drivers LIKE 'profile_image'")->fetch();
+    }
+    return $has;
+}
+
+function save_profile_image(PDO $pdo, int $driverId, string $image, ?string $existingPath): ?string
+{
+    if (!preg_match('#^data:image/(png|jpe?g|webp);base64,(.+)$#i', $image, $m)) {
+        json_error('Profile image must be a PNG, JPEG, or WebP file.', 422);
+    }
+
+    $raw = base64_decode($m[2], true);
+    if ($raw === false || strlen($raw) > 5 * 1024 * 1024) {
+        json_error('Profile image must be 5 MB or smaller.', 422);
+    }
+
+    $dir = __DIR__ . '/uploads/profile';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+    }
+
+    $filename = date('Ymd_His') . '_' . $driverId . '.' . strtolower($m[1]);
+    $fullPath = $dir . '/' . $filename;
+    if (file_put_contents($fullPath, $raw) === false) {
+        json_error('Failed to save profile image.', 500);
+    }
+
+    $publicPath = '/fleetops/api/uploads/profile/' . $filename;
+    if ($existingPath) {
+        $oldFile = __DIR__ . '/uploads/profile/' . basename($existingPath);
+        if (is_file($oldFile)) {
+            @unlink($oldFile);
+        }
+    }
+
+    return $publicPath;
+}
 
 if ($method === 'POST') {
     $data = body_json();
     $action = trim((string)($data['action'] ?? ''));
-    $userId = (int)$user['user_id'];
 
     if ($action === 'update_profile') {
         $email = trim((string)($data['email'] ?? ''));
         $contactNumber = trim((string)($data['contactNumber'] ?? ''));
-        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            json_error('Please provide a valid email address.', 422);
+
+        if ($err = validate_email_field($email)) {
+            json_error($err, 422);
         }
+        if ($err = validate_contact_number($contactNumber)) {
+            json_error($err, 422);
+        }
+
+        if ($user['role'] === 'driver') {
+            $driver = driver_for_user($pdo, $userId);
+            if (!$driver) {
+                json_error('No driver record linked to this account.', 404);
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $pdo->prepare(
+                    'UPDATE users SET email = ?, contact_number = ? WHERE user_id = ?'
+                )->execute([$email, $contactNumber, $userId]);
+
+                $pdo->prepare(
+                    'UPDATE drivers SET contact_number = ? WHERE driver_id = ? AND user_id = ?'
+                )->execute([$contactNumber, (int)$driver['driver_id'], $userId]);
+
+                $pdo->commit();
+            } catch (Throwable $e) {
+                $pdo->rollBack();
+                json_error('Failed to update profile.', 500);
+            }
+
+            log_action($pdo, $userId, 'UPDATE_PROFILE', 'Driver updated contact details');
+            json_out(['ok' => true]);
+        }
+
         $stmt = $pdo->prepare(
             'UPDATE users
-             SET email = COALESCE(NULLIF(?, ""), email),
-                 contact_number = COALESCE(NULLIF(?, ""), contact_number)
+             SET email = ?, contact_number = ?
              WHERE user_id = ?'
         );
         $stmt->execute([$email, $contactNumber, $userId]);
         log_action($pdo, $userId, 'UPDATE_PROFILE', 'Updated profile contact details');
         json_out(['ok' => true]);
+    }
+
+    if ($action === 'upload_profile_image') {
+        if ($user['role'] !== 'driver') {
+            json_error('Profile image upload is only available for driver accounts.', 403);
+        }
+        if (!driver_has_profile_image_column($pdo)) {
+            json_error('Profile image upload is not available on this system.', 501);
+        }
+
+        $driver = driver_for_user($pdo, $userId);
+        if (!$driver) {
+            json_error('No driver record linked to this account.', 404);
+        }
+
+        $image = (string)($data['image'] ?? '');
+        if ($image === '') {
+            json_error('Profile image is required.', 422);
+        }
+
+        $driverId = (int)$driver['driver_id'];
+        $existing = $driver['profile_image'] ?? null;
+        $publicPath = save_profile_image($pdo, $driverId, $image, $existing);
+
+        $pdo->prepare(
+            'UPDATE drivers SET profile_image = ? WHERE driver_id = ? AND user_id = ?'
+        )->execute([$publicPath, $driverId, $userId]);
+
+        log_action($pdo, $userId, 'UPDATE_PROFILE', 'Driver updated profile image');
+        json_out(['ok' => true, 'profileImage' => $publicPath]);
     }
 
     if ($action === 'change_password') {
@@ -58,7 +204,7 @@ if ($method === 'POST') {
         json_out(['ok' => true]);
     }
 
-    json_error('Action must be one of: update_profile, change_password.', 422);
+    json_error('Action must be one of: update_profile, upload_profile_image, change_password.', 422);
 }
 
 // Non-driver roles get their basic account profile.
@@ -67,8 +213,6 @@ if ($user['role'] !== 'driver') {
     $stmt->execute([$user['user_id']]);
     $u = $stmt->fetch();
     if (!$u) json_error('Account not found.', 404);
-
-    $userId = (int)$user['user_id'];
 
     json_out([
         'role' => $u['role'],
@@ -89,9 +233,7 @@ if ($user['role'] !== 'driver') {
     ]);
 }
 
-$stmt = $pdo->prepare('SELECT * FROM drivers WHERE user_id = ?');
-$stmt->execute([$user['user_id']]);
-$driver = $stmt->fetch();
+$driver = driver_for_user($pdo, $userId);
 if (!$driver) json_error('No driver record linked to this account.', 404);
 
 $driverId = (int)$driver['driver_id'];
@@ -106,6 +248,7 @@ if ($res) {
         'plateNumber' => $res['plate_number'],
         'type' => $res['vehicle_type'],
         'assignedDate' => $res['start_date'],
+        'vehicleId' => (int)$res['vehicle_id'],
     ];
 }
 
@@ -113,14 +256,14 @@ if ($res) {
 $monthStart = date('Y-m-01');
 $monthRows = $pdo->prepare(
     'SELECT COUNT(*) AS total, SUM(time_out IS NOT NULL) AS with_timeout FROM attendance
-     WHERE driver_id = ? AND attendance_date >= ?'
+     WHERE driver_id = ? AND attendance_date >= ? AND verification_status = "verified"'
 );
 $monthRows->execute([$driverId, $monthStart]);
 $m = $monthRows->fetch();
 
 $totalHours = $pdo->prepare(
     'SELECT COALESCE(SUM(TIMESTAMPDIFF(HOUR, time_in, COALESCE(time_out, time_in))), 0)
-     FROM attendance WHERE driver_id = ? AND attendance_date >= ?'
+     FROM attendance WHERE driver_id = ? AND attendance_date >= ? AND verification_status = "verified"'
 );
 $totalHours->execute([$driverId, $monthStart]);
 $hours = (float)$totalHours->fetchColumn();
@@ -130,7 +273,7 @@ $avgRating->execute([$driverId]);
 $rating = (float)$avgRating->fetchColumn();
 
 $onTime = $pdo->prepare(
-    'SELECT COALESCE(SUM(time_in <= "08:00:00"), 0) AS on_time, COUNT(*) AS total FROM attendance WHERE driver_id = ?'
+    'SELECT COALESCE(SUM(time_in <= "08:00:00"), 0) AS on_time, COUNT(*) AS total FROM attendance WHERE driver_id = ? AND verification_status = "verified"'
 );
 $onTime->execute([$driverId]);
 $onTimeRow = $onTime->fetch();
@@ -141,26 +284,36 @@ $latestPayroll = $pdo->prepare('SELECT status FROM payroll WHERE driver_id = ? O
 $latestPayroll->execute([$driverId]);
 $payrollStatus = ucfirst((string)$latestPayroll->fetchColumn());
 
-// Currently clocked in (today's record without a time out)
+// Currently clocked in (today's record without a time out - accept both verified and pending)
 $clocked = $pdo->prepare(
     'SELECT attendance_id FROM attendance
-     WHERE driver_id = ? AND attendance_date = CURDATE() AND time_out IS NULL'
+     WHERE driver_id = ? AND attendance_date = CURDATE() AND time_out IS NULL AND verification_status IN ("verified", "pending")'
 );
 $clocked->execute([$driverId]);
 
+$unread = $pdo->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0');
+$unread->execute([$userId]);
+$unreadCount = (int)$unread->fetchColumn();
+
 $presentDays = (int)($m['total'] ?? 0);
+$profileImage = null;
+if (driver_has_profile_image_column($pdo) && !empty($driver['profile_image'])) {
+    $profileImage = $driver['profile_image'];
+}
 
 json_out([
     'clockedIn' => (bool)$clocked->fetchColumn(),
     'driver' => [
         'id' => 'DRV-' . str_pad((string)$driverId, 3, '0', STR_PAD_LEFT),
         'name' => $driver['fullname'],
-        'email' => '',
+        'email' => $driver['user_email'] ?? '',
         'status' => ucfirst($driver['status']),
+        'employmentStatus' => ucfirst($driver['status']),
         'licenseNumber' => $driver['license_number'],
         'licenseExpiry' => $driver['license_expiry'],
         'department' => '',
         'contactNumber' => $driver['contact_number'],
+        'profileImage' => $profileImage,
         'rating' => round($rating, 1),
         'onTimeAttendance' => $totalCount > 0 ? round($onTimeCount / $totalCount * 100) . '%' : '0%',
     ],
@@ -173,5 +326,6 @@ json_out([
         'totalHoursThisMonth' => (int)$hours,
         'averageRating' => round($rating, 1),
         'onTimeAttendance' => $totalCount > 0 ? round($onTimeCount / $totalCount * 100) . '%' : '0%',
+        'unreadNotifications' => $unreadCount,
     ],
 ]);

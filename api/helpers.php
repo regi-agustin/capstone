@@ -99,6 +99,28 @@ function log_action(PDO $pdo, int $user_id, string $action, string $details): vo
     )->execute([$user_id, $action, mb_substr($details, 0, 500)]);
 }
 
+// Notification system for driver events
+function create_notification(PDO $pdo, int $user_id, string $type, string $title, string $description): void
+{
+    try {
+        $stmt = $pdo->prepare(
+            'INSERT INTO notifications (user_id, type, title, description) VALUES (?, ?, ?, ?)'
+        );
+        $stmt->execute([$user_id, $type, $title, $description]);
+    } catch (Exception $e) {
+        error_log('Failed to create notification: ' . $e->getMessage());
+    }
+}
+
+// Get user_id from driver_id for notification targeting
+function get_user_id_by_driver(PDO $pdo, int $driver_id): ?int
+{
+    $stmt = $pdo->prepare('SELECT user_id FROM drivers WHERE driver_id = ?');
+    $stmt->execute([$driver_id]);
+    $userId = $stmt->fetchColumn();
+    return $userId ? (int)$userId : null;
+}
+
 // The full permission matrix offered by the Create/Edit Account form.
 // Scope -> actions, mirroring the CenSys scope/action grid.
 function permission_matrix(): array
@@ -119,12 +141,17 @@ function permission_matrix(): array
 // Map DB vehicle status to the GUI display status
 function vehicle_gui_status(string $status): string
 {
-    return match ($status) {
-        'available' => 'Available',
-        'reserved', 'on_trip' => 'Assigned',
-        'maintenance' => 'Maintenance',
-        default => ucfirst($status),
-    };
+    switch ($status) {
+        case 'available':
+            return 'Available';
+        case 'reserved':
+        case 'on_trip':
+            return 'Assigned';
+        case 'maintenance':
+            return 'Maintenance';
+        default:
+            return ucfirst($status);
+    }
 }
 
 function vehicle_car_code(array $vehicle): string
@@ -137,7 +164,9 @@ function vehicle_car_code(array $vehicle): string
 function fmt_time(?string $t): string
 {
     if (!$t) return '-';
-    return date('h:i A', strtotime($t));
+    $time = strtotime($t);
+    if ($time === false) return '-';
+    return date('h:i A', $time);
 }
 
 // Driver's active reservation (driver_id -> row with vehicle + trip details)
@@ -145,8 +174,8 @@ function active_reservation_for_driver(PDO $pdo, int $driver_id): ?array
 {
     $stmt = $pdo->prepare(
         'SELECT r.reservation_id, r.client_id, r.driver_id, r.vehicle_id, r.trip_code,
-                r.start_date, r.trip_purpose, r.destination, r.passengers, r.luggage, r.status,
-                c.company_name AS client_name, c.contact_person, c.contact_number,
+                r.start_date, r.destination, r.passengers, r.luggage, r.status,
+                c.contact_person AS client_name, c.company_name, c.contact_number,
                 v.plate_number, v.model, v.vehicle_type, v.owner_id, v.vehicle_id,
                 tl.start_time
          FROM reservations r
@@ -507,4 +536,39 @@ function preferences_for(PDO $pdo, int $userId): array
         'timeFormat' => $r['time_format'] ?? '12-hour (AM/PM)',
         'timezone' => $r['timezone'] ?? '(GMT+08:00) Asia/Manila',
     ];
+}
+
+// Validate a base64 image payload and return the data URL for direct DB storage,
+// or null when absent/empty/malformed.
+function save_single_image(?string $image): ?string
+{
+    if (!preg_match('#^data:image/(png|jpe?g|webp);base64,(.+)$#i', (string)$image, $m)) {
+        return null;
+    }
+
+    return $image;
+}
+
+// Persist the vehicle images from a request body. Accepts an explicit list of
+// base64 data URLs (`images`) and falls back to the legacy single `image` field.
+// Returns the list of public URL paths in submission order (empty if none).
+function save_vehicle_images(array $data): array
+{
+    $sources = [];
+
+    if (isset($data['images']) && is_array($data['images'])) {
+        $sources = array_values($data['images']);
+    } elseif (!empty($data['image'])) {
+        $sources = [(string)$data['image']];
+    }
+
+    $urls = [];
+    foreach ($sources as $image) {
+        $url = save_single_image((string)$image);
+        if ($url !== null && count($urls) < 12) {
+            $urls[] = $url;
+        }
+    }
+
+    return $urls;
 }
