@@ -52,6 +52,23 @@ export const fetchCompanySettings = () => apiFetch('payroll.php?action=settings'
 export const saveCompanySettings = (companyName) =>
   apiFetch('payroll.php', { method: 'POST', body: JSON.stringify({ action: 'save_settings', companyName }) })
 
+// ------------------------- Current Car Rates -----------------------------
+
+// The list ships with the active owner records so the form can offer them.
+export const fetchCarRates = async () => {
+  const data = await apiFetch('payroll.php?action=carrates')
+  return { cars: data.cars || [], owners: data.owners || [] }
+}
+
+export const addCarRate = (payload) =>
+  apiFetch('payroll.php', { method: 'POST', body: JSON.stringify({ action: 'car_rate_add', ...payload }) })
+
+export const updateCarRate = (payload) =>
+  apiFetch('payroll.php', { method: 'POST', body: JSON.stringify({ action: 'car_rate_update', ...payload }) })
+
+export const deleteCarRate = (id) =>
+  apiFetch('payroll.php', { method: 'POST', body: JSON.stringify({ action: 'car_rate_delete', id }) })
+
 // ------------------------- Other module data ------------------------------
 // (kept for the payroll desk's Drivers / Attendance / Notifications pages)
 
