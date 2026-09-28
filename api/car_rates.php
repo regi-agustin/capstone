@@ -346,7 +346,11 @@ if ($method === 'POST') {
         $model = trim((string)($data['model'] ?? ''));
         $carCode = strtoupper(trim((string)($data['carCode'] ?? '')));
         $dailyRate = max(0, round((float)($data['dailyRate'] ?? 0), 2));
+        $ownership = strtolower(trim((string)($data['ownership'] ?? 'internal')));
+        if (!in_array($ownership, ['internal', 'subcon'], true)) $ownership = 'internal';
         $ownerId = (int)($data['ownerId'] ?? 0);
+        $subconName = trim((string)($data['subconName'] ?? ''));
+        $subconContact = trim((string)($data['subconContact'] ?? ''));
         $driverId = (int)($data['driverId'] ?? 0);
 
         if ($plate === '' || $model === '') {
@@ -380,6 +384,13 @@ if ($method === 'POST') {
             }
         }
 
+        if ($ownership === 'subcon' && $ownerId <= 0 && $subconName === '') {
+            json_error('Pick an existing subcon or enter a new subcon name.', 422);
+        }
+        if (mb_strlen($subconName) > 100) {
+            json_error('Subcon name is too long (max 100 characters).', 422);
+        }
+
         if ($ownerId > 0) {
             $own = $pdo->prepare('SELECT owner_id FROM vehicle_owners WHERE owner_id = ? AND status = "active"');
             $own->execute([$ownerId]);
@@ -398,6 +409,23 @@ if ($method === 'POST') {
 
         $pdo->beginTransaction();
         try {
+            if ($ownerId <= 0 && $ownership === 'subcon') {
+                // Find-or-create the subcon so the Add form never dead-ends on
+                // an empty owners list.
+                $own = $pdo->prepare('SELECT owner_id FROM vehicle_owners WHERE owner_name = ? AND status = "active"');
+                $own->execute([$subconName]);
+                $found = $own->fetch();
+                if ($found) {
+                    $ownerId = (int)$found['owner_id'];
+                } else {
+                    $pdo->prepare(
+                        'INSERT INTO vehicle_owners (owner_name, contact_number, email_address, bank_account, status, registration_date)
+                         VALUES (?, ?, NULL, NULL, "active", CURDATE())'
+                    )->execute([$subconName, $subconContact !== '' ? $subconContact : '']);
+                    $ownerId = (int)$pdo->lastInsertId();
+                }
+            }
+
             $pdo->prepare(
                 'INSERT INTO vehicles (car_code, plate_number, model, year, vehicle_type, daily_rate, seats, owner_id, status, purchase_date)
                  VALUES (?, ?, ?, ?, ?, ?, 5, ?, "available", CURDATE())'

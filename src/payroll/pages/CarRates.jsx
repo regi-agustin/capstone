@@ -66,7 +66,7 @@ export default function CarRates() {
   // add car
   const [showAdd, setShowAdd] = useState(false)
   const [owners, setOwners] = useState([])
-  const [addForm, setAddForm] = useState({ carCode: '', type: 'AUV', model: '', plate: '', dailyRate: '', ownerId: '', driverId: '' })
+  const [addForm, setAddForm] = useState({ carCode: '', type: 'AUV', model: '', plate: '', dailyRate: '', ownership: 'internal', ownerId: '', subconName: '', subconContact: '', driverId: '' })
   const [addError, setAddError] = useState('')
   const [savingAdd, setSavingAdd] = useState(false)
 
@@ -221,7 +221,7 @@ export default function CarRates() {
   }
 
   function openAdd() {
-    setAddForm({ carCode: '', type: 'AUV', model: '', plate: '', dailyRate: '', ownerId: '', driverId: '' })
+    setAddForm({ carCode: '', type: 'AUV', model: '', plate: '', dailyRate: '', ownership: 'internal', ownerId: '', subconName: '', subconContact: '', driverId: '' })
     setAddError('')
     setShowAdd(true)
   }
@@ -238,6 +238,10 @@ export default function CarRates() {
       setAddError('Enter a daily rate greater than zero.')
       return
     }
+    if (addForm.ownership === 'subcon' && !addForm.ownerId && !addForm.subconName.trim()) {
+      setAddError('Pick an existing subcon or type a new subcon name.')
+      return
+    }
     setSavingAdd(true)
     try {
       const created = await addCarRate({
@@ -246,7 +250,10 @@ export default function CarRates() {
         model: addForm.model.trim(),
         plate: addForm.plate.trim(),
         dailyRate: rate,
+        ownership: addForm.ownership,
         ownerId: addForm.ownerId ? Number(addForm.ownerId) : null,
+        subconName: addForm.subconName.trim(),
+        subconContact: addForm.subconContact.trim(),
         driverId: addForm.driverId ? Number(addForm.driverId) : null,
       })
       setShowAdd(false)
@@ -762,19 +769,61 @@ export default function CarRates() {
             />
           </div>
           <div className="form-group">
-            <label className="form-label" htmlFor="ca-owner">Car Owner</label>
+            <label className="form-label" htmlFor="ca-ownership">Car Owner <span className="req">*</span></label>
             <select
-              id="ca-owner"
+              id="ca-ownership"
               className="form-select"
-              value={addForm.ownerId}
-              onChange={(e) => setAddForm({ ...addForm, ownerId: e.target.value })}
+              value={addForm.ownership}
+              onChange={(e) => setAddForm({ ...addForm, ownership: e.target.value })}
             >
-              <option value="">Company Owned</option>
-              {owners.map((o) => (
-                <option key={o.id} value={o.id}>{o.name}</option>
-              ))}
+              <option value="internal">Internal (Company Owned)</option>
+              <option value="subcon">Subcon</option>
             </select>
           </div>
+          {addForm.ownership === 'subcon' && (
+            <>
+              {owners.length > 0 && (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="ca-owner">Existing Subcon</label>
+                  <select
+                    id="ca-owner"
+                    className="form-select"
+                    value={addForm.ownerId}
+                    onChange={(e) => setAddForm({ ...addForm, ownerId: e.target.value, subconName: '' })}
+                  >
+                    <option value="">-- New subcon (type below) --</option>
+                    {owners.map((o) => (
+                      <option key={o.id} value={o.id}>{o.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {!addForm.ownerId && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="ca-subcon">Subcon Name <span className="req">*</span></label>
+                    <input
+                      id="ca-subcon"
+                      className="form-input"
+                      placeholder="e.g. Juan Transport Services"
+                      value={addForm.subconName}
+                      onChange={(e) => setAddForm({ ...addForm, subconName: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="ca-subcon-contact">Subcon Contact</label>
+                    <input
+                      id="ca-subcon-contact"
+                      className="form-input"
+                      placeholder="e.g. 0917 123 4567"
+                      value={addForm.subconContact}
+                      onChange={(e) => setAddForm({ ...addForm, subconContact: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
+            </>
+          )}
           <div className="form-group">
             <label className="form-label" htmlFor="ca-driver">Assigned Driver</label>
             <select
