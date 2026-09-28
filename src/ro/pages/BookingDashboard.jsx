@@ -103,13 +103,13 @@ export default function BookingDashboard() {
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
                     <div className="cell-main">
                       <UserRound size={14} style={{ color: 'var(--text-faint)', verticalAlign: '-2px' }} />
-                      {b.driver.name}
+                      {b.driver?.name}
                     </div>
-                    <div className="cell-sub">{b.driver.contact}</div>
+                    <div className="cell-sub">{b.driver?.contact}</div>
                   </div>
                   <div className="cell-muted" style={{ marginTop: 8 }}>
                     <CalendarDays size={13} style={{ display: 'inline', verticalAlign: '-2px' }} />
-                    {formatDate(b.trip.pickupDate)} → {formatDate(b.trip.returnDate)} · {b.id}
+                    {formatDate(b.trip?.pickupDate)} → {formatDate(b.trip?.returnDate)} · {b.id}
                   </div>
                 </div>
               ))}

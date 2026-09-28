@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Car, CheckCircle2, CircleUserRound, Wrench } from 'lucide-react';
 import { useApp } from '../context/AppContext.jsx';
 import SummaryCard from '../components/SummaryCard.jsx';
 import VehicleTable from '../components/VehicleTable.jsx';
 import VehicleDetailsModal from '../components/VehicleDetailsModal.jsx';
-import { summarizeFleet } from '../services/vehicleService.js';
+import { enrichVehicles, summarizeFleet } from '../services/vehicleService.js';
 
 export default function VehicleAvailability() {
   const { vehicles, bookings, hydrating } = useApp();
@@ -13,6 +13,9 @@ export default function VehicleAvailability() {
   const [selected, setSelected] = useState(null);
 
   const fleet = summarizeFleet(vehicles, bookings);
+
+  // Enrich raw vehicles with booking/status info so VehicleTable can render current assignments
+  const enrichedVehicles = useMemo(() => enrichVehicles(vehicles, bookings), [vehicles, bookings]);
 
   return (
     <div>
@@ -31,7 +34,7 @@ export default function VehicleAvailability() {
       </div>
 
       <VehicleTable
-        vehicles={vehicles}
+        vehicles={enrichedVehicles}
         loading={hydrating}
         search={search}
         onSearchChange={setSearch}

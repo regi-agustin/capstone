@@ -99,38 +99,38 @@ export default function BookingTable({ loading, onView, onConfirm, onDeny, onAdd
                     <td>
                       <div className="cell-main">
                         <User size={14} style={{ color: 'var(--text-faint)' }} />
-                        {b.client.name}
+                        {b.client?.name}
                       </div>
-                      <div className="cell-sub">{b.client.contact}</div>
-                      <div className="cell-sub">{b.client.email}</div>
+                      <div className="cell-sub">{b.client?.contact}</div>
+                      <div className="cell-sub">{b.client?.email}</div>
                     </td>
                     <td>
                       <div className="cell-main">
                         <MapPin size={14} style={{ color: 'var(--text-faint)' }} />
-                        {b.trip.destination}
+                        {b.trip?.destination}
                       </div>
                       <div className="cell-sub">
                         <CalendarDays size={13} style={{ display: 'inline', verticalAlign: '-2px' }} />
-                        Pickup {formatDate(b.trip.pickupDate)} · {formatTime(b.trip.pickupTime)}
+                        Pickup {formatDate(b.trip?.pickupDate)} · {formatTime(b.trip?.pickupTime)}
                       </div>
                       <div className="cell-sub">
                         <CalendarDays size={13} style={{ display: 'inline', verticalAlign: '-2px' }} />
-                        Return {formatDate(b.trip.returnDate)} · {formatTime(b.trip.returnTime)}
+                        Return {formatDate(b.trip?.returnDate)} · {formatTime(b.trip?.returnTime)}
                       </div>
                       <div className="cell-muted">
-                        Duration: {b.trip.durationLabel}
-                        {b.trip.passengers ? ` · ${b.trip.passengers} pax` : ''}
+                        Duration: {b.trip?.durationLabel}
+                        {b.trip?.passengers ? ` · ${b.trip.passengers} pax` : ''}
                       </div>
-                      {b.trip.specialRequests && (
+                      {b.trip?.specialRequests && (
                         <div className="cell-muted" style={{ color: 'var(--primary-dark)' }} title={b.trip.specialRequests}>
                           📝 {b.trip.specialRequests}
                         </div>
                       )}
                     </td>
                     <td>
-                      <div className="cell-main">{formatMoney(b.preBilling.estimatedTotal)}</div>
-                      <div className="cell-sub">Rental {formatMoney(b.preBilling.rentalFee)}</div>
-                      <div className="cell-sub">Charges {formatMoney(b.preBilling.additionalCharges)}</div>
+                      <div className="cell-main">{formatMoney(b.preBilling?.estimatedTotal)}</div>
+                      <div className="cell-sub">Rental {formatMoney(b.preBilling?.rentalFee)}</div>
+                      <div className="cell-sub">Charges {formatMoney(b.preBilling?.additionalCharges)}</div>
                       <div className="badge badge--neutral" style={{ marginTop: 4 }}>Pre-Billing</div>
                     </td>
                     <td>

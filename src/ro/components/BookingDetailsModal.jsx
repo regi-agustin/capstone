@@ -1,4 +1,5 @@
-import { User, MapPin, Car, ShieldAlert } from 'lucide-react';
+import { useState } from 'react';
+import { User, MapPin, Car, ShieldAlert, Image, X } from 'lucide-react';
 import Modal from './Modal.jsx';
 import StatusBadge from './StatusBadge.jsx';
 import { formatMoney, formatDate, formatDateLong, formatTime } from '../utils/format.js';
@@ -24,6 +25,7 @@ const Item = ({ label, value }) => (
 
 export default function BookingDetailsModal({ booking, open, onClose }) {
   const { vehicles, bookings } = useApp();
+  const [licensePreview, setLicensePreview] = useState(false);
   if (!booking) return null;
   const vehicleEnriched = booking.vehicleId ? getVehicleById(vehicles, bookings, booking.vehicleId) : null;
 
@@ -47,24 +49,94 @@ export default function BookingDetailsModal({ booking, open, onClose }) {
 
         <Section icon={User} title="Client Information">
           <div className="detail-grid">
-            <Item label="Client Name" value={booking.client.name} />
-            <Item label="Contact Number" value={booking.client.contact} />
-            <Item label="Email" value={booking.client.email} />
-            <Item label="Company / Organization" value={booking.client.company} />
+            <Item label="Client Name" value={booking.client?.name} />
+            <Item label="Contact Number" value={booking.client?.contact} />
+            <Item label="Email" value={booking.client?.email} />
+            <Item label="Company / Organization" value={booking.client?.company} />
           </div>
         </Section>
 
         <Section icon={MapPin} title="Trip Information">
           <div className="detail-grid">
-            <Item label="Destination" value={booking.trip.destination} />
-            <Item label="Pickup Date" value={formatDateLong(booking.trip.pickupDate)} />
-            <Item label="Pickup Time" value={formatTime(booking.trip.pickupTime)} />
-            <Item label="Return Date" value={formatDateLong(booking.trip.returnDate)} />
-            <Item label="Return Time" value={formatTime(booking.trip.returnTime)} />
-            <Item label="Trip Duration" value={booking.trip.durationLabel} />
-            <Item label="Special Requests" value={booking.trip.specialRequests} />
+            <Item label="Destination" value={booking.trip?.destination} />
+            <Item label="Pickup Date" value={formatDateLong(booking.trip?.pickupDate)} />
+            <Item label="Pickup Time" value={formatTime(booking.trip?.pickupTime)} />
+            <Item label="Return Date" value={formatDateLong(booking.trip?.returnDate)} />
+            <Item label="Return Time" value={formatTime(booking.trip?.returnTime)} />
+            <Item label="Trip Duration" value={booking.trip?.durationLabel} />
+            <Item label="Need Driver" value={booking.trip?.needDriver === 'yes' ? 'Yes' : booking.trip?.needDriver === 'no' ? 'No' : '—'} />
+            <Item label="Passengers" value={booking.trip?.passengers || '—'} />
+            <Item label="Special Requests" value={booking.trip?.specialRequests} />
           </div>
         </Section>
+
+        {booking.trip?.needDriver === 'no' && booking.trip?.driverLicenseImage && (
+          <Section icon={Image} title="Driver's License">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <img
+                src={booking.trip.driverLicenseImage}
+                alt="Driver's License"
+                style={{
+                  maxWidth: 200,
+                  maxHeight: 150,
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  cursor: 'pointer',
+                  objectFit: 'cover',
+                }}
+                onClick={() => setLicensePreview(true)}
+              />
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>Uploaded by customer</div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Click image to view full size</div>
+              </div>
+            </div>
+          </Section>
+        )}
+
+        {licensePreview && booking.trip?.driverLicenseImage && (
+          <div
+            onClick={(e) => { if (e.target === e.currentTarget) setLicensePreview(false); }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 1100,
+              background: 'rgba(10, 15, 30, .92)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 20,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setLicensePreview(false)}
+              aria-label="Close preview"
+              style={{
+                position: 'absolute',
+                top: 18,
+                right: 22,
+                background: 'none',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                padding: 6,
+              }}
+            >
+              <X size={28} />
+            </button>
+            <img
+              src={booking.trip.driverLicenseImage}
+              alt="Driver's License"
+              style={{
+                maxWidth: 'min(900px, 92vw)',
+                maxHeight: '82vh',
+                objectFit: 'contain',
+                borderRadius: 8,
+              }}
+            />
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <Section icon={Car} title="Vehicle Information">

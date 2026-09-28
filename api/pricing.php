@@ -55,6 +55,10 @@ if ($method === 'PUT') {
 
     $type = trim((string)($b['type'] ?? ''));
     if ($type === '') json_error('Vehicle type is required.');
+    $allowedTypes = ['AUV', 'SUV', 'L300'];
+    if (!in_array($type, $allowedTypes)) {
+        json_error("Invalid vehicle type. Allowed: " . implode(', ', $allowedTypes), 422);
+    }
 
     $rate = (float)($b['baseDailyRate'] ?? 0);
     $weekly = (float)($b['weeklyDiscountPct'] ?? 0);

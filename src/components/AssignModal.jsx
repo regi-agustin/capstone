@@ -9,7 +9,6 @@ export default function AssignModal({ driver, vehicles, assignments, drivers, on
   const [destination, setDestination] = useState('')
   const [passengers, setPassengers] = useState(1)
   const [lugSize, setLugSize] = useState('')
-  const [purpose, setPurpose] = useState('')
   const [vehicleId, setVehicleId] = useState('')
   const [error, setError] = useState('')
 
@@ -36,7 +35,6 @@ export default function AssignModal({ driver, vehicles, assignments, drivers, on
         destination: destination.trim(),
         passengers: Number(passengers),
         lugSize: lugSize.trim() || 'Medium luggage',
-        purpose: purpose.trim() || 'General service'
       },
       vehicleId
     })
@@ -119,17 +117,6 @@ export default function AssignModal({ driver, vehicles, assignments, drivers, on
                 <option value="Small luggage">Small luggage</option>
                 <option value="Medium luggage">Medium luggage</option>
                 <option value="Large luggage">Large luggage</option>
-              </select>
-            </div>
-            <div className="form-row full">
-              <label>Purpose of Travel</label>
-              <select value={purpose} onChange={(e) => setPurpose(e.target.value)}>
-                <option value="">Select purpose</option>
-                <option value="Airport transfer">Airport transfer</option>
-                <option value="Executive shuttle">Executive shuttle</option>
-                <option value="Field work">Field work</option>
-                <option value="Event transport">Event transport</option>
-                <option value="General service">General service</option>
               </select>
             </div>
             <div className="form-row full" style={{ fontSize: 12.5, color: 'var(--navy-700)', background: 'var(--blue-bg)', padding: '8px 12px', borderRadius: 8 }}>

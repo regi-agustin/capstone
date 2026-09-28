@@ -25,7 +25,6 @@ function trip_shape(PDO $pdo, array $r): array
         'destination' => $r['destination'],
         'passengers' => (int)$r['passengers'],
         'lugSize' => $r['luggage'] ?? '',
-        'purpose' => $r['trip_purpose'],
         'status' => $r['status'],
         'client' => [
             'name' => $r['client_name'],
@@ -42,8 +41,8 @@ function trip_shape(PDO $pdo, array $r): array
 if ($method === 'GET') {
     $rows = $pdo->prepare(
         'SELECT r.reservation_id, r.trip_code, r.start_date, r.destination, r.passengers,
-                r.luggage, r.trip_purpose, r.status,
-                c.company_name AS client_name, c.contact_number,
+                r.luggage, r.status,
+                c.contact_person AS client_name, c.contact_number,
                 v.plate_number, v.model, v.vehicle_type, v.owner_id, v.vehicle_id,
                 tl.start_time
          FROM reservations r

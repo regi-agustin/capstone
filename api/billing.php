@@ -11,7 +11,7 @@ function billing_select(): string
 {
     return 'SELECT b.billing_id, b.invoice_number, b.invoice_date, b.amount, b.vat, b.total_amount, b.status,
                    r.reservation_id, r.trip_code, r.destination, r.start_date, r.end_date, r.status AS reservation_status,
-                   c.company_name, c.contact_number, c.email_address,
+                   c.company_name, c.contact_person, c.contact_number, c.email_address,
                    v.plate_number, v.model, v.vehicle_type,
                    d.fullname AS driver_name,
                    (SELECT COALESCE(SUM(p.amount_paid), 0) FROM payments p WHERE p.billing_id = b.billing_id) AS paid_amount
@@ -39,7 +39,7 @@ function billing_shape(array $r): array
         'bookingId' => $r['trip_code'] ?? '',
         'reservationId' => (int)$r['reservation_id'],
         'client' => [
-            'name' => $r['company_name'],
+            'name' => $r['contact_person'],
             'contact' => $r['contact_number'],
             'email' => $r['email_address'],
         ],

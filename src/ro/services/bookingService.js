@@ -2,7 +2,7 @@ import { apiFetch } from '../../services/api.js';
 import { toISODate } from '../utils/format.js';
 
 export const calculatePreBilling = (vehicle, durationDays, additionalCharges = 0) => {
-  const baseRate = vehicle ? vehicle.rate : 0;
+  const baseRate = vehicle ? (vehicle.dailyRate || vehicle.rate || 0) : 0;
   const days = Math.max(1, durationDays);
   const rentalFee = baseRate * days;
   return {
@@ -14,9 +14,10 @@ export const calculatePreBilling = (vehicle, durationDays, additionalCharges = 0
   };
 };
 
+// Checks if a booking's trip overlaps with a given date range.
 export const bookingOverlaps = (booking, fromISO, toISO) => {
-  const bs = booking.trip.pickupDate;
-  const be = booking.trip.returnDate;
+  const bs = booking?.trip?.pickupDate;
+  const be = booking?.trip?.returnDate;
   if (!bs || !be || !fromISO || !toISO) return false;
   const a = `${fromISO}T00:00:00` < `${be}T00:00:00` && `${bs}T00:00:00` < `${toISO}T00:00:00`;
   return a;
@@ -77,16 +78,18 @@ export const denyBooking = async ({ booking, reason }) => {
   return updated;
 };
 
+// Filters bookings by a search query across key fields.
+// Uses optional chaining (?) to safely handle missing client/trip data.
 export const searchBookings = (bookings, query = '') => {
   const q = query.trim().toLowerCase();
   if (!q) return bookings;
   return bookings.filter((b) => {
     const haystack = [
       b.id,
-      b.client.name,
-      b.client.contact,
-      b.client.email,
-      b.trip.destination,
+      b.client?.name,
+      b.client?.contact,
+      b.client?.email,
+      b.trip?.destination,
       b.vehicleLabel?.plateNumber,
       b.vehicleLabel?.type,
     ]
@@ -97,22 +100,24 @@ export const searchBookings = (bookings, query = '') => {
   });
 };
 
+// Sorts bookings by the given criteria.
+// Uses optional chaining and fallback values to handle missing data safely.
 export const sortBookings = (bookings, sortBy) => {
   const arr = [...bookings];
   switch (sortBy) {
     case 'tripDate':
-      arr.sort((a, b) => a.trip.pickupDate.localeCompare(b.trip.pickupDate));
+      arr.sort((a, b) => (a.trip?.pickupDate || '').localeCompare(b.trip?.pickupDate || ''));
       return arr;
     case 'client':
-      arr.sort((a, b) => a.client.name.localeCompare(b.client.name));
+      arr.sort((a, b) => (a.client?.name || '').localeCompare(b.client?.name || ''));
       return arr;
     case 'status':
-      const order = { Pending: 0, Confirmed: 1, Denied: 2, Cancelled: 3 };
-      arr.sort((a, b) => order[a.status] - order[b.status]);
+      const order = { Pending: 0, 'Pricing Approved': 1, Confirmed: 2, Denied: 3, Cancelled: 4 };
+      arr.sort((a, b) => (order[a.status] ?? 99) - (order[b.status] ?? 99));
       return arr;
     case 'newest':
     default:
-      arr.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      arr.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       return arr;
   }
 };

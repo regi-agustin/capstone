@@ -51,15 +51,18 @@ export const analyzeTrip = ({ client, bookings, vehicles, passengers = 0, select
 
   const duplicates = bookings.filter((b) => isDuplicateBooking(b, client, trip));
   const datesComplete = trip.pickupDate && trip.returnDate && trip.pickupDate <= trip.returnDate;
-  const best = datesComplete ? suggestBestVehicle(vehicles, bookings, { ...trip, passengers }) : null;
+  const ready = hasRequired(client, trip);
+  const best = (datesComplete && ready) ? suggestBestVehicle(vehicles, bookings, { ...trip, passengers }) : null;
 
   const recommendation = best
-    ? `Recommended vehicle: ${best.type} (${best.plateNumber}) because it is currently available${
+    ? `Recommended vehicle: ${best.type} (${best.plate}) because it is currently available${
         passengers >= 1 ? ' and provides sufficient passenger capacity for this booking' : ''
       }.`
-    : datesComplete
-      ? 'No vehicles are currently available for the selected trip dates.'
-      : 'Complete the trip dates to receive a vehicle recommendation.';
+    : !ready
+      ? 'Complete the client details and trip dates above to receive a vehicle recommendation.'
+      : datesComplete
+        ? 'No vehicles are currently available for the selected trip dates.'
+        : 'Complete the trip dates to receive a vehicle recommendation.';
 
   return {
     missing,
@@ -67,7 +70,7 @@ export const analyzeTrip = ({ client, bookings, vehicles, passengers = 0, select
     duplicates: duplicates.map((d) => ({ id: d.id, clientName: d.client.name, status: d.status })),
     recommendedVehicle: best,
     recommendation,
-    ready: hasRequired(client, trip),
+    ready,
   };
 };
 

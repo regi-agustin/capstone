@@ -1,6 +1,7 @@
-import { SearchX } from 'lucide-react';
+import { SearchX, Car } from 'lucide-react';
 import SearchBar from './SearchBar.jsx';
 import StatusBadge from './StatusBadge.jsx';
+import VehiclePhotos from './VehiclePhotos.jsx';
 import { searchVehicles } from '../services/vehicleService.js';
 import { formatDate } from '../utils/format.js';
 
@@ -23,7 +24,7 @@ export default function VehicleTable({ vehicles, loading, search, onSearchChange
 
       <div className="card__body">
         <div className="toolbar" style={{ marginBottom: 16 }}>
-          <SearchBar value={search} onChange={onSearchChange} placeholder="Search plate number or vehicle type..." />
+          <SearchBar value={search} onChange={onSearchChange} placeholder="Search plate, car code, or vehicle type..." />
           <div className="filter-tabs" role="tablist" aria-label="Filter by vehicle status">
             {STATUS_FILTERS.map((f) => (
               <button
@@ -55,10 +56,13 @@ export default function VehicleTable({ vehicles, loading, search, onSearchChange
             <table className="table">
               <thead>
                 <tr>
-                  <th>Vehicle ID</th>
+                  <th></th>
+                  <th>Fleet / Car Code</th>
                   <th>Plate Number</th>
                   <th>Vehicle Type</th>
-                  <th>Vehicle Status</th>
+                  <th>Model</th>
+                  <th>Ownership</th>
+                  <th>Status</th>
                   <th>Current Booking</th>
                   <th>Driver</th>
                   <th>Actions</th>
@@ -68,15 +72,28 @@ export default function VehicleTable({ vehicles, loading, search, onSearchChange
                 {filtered.map((v) => (
                   <tr key={v.id} className={v.status === 'In Maintenance' ? 'row--pending' : ''}>
                     <td>
-                      <div className="cell-main">{v.id}</div>
-                      <div className="cell-sub">{v.year} · {v.seats} seats</div>
+                      {v.photoUrl || (v.images && v.images.length) ? (
+                        <VehiclePhotos vehicle={v} thumb={{ width: 46, height: 34, borderRadius: 6 }} />
+                      ) : (
+                        <Car size={20} style={{ color: 'var(--text-faint)' }} />
+                      )}
                     </td>
                     <td>
-                      <div className="cell-main">{v.plateNumber}</div>
+                      <div className="cell-main" style={{ fontFamily: 'monospace' }}>{v.carCode}</div>
+                    </td>
+                    <td>
+                      <div className="cell-main" style={{ fontFamily: 'monospace' }}>{v.plate}</div>
                       <div className="cell-sub">{v.model}</div>
                     </td>
                     <td>
                       <div className="cell-main">{v.type}</div>
+                      <div className="cell-sub">{v.year} · {v.seats} seats</div>
+                    </td>
+                    <td>
+                      <div className="cell-main">{v.model}</div>
+                    </td>
+                    <td>
+                      <div className="cell-sub">{v.carCode?.startsWith('HD') ? 'Internal' : 'Subcontracted'}</div>
                     </td>
                     <td>
                       <StatusBadge status={v.status} />

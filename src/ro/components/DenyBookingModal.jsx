@@ -50,12 +50,12 @@ export default function DenyBookingModal({ booking, open, onClose, onDeny }) {
           <div className="detail-grid">
             <div className="detail-item">
               <div className="detail-item__label">Client</div>
-              <div className="detail-item__value">{booking.client.name}</div>
+              <div className="detail-item__value">{booking.client?.name}</div>
             </div>
             <div className="detail-item">
               <div className="detail-item__label">Trip</div>
               <div className="detail-item__value">
-                {formatDate(booking.trip.pickupDate)} → {formatDate(booking.trip.returnDate)}
+                {formatDate(booking.trip?.pickupDate)} → {formatDate(booking.trip?.returnDate)}
               </div>
             </div>
           </div>

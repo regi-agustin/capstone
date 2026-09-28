@@ -15,7 +15,6 @@ export default function BrowseVehicles() {
   const [typeFilter, setTypeFilter] = useState('All Types')
   const [seatsFilter, setSeatsFilter] = useState('All Capacity')
   const [priceRange, setPriceRange] = useState(6000)
-  const [availableOnly, setAvailableOnly] = useState(false)
   const [profile, setProfile] = useState(null)
   const [bookingOpen, setBookingOpen] = useState(false)
   const [initialVehicleId, setInitialVehicleId] = useState(null)
@@ -51,10 +50,10 @@ export default function BrowseVehicles() {
       if (typeFilter !== 'All Types' && v.type !== typeFilter) return false
       if (seatsFilter !== 'All Capacity' && v.seats !== Number(seatsFilter)) return false
       if (v.dailyRate > priceRange) return false
-      if (availableOnly && v.status !== 'Available') return false
+      if (v.status !== 'Available') return false
       return true
     })
-  }, [vehicles, searchTerm, typeFilter, seatsFilter, priceRange, availableOnly])
+  }, [vehicles, searchTerm, typeFilter, seatsFilter, priceRange])
 
   const types = [...new Set(vehicles.map((v) => v.type))].sort()
   const seats = [...new Set(vehicles.map((v) => v.seats))].sort()
@@ -129,14 +128,6 @@ export default function BrowseVehicles() {
                 </div>
               </div>
 
-              <label className="toggle-wrap" style={{ gap: 10 }}>
-                <input
-                  type="checkbox"
-                  checked={availableOnly}
-                  onChange={(e) => setAvailableOnly(e.target.checked)}
-                />
-                <span>Available Only</span>
-              </label>
             </div>
           </section>
         </aside>

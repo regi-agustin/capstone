@@ -23,7 +23,6 @@ function assignment_shape(PDO $pdo, array $r): array
             'destination' => $r['destination'],
             'passengers' => (int)$r['passengers'],
             'lugSize' => $r['luggage'] ?? '',
-            'purpose' => $r['trip_purpose'],
         ],
         'vehicleId' => (int)$r['vehicle_id'],
     ];
@@ -32,8 +31,8 @@ function assignment_shape(PDO $pdo, array $r): array
 if ($method === 'GET') {
     $rows = $pdo->query(
         'SELECT r.reservation_id, r.status, r.driver_id, r.vehicle_id, r.trip_code, r.start_date,
-                r.destination, r.passengers, r.luggage, r.trip_purpose,
-                c.company_name AS client_name, c.contact_number,
+                r.destination, r.passengers, r.luggage,
+                c.contact_person AS client_name, c.contact_number,
                 tl.start_time
          FROM reservations r
          JOIN clients c ON c.client_id = r.client_id
@@ -190,16 +189,15 @@ if ($method === 'POST') {
     $destination = trim((string)($trip['destination'] ?? ''));
     $passengers = max(1, (int)($trip['passengers'] ?? 1));
     $luggage = trim((string)($trip['lugSize'] ?? ''));
-    $purpose = trim((string)($trip['purpose'] ?? ''));
 
     $pdo->beginTransaction();
     try {
         $stmt = $pdo->prepare(
             'INSERT INTO reservations (client_id, driver_id, vehicle_id, trip_code, start_date, end_date,
-                                       trip_purpose, destination, passengers, luggage, status, total_amount)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "confirmed", 0)'
+                                       destination, passengers, luggage, status, total_amount)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "confirmed", 0)'
         );
-        $stmt->execute([$clientId, $driverId, $vehicleId, $tripCode, $start, $start, $purpose, $destination, $passengers, $luggage]);
+        $stmt->execute([$clientId, $driverId, $vehicleId, $tripCode, $start, $start, $destination, $passengers, $luggage]);
         $reservationId = (int)$pdo->lastInsertId();
 
         $stmt = $pdo->prepare(

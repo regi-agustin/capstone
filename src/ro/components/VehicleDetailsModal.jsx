@@ -1,6 +1,7 @@
 import { Car } from 'lucide-react';
 import Modal from './Modal.jsx';
 import StatusBadge from './StatusBadge.jsx';
+import VehiclePhotos from './VehiclePhotos.jsx';
 import { formatDateLong } from '../utils/format.js';
 
 const Item = ({ label, value }) => (
@@ -17,18 +18,22 @@ export default function VehicleDetailsModal({ vehicle, open, onClose }) {
     <Modal
       open={open}
       onClose={onClose}
-      title={`Vehicle Details — ${vehicle.plateNumber}`}
+      title={`Vehicle Details — ${vehicle.carCode || vehicle.plate}`}
       subtitle={vehicle.type}
       size="lg"
     >
       <div style={{ display: 'grid', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div className="stat-card__icon" style={{ width: 40, height: 40 }}>
-              <Car size={20} />
-            </div>
+            {vehicle.photoUrl || (vehicle.images && vehicle.images.length) ? (
+              <VehiclePhotos vehicle={vehicle} thumb={{ width: 56, height: 42, borderRadius: 8 }} />
+            ) : (
+              <div className="stat-card__icon" style={{ width: 40, height: 40 }}>
+                <Car size={20} />
+              </div>
+            )}
             <div>
-              <div className="cell-main" style={{ fontSize: 15 }}>{vehicle.type}</div>
+              <div className="cell-main" style={{ fontSize: 15 }}>{vehicle.type} — {vehicle.carCode}</div>
               <div className="cell-sub">
                 {vehicle.model} · {vehicle.year}
               </div>
@@ -43,12 +48,14 @@ export default function VehicleDetailsModal({ vehicle, open, onClose }) {
             Vehicle Information
           </div>
           <div className="detail-grid">
-            <Item label="Vehicle ID" value={vehicle.id} />
-            <Item label="Plate Number" value={vehicle.plateNumber} />
+            <Item label="Fleet / Car Code" value={vehicle.carCode} />
+            <Item label="Plate Number" value={vehicle.plate} />
             <Item label="Vehicle Type" value={vehicle.type} />
             <Item label="Model" value={vehicle.model} />
             <Item label="Year" value={vehicle.year} />
             <Item label="Seating Capacity" value={`${vehicle.seats} passengers`} />
+            <Item label="Daily Rate" value={`₱${vehicle.dailyRate?.toLocaleString()}`} />
+            <Item label="Ownership" value={vehicle.carCode?.startsWith('HD') ? 'Internal' : 'Subcontracted'} />
           </div>
         </div>
 

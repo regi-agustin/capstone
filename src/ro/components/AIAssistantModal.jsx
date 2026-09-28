@@ -51,11 +51,11 @@ export default function AIAssistantModal({ open, onClose, client, trip, passenge
               <div className="vehicle-option vehicle-option--selected" style={{ cursor: 'default' }}>
                 <div>
                   <div className="vehicle-option__main">
-                    {analysis.recommendedVehicle.type} — {analysis.recommendedVehicle.plateNumber}
+                    {analysis.recommendedVehicle.type} — {analysis.recommendedVehicle.plate}
                   </div>
                   <div className="vehicle-option__sub">
                     {analysis.recommendedVehicle.model} · {analysis.recommendedVehicle.seats} seats · ₱{' '}
-                    {analysis.recommendedVehicle.rate.toLocaleString()}/day
+                    {analysis.recommendedVehicle.dailyRate.toLocaleString()}/day
                   </div>
                 </div>
                 <div className="vehicle-option__meta">
@@ -66,6 +66,7 @@ export default function AIAssistantModal({ open, onClose, client, trip, passenge
                     onClick={() => {
                       onPickVehicle?.(analysis.recommendedVehicle.id);
                       notify?.('info', `${analysis.recommendedVehicle.type} added to your booking.`);
+                      onClose?.();
                     }}
                   >
                     <Check size={15} /> Use this vehicle

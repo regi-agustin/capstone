@@ -52,6 +52,36 @@ export const fetchCompanySettings = () => apiFetch('payroll.php?action=settings'
 export const saveCompanySettings = (companyName) =>
   apiFetch('payroll.php', { method: 'POST', body: JSON.stringify({ action: 'save_settings', companyName }) })
 
+// ------------------------- Current Car Rates ------------------------------
+// The screen that manages each car's daily rate, the driver currently
+// assigned to it, and the effective-dated history behind both.
+
+export const fetchCarRates = (q = '') =>
+  apiFetch(`car_rates.php?action=list${q ? `&q=${encodeURIComponent(q)}` : ''}`)
+
+export const fetchCarRateHistory = (vehicleId) =>
+  apiFetch(`car_rates.php?action=history&vehicle_id=${vehicleId}`)
+
+export const fetchCarAssignments = (vehicleId) =>
+  apiFetch(`car_rates.php?action=assignments&vehicle_id=${vehicleId}`)
+
+export const fetchAssignableDrivers = () => apiFetch('car_rates.php?action=drivers')
+
+export const saveCarRate = (payload) =>
+  apiFetch('car_rates.php', { method: 'POST', body: JSON.stringify({ action: 'save_rate', ...payload }) })
+
+export const saveCarAssignment = (payload) =>
+  apiFetch('car_rates.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'save_assignment', ...payload }),
+  })
+
+// Car-rental quote for a payroll period: daily rate x unique use days per car.
+export const fetchCarRentalQuote = (driverId, cutoffStart, cutoffEnd) =>
+  apiFetch(
+    `car_rates.php?action=quote&driver_id=${driverId}&cutoff_start=${cutoffStart}&cutoff_end=${cutoffEnd}`
+  )
+
 // ------------------------- Other module data ------------------------------
 // (kept for the payroll desk's Drivers / Attendance / Notifications pages)
 
