@@ -4,7 +4,8 @@ import {
   HelpCircle, LogOut, Search, Plus, Eye, Pencil, Trash2, Download,
   Calendar, CreditCard, CheckCircle, XCircle, Clock, AlertCircle,
   ChevronRight, ChevronDown, Camera, Mail, Phone, MapPin, Lock,
-  FileBarChart, Smartphone, MessageSquare, FileQuestion, Filter, Settings, Info
+  FileBarChart, Smartphone, MessageSquare, FileQuestion, Filter, Settings, Info,
+  Car, UserPlus, History, AlertTriangle
 } from 'lucide-react';
 
 // --- MOCK DATA (Fixed for all pages) ---
@@ -39,11 +40,30 @@ const notifications = [
   { type: 'Payroll', icon: 'Bell', title: 'Cut-off Reminder', msg: 'Payroll cut-off for May 1 – 15, 2026 is on May 15, 2026 8:00 AM.', date: 'May 15, 2026 07:30 AM', priority: 'Medium', status: 'Read' },
 ];
 
+const carRateRecords = [
+  { id: 1, code: 'HD-MPV-001', since: 'since Sep 12, 2026', category: 'MPV', vehicle: 'Toyota Avanza', rate: '₱1,400.00', driver: '', plate: 'GHI 6789', owner: 'Company Owned', status: 'Available' },
+  { id: 2, code: 'HD-MPV-002', since: 'since Sep 12, 2026', category: 'MPV', vehicle: 'Toyota Avanza', rate: '₱1,400.00', driver: '', plate: 'JKL 7890', owner: 'Company Owned', status: 'Available' },
+  { id: 3, code: 'HD-MPV-003', since: 'since Sep 27, 2026', category: 'MPV', vehicle: 'Toyota Innova', rate: '₱1,500.00', driver: '', plate: 'ABC 1234', owner: 'Company Owned', status: 'Available' },
+  { id: 4, code: 'HD-MPV-004', since: 'since Sep 27, 2026', category: 'MPV', vehicle: 'Mitsubishi Xpander', rate: '₱2,500.00', driver: '', plate: 'BCD 2345', owner: 'Company Owned', status: 'Available' },
+  { id: 5, code: 'HD-MPV-005', since: '', category: 'MPV', vehicle: 'Toyota Veloz', rate: '₱2,300.00', driver: '', plate: 'CDE 3456', owner: 'Company Owned', status: 'Available' },
+  { id: 6, code: 'HD-SUV-006', since: '', category: 'SUV', vehicle: 'Toyota Fortuner', rate: '₱3,800.00', driver: '', plate: 'DEF 4567', owner: 'Company Owned', status: 'Available' },
+  { id: 7, code: 'HD-SUV-007', since: '', category: 'SUV', vehicle: 'Mitsubishi Montero', rate: '₱3,600.00', driver: '', plate: 'EFG 5678', owner: 'Company Owned', status: 'Available' },
+  { id: 8, code: 'HD-SUV-008', since: '', category: 'SUV', vehicle: 'Honda CR-V', rate: '₱3,500.00', driver: '', plate: 'FGH 6789', owner: 'Company Owned', status: 'Available' },
+  { id: 9, code: 'HD-SEDAN-009', since: '', category: 'Sedan', vehicle: 'Toyota Vios', rate: '₱1,700.00', driver: '', plate: 'GHI 7890', owner: 'Company Owned', status: 'Available' },
+  { id: 10, code: 'HD-SEDAN-010', since: '', category: 'Sedan', vehicle: 'Honda City', rate: '₱1,800.00', driver: '', plate: 'HIJ 8901', owner: 'Company Owned', status: 'Available' },
+  { id: 11, code: 'HD-VAN-011', since: '', category: 'Van', vehicle: 'Toyota Hiace', rate: '₱4,200.00', driver: '', plate: 'IJK 9012', owner: 'Company Owned', status: 'Available' },
+  { id: 12, code: 'HD-VAN-012', since: '', category: 'Van', vehicle: 'Hyundai Staria', rate: '₱4,500.00', driver: '', plate: 'JKL 0123', owner: 'Company Owned', status: 'Available' },
+  { id: 13, code: 'HD-PU-013', since: '', category: 'Pickup', vehicle: 'Toyota Hilux', rate: '₱3,200.00', driver: '', plate: 'KLM 1234', owner: 'Company Owned', status: 'Available' },
+  { id: 14, code: 'HD-MPV-014', since: '', category: 'MPV', vehicle: 'Kia Carnival', rate: '₱4,800.00', driver: '', plate: 'LMN 2345', owner: 'Company Owned', status: 'Available' },
+  { id: 15, code: 'HD-SUV-015', since: '', category: 'SUV', vehicle: 'Ford Everest', rate: '₱3,900.00', driver: '', plate: 'MNO 3456', owner: 'Company Owned', status: 'Available' },
+];
+
 // --- COMPONENTS ---
 const Sidebar = ({ activeTab, setActiveTab }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'payroll', label: 'Payroll Management', icon: FileText },
+    { id: 'carrates', label: 'Current Car Rates', icon: Car },
     { id: 'drivers', label: 'Driver Records', icon: Users },
     { id: 'attendance', label: 'Driver Attendance', icon: UserCheck },
     { id: 'notifications', label: 'Notifications', icon: Bell, badge: 3 },
@@ -172,7 +192,55 @@ const DashboardView = () => (
   </div>
 );
 
-const PayrollView = () => (
+const initialCarRates = [
+  { id: 1, date: 'May 01, 2026', carCode: 'CAR-001', rentalRate: '1,800.00', requestedTime: '8:00 AM', timeOut: '5:30 PM', workHours: '9.50', excessKm: '20', excessGas: '200.00', overnightRate: '0.00', otHrs: '1.50', otRate: '150.00', dime: '100.00', hazard: '100.00', toll: '60.00', parking: '50.00', advance: '1,000.00', total: '3,460.00' },
+  { id: 2, date: 'May 02, 2026', carCode: 'CAR-014', rentalRate: '1,800.00', requestedTime: '8:30 AM', timeOut: '6:00 PM', workHours: '9.50', excessKm: '30', excessGas: '240.00', overnightRate: '0.00', otHrs: '2.00', otRate: '150.00', dime: '100.00', hazard: '100.00', toll: '80.00', parking: '60.00', advance: '1,000.00', total: '3,680.00' },
+  { id: 3, date: 'May 03, 2026', carCode: 'CAR-014', rentalRate: '1,800.00', requestedTime: '7:00 PM', timeOut: '7:00 AM', workHours: '12.00', excessKm: '40', excessGas: '300.00', overnightRate: '800.00', otHrs: '2.50', otRate: '150.00', dime: '100.00', hazard: '100.00', toll: '100.00', parking: '70.00', advance: '1,000.00', total: '4,720.00' },
+];
+
+const toNumber = (value) => {
+  const parsed = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+  return isNaN(parsed) ? 0 : parsed;
+};
+
+const formatAmount = (value) =>
+  value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const emptyCarRate = (id) => ({
+  id,
+  date: '', carCode: '', rentalRate: '', requestedTime: '', timeOut: '', workHours: '',
+  excessKm: '', excessGas: '', overnightRate: '', otHrs: '', otRate: '', dime: '',
+  hazard: '', toll: '', parking: '', advance: '', total: '',
+});
+
+const PayrollView = () => {
+  const [carRates, setCarRates] = useState(initialCarRates);
+
+  const addCarRate = () => {
+    setCarRates((prev) => [...prev, emptyCarRate(prev.length ? Math.max(...prev.map((r) => r.id)) + 1 : 1)]);
+  };
+
+  const deleteCarRate = (id) => {
+    setCarRates((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const carRateTotals = carRates.reduce((acc, r) => ({
+    rentalRate: acc.rentalRate + toNumber(r.rentalRate),
+    workHours: acc.workHours + toNumber(r.workHours),
+    excessKm: acc.excessKm + toNumber(r.excessKm),
+    excessGas: acc.excessGas + toNumber(r.excessGas),
+    overnightRate: acc.overnightRate + toNumber(r.overnightRate),
+    otHrs: acc.otHrs + toNumber(r.otHrs),
+    otRate: acc.otRate + toNumber(r.otRate),
+    dime: acc.dime + toNumber(r.dime),
+    hazard: acc.hazard + toNumber(r.hazard),
+    toll: acc.toll + toNumber(r.toll),
+    parking: acc.parking + toNumber(r.parking),
+    advance: acc.advance + toNumber(r.advance),
+    total: acc.total + toNumber(r.total),
+  }), { rentalRate: 0, workHours: 0, excessKm: 0, excessGas: 0, overnightRate: 0, otHrs: 0, otRate: 0, dime: 0, hazard: 0, toll: 0, parking: 0, advance: 0, total: 0 });
+
+  return (
   <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] pr-2 pb-10">
     <h2 className="text-xl font-bold text-gray-800">Payroll Management</h2>
     <p className="text-sm text-gray-500 -mt-4">Create, encode, review and verify driver payroll records.</p>
@@ -284,7 +352,10 @@ const PayrollView = () => (
 
       {/* D. TRIP BREAKDOWN (MASSIVE TABLE) */}
       <div>
-        <h4 className="text-sm font-bold text-gray-800 bg-blue-50/50 p-2 rounded-t border border-b-0 border-blue-200 -mx-6 px-6 mb-4">D. TRIP BREAKDOWN <span className="font-normal text-xs text-gray-500 font-light">(input manually per trip)</span></h4>
+        <div className="flex items-center justify-between gap-4">
+          <h4 className="text-sm font-bold text-gray-800 bg-blue-50/50 p-2 rounded-t border border-b-0 border-blue-200 -mx-6 px-6 mb-4 flex-1">D. TRIP BREAKDOWN <span className="font-normal text-xs text-gray-500 font-light">(input manually per trip)</span></h4>
+          <button onClick={addCarRate} className="mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-blue-700"><Plus size={16} /> Add</button>
+        </div>
         <div className="overflow-x-auto">
             <table className="w-full text-[11px] text-left border-collapse">
                 <thead className="bg-blue-50/50 text-gray-600 font-semibold border-b border-gray-200">
@@ -298,40 +369,29 @@ const PayrollView = () => (
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                    <tr className="hover:bg-gray-50">
-                        <td className="p-2 border-r border-gray-200 text-center">1</td><td className="p-2 border-r border-gray-200">May 01, 2026</td><td className="p-2 border-r border-gray-200">CAR-001</td>
-                        <td className="p-2 border-r border-gray-200">1,800.00</td><td className="p-2 border-r border-gray-200">8:00 AM</td><td className="p-2 border-r border-gray-200">5:30 PM</td>
-                        <td className="p-2 border-r border-gray-200">9.50</td><td className="p-2 border-r border-gray-200">20</td><td className="p-2 border-r border-gray-200">200.00</td>
-                        <td className="p-2 border-r border-gray-200">0.00</td><td className="p-2 border-r border-gray-200">1.50</td><td className="p-2 border-r border-gray-200">150.00</td>
-                        <td className="p-2 border-r border-gray-200">100.00</td><td className="p-2 border-r border-gray-200">100.00</td><td className="p-2 border-r border-gray-200">60.00</td>
-                        <td className="p-2 border-r border-gray-200">50.00</td><td className="p-2 border-r border-gray-200">1,000.00</td><td className="p-2 border-r border-gray-200 font-bold">3,460.00</td>
-                        <td className="p-2 text-center text-red-500"><Trash2 size={14}/></td>
-                    </tr>
-                    <tr className="hover:bg-gray-50">
-                        <td className="p-2 border-r border-gray-200 text-center">2</td><td className="p-2 border-r border-gray-200">May 02, 2026</td><td className="p-2 border-r border-gray-200">CAR-014</td>
-                        <td className="p-2 border-r border-gray-200">1,800.00</td><td className="p-2 border-r border-gray-200">8:30 AM</td><td className="p-2 border-r border-gray-200">6:00 PM</td>
-                        <td className="p-2 border-r border-gray-200">9.50</td><td className="p-2 border-r border-gray-200">30</td><td className="p-2 border-r border-gray-200">240.00</td>
-                        <td className="p-2 border-r border-gray-200">0.00</td><td className="p-2 border-r border-gray-200">2.00</td><td className="p-2 border-r border-gray-200">150.00</td>
-                        <td className="p-2 border-r border-gray-200">100.00</td><td className="p-2 border-r border-gray-200">100.00</td><td className="p-2 border-r border-gray-200">80.00</td>
-                        <td className="p-2 border-r border-gray-200">60.00</td><td className="p-2 border-r border-gray-200">1,000.00</td><td className="p-2 border-r border-gray-200 font-bold">3,680.00</td>
-                        <td className="p-2 text-center text-red-500"><Trash2 size={14}/></td>
-                    </tr>
-                    <tr className="hover:bg-gray-50">
-                        <td className="p-2 border-r border-gray-200 text-center">3</td><td className="p-2 border-r border-gray-200">May 03, 2026</td><td className="p-2 border-r border-gray-200">CAR-014</td>
-                        <td className="p-2 border-r border-gray-200">1,800.00</td><td className="p-2 border-r border-gray-200">7:00 PM</td><td className="p-2 border-r border-gray-200">7:00 AM</td>
-                        <td className="p-2 border-r border-gray-200">12.00</td><td className="p-2 border-r border-gray-200">40</td><td className="p-2 border-r border-gray-200">300.00</td>
-                        <td className="p-2 border-r border-gray-200">800.00</td><td className="p-2 border-r border-gray-200">2.50</td><td className="p-2 border-r border-gray-200">150.00</td>
-                        <td className="p-2 border-r border-gray-200">100.00</td><td className="p-2 border-r border-gray-200">100.00</td><td className="p-2 border-r border-gray-200">100.00</td>
-                        <td className="p-2 border-r border-gray-200">70.00</td><td className="p-2 border-r border-gray-200">1,000.00</td><td className="p-2 border-r border-gray-200 font-bold">4,720.00</td>
-                        <td className="p-2 text-center text-red-500"><Trash2 size={14}/></td>
-                    </tr>
+                    {carRates.map((car, idx) => (
+                        <tr key={car.id} className="hover:bg-gray-50">
+                            <td className="p-2 border-r border-gray-200 text-center">{idx + 1}</td><td className="p-2 border-r border-gray-200">{car.date}</td><td className="p-2 border-r border-gray-200">{car.carCode}</td>
+                            <td className="p-2 border-r border-gray-200">{car.rentalRate}</td><td className="p-2 border-r border-gray-200">{car.requestedTime}</td><td className="p-2 border-r border-gray-200">{car.timeOut}</td>
+                            <td className="p-2 border-r border-gray-200">{car.workHours}</td><td className="p-2 border-r border-gray-200">{car.excessKm}</td><td className="p-2 border-r border-gray-200">{car.excessGas}</td>
+                            <td className="p-2 border-r border-gray-200">{car.overnightRate}</td><td className="p-2 border-r border-gray-200">{car.otHrs}</td><td className="p-2 border-r border-gray-200">{car.otRate}</td>
+                            <td className="p-2 border-r border-gray-200">{car.dime}</td><td className="p-2 border-r border-gray-200">{car.hazard}</td><td className="p-2 border-r border-gray-200">{car.toll}</td>
+                            <td className="p-2 border-r border-gray-200">{car.parking}</td><td className="p-2 border-r border-gray-200">{car.advance}</td><td className="p-2 border-r border-gray-200 font-bold">{car.total}</td>
+                            <td className="p-2 text-center text-red-500">
+                                <button onClick={() => deleteCarRate(car.id)} title="Delete car record" className="hover:text-red-700"><Trash2 size={14}/></button>
+                            </td>
+                        </tr>
+                    ))}
+                    {carRates.length === 0 && (
+                        <tr><td colSpan={19} className="p-6 text-center text-gray-400">No car records yet. Click Add to create one.</td></tr>
+                    )}
                     <tr className="bg-gray-50 border-t-2 border-gray-200">
                         <td className="p-2 font-bold text-right pr-4" colSpan={3}>TOTAL</td>
-                        <td className="p-2 font-bold border-r border-gray-200 text-right">5,400.00</td><td className="p-2 border-r border-gray-200"></td><td className="p-2 border-r border-gray-200"></td>
-                        <td className="p-2 font-bold border-r border-gray-200 text-right">31.00</td><td className="p-2 font-bold border-r border-gray-200 text-right">95</td><td className="p-2 font-bold border-r border-gray-200 text-right">740.00</td>
-                        <td className="p-2 font-bold border-r border-gray-200 text-right">800.00</td><td className="p-2 font-bold border-r border-gray-200 text-right">6.00</td><td className="p-2 font-bold border-r border-gray-200 text-right">450.00</td>
-                        <td className="p-2 font-bold border-r border-gray-200 text-right">300.00</td><td className="p-2 font-bold border-r border-gray-200 text-right">300.00</td><td className="p-2 font-bold border-r border-gray-200 text-right">240.00</td>
-                        <td className="p-2 font-bold border-r border-gray-200 text-right">180.00</td><td className="p-2 font-bold border-r border-gray-200 text-right">3,000.00</td><td className="p-2 font-bold border-r border-gray-200 text-right">11,860.00</td>
+                        <td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.rentalRate)}</td><td className="p-2 border-r border-gray-200"></td><td className="p-2 border-r border-gray-200"></td>
+                        <td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.workHours)}</td><td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.excessKm)}</td><td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.excessGas)}</td>
+                        <td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.overnightRate)}</td><td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.otHrs)}</td><td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.otRate)}</td>
+                        <td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.dime)}</td><td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.hazard)}</td><td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.toll)}</td>
+                        <td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.parking)}</td><td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.advance)}</td><td className="p-2 font-bold border-r border-gray-200 text-right">{formatAmount(carRateTotals.total)}</td>
                         <td className="p-2 text-center"></td>
                     </tr>
                 </tbody>
@@ -368,7 +428,8 @@ const PayrollView = () => (
 
     </div>
   </div>
-);
+  );
+};
 
 const DriversView = () => (
   <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] pr-2 pb-10">
@@ -1648,6 +1709,197 @@ const HelpCenterView = () => (
   </div>
 );
 
+// --- CURRENT CAR RATES VIEW ---
+const emptyCarRateForm = { carCode: '', vehicleType: '', dailyRate: '', plateNumber: '', carOwner: '', assignedDriver: '' };
+
+const CarRatesView = () => {
+  const [cars, setCars] = useState(carRateRecords);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [form, setForm] = useState(emptyCarRateForm);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const openAddModal = () => { setForm(emptyCarRateForm); setShowAddModal(true); };
+  const closeAddModal = () => { setShowAddModal(false); setForm(emptyCarRateForm); };
+
+  const setField = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const handleAddSubmit = (e) => {
+    e.preventDefault();
+    if (!form.carCode.trim() || !form.vehicleType.trim() || !form.dailyRate.trim()) return;
+
+    const nextId = cars.length ? Math.max(...cars.map((c) => c.id)) + 1 : 1;
+    const today = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const parts = form.vehicleType.trim().split(' ');
+
+    setCars((prev) => [...prev, {
+      id: nextId,
+      code: form.carCode.trim(),
+      since: `since ${today}`,
+      category: parts[0] || form.vehicleType.trim(),
+      vehicle: parts.length > 1 ? parts.slice(1).join(' ') : form.vehicleType.trim(),
+      rate: form.dailyRate.startsWith('₱') ? form.dailyRate.trim() : `₱${form.dailyRate.trim()}`,
+      driver: form.assignedDriver.trim(),
+      plate: form.plateNumber.trim(),
+      owner: form.carOwner.trim() || 'Company Owned',
+      status: 'Available',
+    }]);
+    closeAddModal();
+  };
+
+  const confirmDelete = () => {
+    setCars((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+    setDeleteTarget(null);
+  };
+
+  return (
+  <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] pr-2 pb-10">
+    <h2 className="text-xl font-bold text-gray-800">Current Car Rates</h2>
+    <p className="text-sm text-gray-500 -mt-4">Manage the daily rate and assigned driver for each car code used in payroll.</p>
+
+    {/* Top Controls Row */}
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex items-center gap-4 flex-1 flex-wrap">
+         <div className="relative flex-1 max-w-sm bg-white"><Search className="absolute left-3 top-2.5 text-gray-400" size={16} /><input type="text" placeholder="Search car code, driver, plate..." className="pl-9 pr-4 py-2 border rounded-lg text-sm w-full focus:outline-none focus:ring-1 focus:ring-blue-500" /></div>
+         <select className="px-3 py-2 border rounded-lg text-sm text-gray-600 bg-white"><option>All</option></select>
+      </div>
+      <div className="flex gap-3">
+         <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 flex items-center gap-2 bg-white hover:bg-gray-50"><Download size={16}/> Export</button>
+      </div>
+    </div>
+
+    {/* Car Rate List */}
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="px-6 py-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-bold text-gray-800">Car Rate List</h3>
+            <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">15</span>
+          </div>
+          <p className="text-sm text-gray-500 mt-1">15 active cars &bull; 0 assigned &bull; 15 unassigned</p>
+        </div>
+        <button onClick={openAddModal} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-blue-700 shrink-0"><Plus size={16} /> Add</button>
+      </div>
+
+      <table className="w-full text-sm text-left">
+        <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
+          <tr>
+            <th className="px-6 py-3">CAR CODE</th>
+            <th className="px-6 py-3">VEHICLE TYPE</th>
+            <th className="px-6 py-3">DAILY RATE</th>
+            <th className="px-6 py-3">ASSIGNED DRIVER</th>
+            <th className="px-6 py-3">PLATE NUMBER</th>
+            <th className="px-6 py-3">CAR OWNER</th>
+            <th className="px-6 py-3">STATUS</th>
+            <th className="px-6 py-3 text-center">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {cars.map((c) => (
+            <tr key={c.id} className="hover:bg-blue-50/30 transition-colors">
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-gray-800 whitespace-nowrap">{c.code}</span>
+                  {c.since && <span className="text-xs text-gray-400">{c.since}</span>}
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <div className="font-medium text-gray-800">{c.category}</div>
+                <div className="text-xs text-gray-500">{c.vehicle}</div>
+              </td>
+              <td className="px-6 py-4 font-bold text-gray-800 whitespace-nowrap">{c.rate}</td>
+              <td className="px-6 py-4 text-gray-400">{c.driver || 'Unassigned'}</td>
+              <td className="px-6 py-4 text-gray-600">{c.plate}</td>
+              <td className="px-6 py-4 text-gray-500">{c.owner}</td>
+              <td className="px-6 py-4">
+                <span className={`px-3 py-1 rounded-full text-[11px] font-medium ${c.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{c.status}</span>
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex justify-center gap-3 text-blue-500">
+                  <button title="Edit car rate" className="hover:text-blue-700"><Pencil size={16}/></button>
+                  <button title="Assign driver" className="hover:text-blue-700"><UserPlus size={16}/></button>
+                  <button title="Rate history" className="hover:text-blue-700"><History size={16}/></button>
+                  <button onClick={() => setDeleteTarget(c)} title="Delete car rate" className="hover:text-red-600"><Trash2 size={16}/></button>
+                </div>
+              </td>
+            </tr>
+          ))}
+          {cars.length === 0 && (
+            <tr><td colSpan={8} className="px-6 py-8 text-center text-sm text-gray-400">No car rate records yet. Click Add to create one.</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    {/* Add Car Rate Modal */}
+    {showAddModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+            <h4 className="text-base font-bold text-gray-800">Add Car Rate</h4>
+            <button onClick={closeAddModal} title="Close" className="text-gray-400 hover:text-gray-600"><XCircle size={20}/></button>
+          </div>
+          <form onSubmit={handleAddSubmit} className="px-6 py-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Car Code <span className="text-red-500">*</span></label>
+                <input type="text" value={form.carCode} onChange={setField('carCode')} placeholder="HD-MPV-016" className="w-full border rounded px-3 py-2 bg-gray-50 text-gray-600 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Vehicle Type <span className="text-red-500">*</span></label>
+                <input type="text" value={form.vehicleType} onChange={setField('vehicleType')} placeholder="MPV Toyota Innova" className="w-full border rounded px-3 py-2 bg-gray-50 text-gray-600 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Daily Rate <span className="text-red-500">*</span></label>
+                <input type="text" value={form.dailyRate} onChange={setField('dailyRate')} placeholder="₱1,500.00" className="w-full border rounded px-3 py-2 bg-gray-50 text-gray-600 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Plate Number</label>
+                <input type="text" value={form.plateNumber} onChange={setField('plateNumber')} placeholder="ABC 1234" className="w-full border rounded px-3 py-2 bg-gray-50 text-gray-600 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Car Owner</label>
+                <input type="text" value={form.carOwner} onChange={setField('carOwner')} placeholder="Company Owned" className="w-full border rounded px-3 py-2 bg-gray-50 text-gray-600 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Assigned Driver</label>
+                <select value={form.assignedDriver} onChange={setField('assignedDriver')} className="w-full border rounded px-3 py-2 bg-gray-50 text-gray-600 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <option value="">Unassigned</option>
+                  {driverRecords.filter((d) => d.status === 'Active').map((d) => (<option key={d.id} value={d.name}>{d.name}</option>))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-5 mt-5 border-t border-gray-200">
+              <button type="button" onClick={closeAddModal} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-blue-700"><Plus size={16}/> Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+
+    {/* Delete Car Rate Confirmation Modal */}
+    {deleteTarget && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0"><AlertTriangle size={20}/></div>
+            <div>
+              <h4 className="text-base font-bold text-gray-800">Delete Car Rate?</h4>
+              <p className="text-sm text-gray-500 mt-1">Are you sure you want to delete this car rate? This action cannot be undone.</p>
+              <p className="text-xs text-gray-400 mt-2">{deleteTarget.code} &bull; {deleteTarget.category} {deleteTarget.vehicle}</p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button onClick={confirmDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-red-700"><Trash2 size={16}/> Delete</button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+  );
+};
+
 // --- MAIN APP ---
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -1656,6 +1908,7 @@ function App() {
     switch(activeTab) {
       case 'dashboard': return <DashboardView />;
       case 'payroll': return <PayrollView />;
+      case 'carrates': return <CarRatesView />;
       case 'drivers': return <DriversView />;
       case 'attendance': return <AttendanceView />;
       case 'notifications': return <NotificationsView />;
