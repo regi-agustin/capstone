@@ -22,7 +22,12 @@ if errorlevel 1 (
 )
 
 echo [2/3] Importing fleetops_db.sql ...
-"%XAMPP%\mysql\bin\mysql.exe" -h 127.0.0.1 --protocol=TCP -u root < fleetops_db.sql
+"%XAMPP%\mysql\bin\mysql.exe" -h 127.0.0.1 --protocol=TCP -u root -e "CREATE DATABASE IF NOT EXISTS fleetops_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+if errorlevel 1 (
+  echo Could not create the fleetops_db database. Make sure MySQL is running in XAMPP.
+  exit /b 1
+)
+"%XAMPP%\mysql\bin\mysql.exe" -h 127.0.0.1 --protocol=TCP -u root fleetops_db < fleetops_db.sql
 if errorlevel 1 (
   echo SQL import failed. Make sure MySQL is running in XAMPP.
   echo If your MySQL root user has a password, import manually via phpMyAdmin

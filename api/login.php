@@ -14,9 +14,14 @@ if ($username === '' || $password === '') {
 }
 
 // SHA-256 hashing, matching what the app stores in users.password_hash
-$stmt = db()->prepare('SELECT user_id, username, fullname, role, password_hash, status FROM users WHERE username = ?');
-$stmt->execute([$username]);
-$user = $stmt->fetch();
+try {
+    $stmt = db()->prepare('SELECT user_id, username, fullname, role, password_hash, status FROM users WHERE username = ?');
+    $stmt->execute([$username]);
+    $user = $stmt->fetch();
+} catch (Throwable $e) {
+    error_log('Login lookup failed: ' . $e->getMessage());
+    json_error('Login is temporarily unavailable. Please try again later.', 500);
+}
 
 if (!$user || !hash_equals($user['password_hash'], hash('sha256', $password))) {
     json_error('Invalid username or password.', 401);
@@ -39,12 +44,17 @@ elseif (stripos($ua, 'Macintosh') !== false || stripos($ua, 'Mac OS') !== false)
 elseif (stripos($ua, 'Edg') !== false) $device = 'Windows · Edge';
 else $device = 'Windows · Chrome';
 
-$pdo->prepare("UPDATE login_sessions SET status = 'active' WHERE user_id = ? AND status = 'current'")
-    ->execute([(int)$user['user_id']]);
-$pdo->prepare(
-    'INSERT INTO login_sessions (user_id, device, location, ip_address, status)
-     VALUES (?, ?, ?, ?, "current")'
-)->execute([(int)$user['user_id'], $device, 'Pampanga, Philippines', $_SERVER['REMOTE_ADDR'] ?? null]);
+try {
+    $pdo->prepare("UPDATE login_sessions SET status = 'active' WHERE user_id = ? AND status = 'current'")
+        ->execute([(int)$user['user_id']]);
+    $pdo->prepare(
+        'INSERT INTO login_sessions (user_id, device, location, ip_address, status)
+         VALUES (?, ?, ?, ?, "current")'
+    )->execute([(int)$user['user_id'], $device, 'Pampanga, Philippines', $_SERVER['REMOTE_ADDR'] ?? null]);
+} catch (Throwable $e) {
+    // The session is already established; a bookkeeping failure must not block login.
+    error_log('Login session record failed: ' . $e->getMessage());
+}
 
 json_out([
     'user_id' => (int)$user['user_id'],
