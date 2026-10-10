@@ -133,13 +133,48 @@ if ($method === 'POST') {
             json_out(['ok' => true]);
         }
 
-        $stmt = $pdo->prepare(
-            'UPDATE users
-             SET email = ?, contact_number = ?
-             WHERE user_id = ?'
-        );
-        $stmt->execute([$email, $contactNumber, $userId]);
-        log_action($pdo, $userId, 'UPDATE_PROFILE', 'Updated profile contact details');
+        // Optional identity fields (customer edit-profile). Keys that are absent
+        // are left unchanged, so older callers sending only email/contact still work.
+        $fullname = array_key_exists('fullname', $data) ? trim((string)$data['fullname']) : null;
+        $username = array_key_exists('username', $data) ? trim((string)$data['username']) : null;
+
+        if ($fullname !== null) {
+            if ($fullname === '') {
+                json_error('Full name is required.', 422);
+            }
+            if (mb_strlen($fullname) > 100) {
+                json_error('Full name must be 100 characters or fewer.', 422);
+            }
+        }
+        if ($username !== null) {
+            if ($username === '') {
+                json_error('Username is required.', 422);
+            }
+            if (mb_strlen($username) < 3 || mb_strlen($username) > 50) {
+                json_error('Username must be 3 to 50 characters.', 422);
+            }
+            $taken = $pdo->prepare('SELECT user_id FROM users WHERE username = ? AND user_id <> ?');
+            $taken->execute([$username, $userId]);
+            if ($taken->fetch()) {
+                json_error('This username is already taken.', 422);
+            }
+        }
+
+        $fields = ['email = ?', 'contact_number = ?'];
+        $args = [$email, $contactNumber];
+        if ($fullname !== null) {
+            $fields[] = 'fullname = ?';
+            $args[] = $fullname;
+        }
+        if ($username !== null) {
+            $fields[] = 'username = ?';
+            $args[] = $username;
+        }
+        $args[] = $userId;
+
+        $stmt = $pdo->prepare('UPDATE users SET ' . implode(', ', $fields) . ' WHERE user_id = ?');
+        $stmt->execute($args);
+        log_action($pdo, $userId, 'UPDATE_PROFILE', 'Updated profile details');
         json_out(['ok' => true]);
     }
 

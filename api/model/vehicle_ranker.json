@@ -1,0 +1,188 @@
+{
+  "name": "vehicle_ranker",
+  "version": 2,
+  "model": "logistic_regression",
+  "trained_at": "2026-10-02T03:57:06+00:00",
+  "features": [
+    "seat_sufficient",
+    "seat_gap",
+    "seat_class_match",
+    "type_match",
+    "within_budget",
+    "relative_cost",
+    "budget_utilization",
+    "luggage_margin",
+    "year_norm"
+  ],
+  "mean": [
+    0.720551,
+    0.332176,
+    0.479593,
+    0.399103,
+    0.839173,
+    0.550501,
+    0.467363,
+    0.304592,
+    0.729825
+  ],
+  "scale": [
+    0.448729,
+    0.335685,
+    0.499583,
+    0.370627,
+    0.367371,
+    0.175412,
+    0.215197,
+    0.269598,
+    0.087789
+  ],
+  "coefficients": [
+    4.480734,
+    -0.443227,
+    1.278379,
+    0.048649,
+    2.55955,
+    0.574555,
+    0.849219,
+    0.442636,
+    -0.602659
+  ],
+  "intercept": -3.364367,
+  "params": {
+    "C": 1.0,
+    "class_weight": "balanced"
+  },
+  "metrics": {
+    "top1_accuracy_train": 0.3648,
+    "top1_accuracy": 0.3779,
+    "rows": 57551,
+    "requests": 3029,
+    "positives": 3029,
+    "weight_sum": 57551.0
+  },
+  "training": {
+    "gated": 29,
+    "gated_log": 0,
+    "gated_reservation": 29,
+    "gated_generated_at": "2026-10-02T03:57:01+00:00",
+    "synthetic": 3000,
+    "gate_counts": {
+      "logs_total": 1,
+      "converted_reservations": 29,
+      "log_linked_reservations": 0,
+      "examples": 29,
+      "log_examples": 0,
+      "reservation_examples": 29,
+      "booking_pairs": 27,
+      "ratings": 23,
+      "by_label_status": {
+        "analysis_only": 1
+      },
+      "by_data_class": {
+        "unconverted": 1
+      },
+      "by_interaction_status": {
+        "excluded": 1
+      }
+    }
+  },
+  "eval": {
+    "gate": "2026-10-02T03:57:01+00:00",
+    "e1": {
+      "pass": true,
+      "skipped": false,
+      "candidate_test": 0.3779,
+      "production_test": 0.3432,
+      "eps": 0.01
+    },
+    "e2": {
+      "gate": "E2_policy_regression",
+      "passed": 11,
+      "total": 11,
+      "all_pass": true,
+      "results": [
+        {
+          "name": "never_oversize",
+          "pass": true,
+          "detail": "top=AUV/5 seats (want <=5)"
+        },
+        {
+          "name": "seat_sufficient",
+          "pass": true,
+          "detail": "top=L300/12 seats (want >=8)"
+        },
+        {
+          "name": "budget_respected",
+          "pass": true,
+          "detail": "top total=4400 (want <= 5000)"
+        },
+        {
+          "name": "luggage_hard_filter",
+          "pass": true,
+          "detail": "top=L300/12 (want >=6)"
+        },
+        {
+          "name": "leanest_fit_first",
+          "pass": true,
+          "detail": "top seats=5 (want 5, leanest fit)"
+        },
+        {
+          "name": "stated_type_tiebreak",
+          "pass": true,
+          "detail": "top=SEDAN (want SEDAN)"
+        },
+        {
+          "name": "no_preference_keeps_cheapest_tie",
+          "pass": true,
+          "detail": "top rate=2500 (want 2500)"
+        },
+        {
+          "name": "score_seat_sufficient_positive",
+          "pass": true,
+          "detail": "score 0.0012 -> 0.9637 (want strictly higher)"
+        },
+        {
+          "name": "score_within_budget_positive",
+          "pass": true,
+          "detail": "score 0.0244 -> 0.9637 (want strictly higher)"
+        },
+        {
+          "name": "score_bounded_0_1",
+          "pass": true,
+          "detail": "score=0.963747 (want in [0,1])"
+        },
+        {
+          "name": "demo_fleet_recommendable",
+          "pass": true,
+          "detail": "top=AUV/1"
+        }
+      ]
+    },
+    "e3a": {
+      "pass": true,
+      "status": "insufficient_data",
+      "note": "invalid means rmse >= baseline; CF stays OFF (fail-safe, not a deploy blocker)"
+    },
+    "e3b": {
+      "pass": true,
+      "status": "ok",
+      "hr_at_3": 0.3333,
+      "random_hr_at_3": 0.1579,
+      "mrr": 0.2583,
+      "note": "invalid disables CB weights only (fail-safe, not a deploy blocker)"
+    },
+    "tuning": null,
+    "safety_gates_pass": true
+  },
+  "feature_importance": {
+    "seat_sufficient": 4.4807,
+    "seat_gap": -0.4432,
+    "seat_class_match": 1.2784,
+    "type_match": 0.0486,
+    "within_budget": 2.5596,
+    "relative_cost": 0.5746,
+    "budget_utilization": 0.8492,
+    "luggage_margin": 0.4426,
+    "year_norm": -0.6027
+  }
+}

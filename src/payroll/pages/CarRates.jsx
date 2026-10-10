@@ -729,7 +729,7 @@ export default function CarRates() {
               value={addForm.type}
               onChange={(e) => setAddForm({ ...addForm, type: e.target.value })}
             >
-              {['AUV', 'SUV', 'L300'].map((t) => (
+              {['AUV', 'SEDAN', 'L300'].map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>

@@ -17,6 +17,7 @@ const toMyVehicle = (v) => ({
   model: v.model,
   year: v.year,
   seats: v.seats,
+  luggageCapacity: v.luggageCapacity,
   dailyRate: v.dailyRate,
   status: v.status,
   photoUrl: v.photoUrl,
@@ -75,6 +76,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
   const [errors, setErrors] = useState({});
   const [licenseImage, setLicenseImage] = useState(null);
   const [licenseDragging, setLicenseDragging] = useState(false);
+  const [recommendationLogId, setRecommendationLogId] = useState(null);
   const licenseFileRef = useRef(null);
 
   useEffect(() => {
@@ -86,9 +88,9 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
       email: profile?.account?.email || '',
       destination: '',
       pickupDate: today,
-      pickupTime: '',
+      pickupTime: '12:00',
       returnDate: today,
-      returnTime: '',
+      returnTime: '18:00',
       passengers: '',
       needDriver: '',
       specialRequests: '',
@@ -99,6 +101,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
     setVehicleSearch('');
     setVehicleListOpen(false);
     setLicenseImage(null);
+    setRecommendationLogId(null);
   }, [open, profile, initialVehicleId]);
 
   if (!form) return null;
@@ -167,12 +170,18 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) errs.email = 'Please enter a valid email address.';
     if (!f.destination.trim()) errs.destination = 'Destination is required.';
     if (!f.pickupDate) errs.pickupDate = 'Pickup date is required.';
+    if (!f.pickupTime) errs.pickupTime = 'Pickup time is required.';
     if (!f.returnDate) errs.returnDate = 'Return date is required.';
+    if (!f.returnTime) errs.returnTime = 'Return time is required.';
     if (f.pickupDate && f.returnDate && f.returnDate < f.pickupDate)
       errs.returnDate = 'Return date cannot be earlier than pickup date.';
     if (f.pickupDate && f.returnDate && f.returnDate === f.pickupDate &&
         f.pickupTime && f.returnTime && f.returnTime < f.pickupTime)
       errs.returnTime = 'Drop-off time cannot be earlier than pickup time on the same day.';
+    const pax = Number(f.passengers);
+    if (!f.passengers || !Number.isInteger(pax) || pax < 1 || pax > 50)
+      errs.passengers = 'Number of passengers must be between 1 and 50.';
+    if (!f.vehicleId) errs.vehicleId = 'Please select a vehicle.';
     return errs;
   };
 
@@ -210,6 +219,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
           specialRequests: form.specialRequests.trim(),
         },
         estimatedTotal: selectedVehicle ? selectedVehicle.dailyRate * days : 0,
+        recommendationLogId: recommendationLogId || null,
       });
       notify?.('success', 'Reservation submitted! It is now pending approval. Check My Reservations.');
       onClose?.();
@@ -299,17 +309,17 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
                 {errors.needDriver && <div className="form-error">{errors.needDriver}</div>}
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="cust-name">Full Name</label>
+                <label className="form-label" htmlFor="cust-name">Full Name <span className="req">*</span></label>
                 <input id="cust-name" className={`form-input${errors.clientName ? ' is-invalid' : ''}`} type="text" placeholder="Enter full name" value={form.clientName} onChange={set('clientName')} />
                 {errors.clientName && <div className="form-error">{errors.clientName}</div>}
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="cust-contact">Contact Number</label>
+                <label className="form-label" htmlFor="cust-contact">Contact Number <span className="req">*</span></label>
                 <input id="cust-contact" className={`form-input${errors.contact ? ' is-invalid' : ''}`} type="tel" placeholder="Enter contact number" value={form.contact} onChange={set('contact')} />
                 {errors.contact && <div className="form-error">{errors.contact}</div>}
               </div>
               <div className="form-group full">
-                <label className="form-label" htmlFor="cust-email">Email Address</label>
+                <label className="form-label" htmlFor="cust-email">Email Address <span className="req">*</span></label>
                 <input id="cust-email" className={`form-input${errors.email ? ' is-invalid' : ''}`} type="email" placeholder="Enter email address" value={form.email} onChange={set('email')} />
                 {errors.email && <div className="form-error">{errors.email}</div>}
               </div>
@@ -449,7 +459,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
           <Section step={2} icon={MapPin} title="Trip Details" sub="Where and when will you travel?">
             <div className="form-grid">
               <div className="form-group full">
-                <label className="form-label" htmlFor="cust-destination">Destination</label>
+                <label className="form-label" htmlFor="cust-destination">Destination <span className="req">*</span></label>
                 <div className={`form-input input-with-icon${errors.destination ? ' is-invalid' : ''}`}>
                   <MapPin size={15} className="input-with-icon__icon" />
                   <input
@@ -472,20 +482,27 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
                 </div>
                 <div className="trip-point__row">
                   <div className="form-group">
-                    <label className="form-label" htmlFor="cust-pickupDate">Date</label>
+                    <label className="form-label" htmlFor="cust-pickupDate">Date <span className="req">*</span></label>
                     <DatePopupField
                       value={form.pickupDate}
                       invalid={Boolean(errors.pickupDate)}
-                      onSelect={(v) => setForm((p) => ({ ...p, pickupDate: v }))}
+                      onSelect={(v) =>
+                        setForm((p) => ({
+                          ...p,
+                          pickupDate: v,
+                          returnDate: p.returnDate && p.returnDate < v ? v : p.returnDate,
+                        }))
+                      }
                     />
                     {errors.pickupDate && <div className="form-error">{errors.pickupDate}</div>}
                   </div>
                   <div className="form-group">
-                    <label className="form-label" htmlFor="cust-pickupTime">Time</label>
+                    <label className="form-label" htmlFor="cust-pickupTime">Time <span className="req">*</span></label>
                     <TimePopupField
                       value={form.pickupTime}
                       onSelect={(v) => setForm((p) => ({ ...p, pickupTime: v }))}
                     />
+                    {errors.pickupTime && <div className="form-error">{errors.pickupTime}</div>}
                     <div className="form-hint">Defaults to 12:00 PM</div>
                   </div>
                 </div>
@@ -498,16 +515,17 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
                 </div>
                 <div className="trip-point__row">
                   <div className="form-group">
-                    <label className="form-label" htmlFor="cust-returnDate">Date</label>
+                    <label className="form-label" htmlFor="cust-returnDate">Date <span className="req">*</span></label>
                     <DatePopupField
                       value={form.returnDate}
+                      minDate={form.pickupDate || undefined}
                       invalid={Boolean(errors.returnDate)}
                       onSelect={(v) => setForm((p) => ({ ...p, returnDate: v }))}
                     />
                     {errors.returnDate && <div className="form-error">{errors.returnDate}</div>}
                   </div>
                   <div className="form-group">
-                    <label className="form-label" htmlFor="cust-returnTime">Time</label>
+                    <label className="form-label" htmlFor="cust-returnTime">Time <span className="req">*</span></label>
                     <TimePopupField
                       value={form.returnTime}
                       onSelect={(v) => setForm((p) => ({ ...p, returnTime: v }))}
@@ -521,8 +539,9 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
 
             <div className="form-grid" style={{ marginTop: 14 }}>
               <div className="form-group">
-                <label className="form-label" htmlFor="cust-passengers">Number of Passengers <span className="req" style={{ color: 'var(--text-faint)' }}>(optional)</span></label>
-                <input id="cust-passengers" className="form-input" type="number" min="1" max="50" placeholder="e.g. 8" value={form.passengers} onChange={set('passengers')} />
+                <label className="form-label" htmlFor="cust-passengers">Number of Passengers <span className="req">*</span></label>
+                <input id="cust-passengers" className={`form-input${errors.passengers ? ' is-invalid' : ''}`} type="number" min="1" max="50" placeholder="e.g. 8" value={form.passengers} onChange={set('passengers')} />
+                {errors.passengers && <div className="form-error">{errors.passengers}</div>}
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="cust-duration">Trip Duration</label>
@@ -547,7 +566,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
             step={3}
             icon={Car}
             title="Vehicle Choice"
-            sub="Only vehicles free on your selected dates are selectable. You can also submit without a vehicle — we'll assign the best match."
+            sub="A vehicle selection is required — only vehicles free on your selected dates are selectable."
             actions={
               <button type="button" className="btn btn-pill btn--sm" onClick={() => setAiOpen(true)}>
                 <Sparkles size={15} /> AI Assistant
@@ -576,7 +595,7 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
                 <div className="empty-state" style={{ padding: '28px' }}>
                   <XCircle size={30} />
                   <div className="empty-state__title">No vehicles currently available for the selected trip period.</div>
-                  <div className="empty-state__sub">Try adjusting the trip dates — or submit without a vehicle and we will assign the best match.</div>
+                  <div className="empty-state__sub">Try adjusting the trip dates — a vehicle selection is required to submit this reservation.</div>
                 </div>
               ) : (
                 <div className="vehicle-picker">
@@ -701,11 +720,13 @@ export default function NewBookingModal({ open, onClose, vehicles = [], bookings
         }}
         passengers={Number(form.passengers) || 0}
         selectedVehicleId={form.vehicleId}
+        needDriver={form.needDriver}
         bookings={bookings}
         vehicles={myVehicles}
         notify={notify}
-        onPickVehicle={(id) => {
+        onPickVehicle={(id, logId) => {
           setForm((p) => ({ ...p, vehicleId: id }));
+          setRecommendationLogId(logId ?? null);
         }}
       />
     </>

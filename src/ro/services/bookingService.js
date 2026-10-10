@@ -39,7 +39,7 @@ export const fetchBookings = async () => {
   }));
 };
 
-export const createBookingRequest = async ({ client, trip, vehicle, additionalCharges }) => {
+export const createBookingRequest = async ({ client, trip, vehicle, additionalCharges, recommendationLogId = null }) => {
   const booking = await apiFetch('bookings.php', {
     method: 'POST',
     body: JSON.stringify({
@@ -57,6 +57,7 @@ export const createBookingRequest = async ({ client, trip, vehicle, additionalCh
       vehicleId: vehicle ? vehicle.id : null,
       additionalCharges: Number(additionalCharges) || 0,
       estimatedTotal: calculatePreBilling(vehicle, trip.days, additionalCharges).estimatedTotal,
+      recommendationLogId: recommendationLogId || null,
     }),
   });
   return { id: booking.id, record: booking };

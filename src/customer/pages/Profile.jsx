@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { FiCalendar, FiClock, FiBell, FiShield } from 'react-icons/fi'
+import { FiCalendar, FiClock, FiBell, FiShield, FiEdit3 } from 'react-icons/fi'
 import { Link } from 'react-router-dom'
 import { fetchProfile } from '../services/customerService.js'
 import StatusBadge from '../../ro/components/StatusBadge.jsx'
+import EditProfileModal from '../components/EditProfileModal.jsx'
 
 const Detail = ({ label, value }) => (
   <div>
@@ -13,6 +14,7 @@ const Detail = ({ label, value }) => (
 
 export default function Profile({ user }) {
   const [profile, setProfile] = useState(null)
+  const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => {
     fetchProfile()
@@ -90,6 +92,13 @@ export default function Profile({ user }) {
           <section className="card">
             <div className="card__header">
               <div className="card__title">Account Information</div>
+              <button
+                type="button"
+                className="btn btn--secondary btn--sm"
+                onClick={() => setEditOpen(true)}
+              >
+                <FiEdit3 size={15} /> Edit Profile
+              </button>
             </div>
             <div className="card__body">
               <div className="detail-grid">
@@ -134,6 +143,13 @@ export default function Profile({ user }) {
           </section>
         </div>
       </div>
+
+      <EditProfileModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        profile={profile}
+        onSaved={(fresh) => setProfile(fresh)}
+      />
     </div>
   )
 }

@@ -9,6 +9,7 @@ An AI-Driven Fleet Operations System for Hollydot Car Rental — React + Vite fr
 | `api/` | PHP backend. Must be served by Apache (see Setup). |
 | `fleetops_db.sql` | Full database dump (schema + data). Import via phpMyAdmin. |
 | `src/` | React frontend source. |
+| `training/` | Gated AI training pipeline (gate → train → evaluate → safe deploy). See `training/README.md`. |
 | `dist/` | Production build output (generated, not committed). |
 
 ## Prerequisites (XAMPP recommended)

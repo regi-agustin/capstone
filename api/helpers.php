@@ -99,6 +99,67 @@ function log_action(PDO $pdo, int $user_id, string $action, string $details): vo
     )->execute([$user_id, $action, mb_substr($details, 0, 500)]);
 }
 
+// Marks that training-relevant data changed (new booking, rating, status
+// transition). training/retrain.py --if-needed consumes the flag; a failed
+// write is non-fatal because manual retraining always remains available.
+function touch_retrain_flag(): void
+{
+    $dir = __DIR__ . '/model';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+    @file_put_contents($dir . '/retrain.requested', date('c'));
+}
+
+// Links a raw AI-assistant exposure row to the reservation it produced so the
+// training gate can tell converted behavior from unconverted clicks.
+// Prefers the explicit logId sent by the client; falls back to matching the
+// client + booked vehicle + trip shape. Never touches eligibility columns.
+function link_recommendation_log(PDO $pdo, int $reservationId, int $logId, int $vehicleId,
+                                 int $clientId, string $email, string $pickupDate, string $returnDate,
+                                 int $passengers): void
+{
+    $days = max(1, (int)ceil((strtotime($returnDate) - strtotime($pickupDate)) / 86400));
+
+    if ($logId > 0) {
+        $stmt = $pdo->prepare(
+            'SELECT client_id FROM recommendation_logs WHERE log_id = ? LIMIT 1'
+        );
+        $stmt->execute([$logId]);
+        $row = $stmt->fetch();
+        $ownerOk = $row
+            && ($row['client_id'] === null
+                || (int)$row['client_id'] === $clientId
+                || strtolower((string)$row['email']) === strtolower($email));
+        if ($ownerOk) {
+            $stmt = $pdo->prepare(
+                'UPDATE recommendation_logs
+                    SET reservation_id = ?
+                  WHERE log_id = ? AND reservation_id IS NULL
+                    AND (chosen_vehicle_id = ? OR chosen_vehicle_id IS NULL)'
+            );
+            $stmt->execute([$reservationId, $logId, $vehicleId]);
+            if ($stmt->rowCount() > 0) {
+                return;
+            }
+        }
+    }
+
+    // Fallback: same client/email, same booked vehicle, same trip shape.
+    $stmt = $pdo->prepare(
+        'UPDATE recommendation_logs
+            SET reservation_id = ?
+          WHERE reservation_id IS NULL
+            AND chosen_vehicle_id = ?
+            AND passengers = ?
+            AND days = ?
+            AND (client_id = ? OR LOWER(COALESCE(email, \'\')) = ?)
+            AND created_at >= (NOW() - INTERVAL 30 DAY)
+          LIMIT 1'
+    );
+    $stmt->execute([$reservationId, $vehicleId, $passengers, $days, $clientId, strtolower($email)]);
+}
+
 // Notification system for driver events
 function create_notification(PDO $pdo, int $user_id, string $type, string $title, string $description): void
 {
@@ -479,7 +540,7 @@ function security_settings_for(PDO $pdo, int $userId): array
         'backupCodesTotal' => (int)($r['backup_codes_total'] ?? 10),
         'backupCodesUsed' => (int)($r['backup_codes_used'] ?? 0),
         'passwordStrength' => $r['password_strength'] ?? 'Strong',
-        'lastSecurityCheck' => $r['last_security_check'] ? substr($r['last_security_check'], 0, 10) : null,
+        'lastSecurityCheck' => (($r['last_security_check'] ?? null) ? substr($r['last_security_check'], 0, 10) : null),
     ];
 }
 

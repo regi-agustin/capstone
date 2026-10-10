@@ -39,6 +39,7 @@ export const fetchVehicles = async () => {
     model: v.model,
     year: v.year,
     seats: v.seats,
+    luggageCapacity: v.luggageCapacity,
     dailyRate: v.dailyRate,
     status: v.status,
     photoUrl: v.photoUrl,
@@ -63,6 +64,7 @@ export const vehiclesAvailableForRange = (vehicles, bookings, range) =>
         (b) =>
           b.vehicleId === v.id &&
           b.status !== 'Denied' &&
+          b.status !== 'Cancelled' &&
           bookingOverlaps(b, range.pickupDate, range.returnDate),
       ),
   );
@@ -74,6 +76,7 @@ export const isSelectableForRange = (vehicle, bookings, range) => {
     (b) =>
       b.vehicleId === vehicle.id &&
       b.status !== 'Denied' &&
+      b.status !== 'Cancelled' &&
       bookingOverlaps(b, range.pickupDate, range.returnDate),
   );
 };
@@ -85,9 +88,16 @@ export const suggestBestVehicle = (vehicles, bookings, { pickupDate, returnDate,
   const candidates = vehiclesAvailableForRange(vehicles, bookings, { pickupDate, returnDate });
   if (!candidates.length) return null;
   const sorted = [...candidates].sort((a, b) => {
-    const seatA = a.seats >= passengers;
-    const seatB = b.seats >= passengers;
-    if (seatA !== seatB) return seatA ? -1 : 1;
+    if (passengers > 0) {
+      const fitsA = a.seats >= passengers;
+      const fitsB = b.seats >= passengers;
+      if (fitsA !== fitsB) return fitsA ? -1 : 1;
+      if (fitsA) {
+        const excessA = a.seats - passengers;
+        const excessB = b.seats - passengers;
+        if (excessA !== excessB) return excessA - excessB; // leanest fit first
+      }
+    }
     return a.dailyRate - b.dailyRate;
   });
   return sorted[0];

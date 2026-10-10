@@ -37,10 +37,7 @@ function usePopupPosition(anchorRef, open, popupHeight = 320, popupWidth = 306) 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-// How many years into the future a booking may be made.
-const FUTURE_YEARS = 2;
-
-export function DatePopupField({ value, onSelect, invalid, placeholder = 'Select a date' }) {
+export function DatePopupField({ value, onSelect, minDate, invalid, placeholder = 'Select a date' }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
   const popupRef = useRef(null);
@@ -51,11 +48,17 @@ export function DatePopupField({ value, onSelect, invalid, placeholder = 'Select
   const todayISO = toISODate(today);
   const minY = today.getFullYear();
   const minM = today.getMonth();
-  const maxY = minY + FUTURE_YEARS;
+  // Earliest selectable day: today, or the given lower bound (e.g. return
+  // date cannot be earlier than pickup). Future dates are otherwise open.
+  const floorISO = minDate && minDate > todayISO ? minDate : todayISO;
   const [cursor, setCursor] = useState(selected || today);
+  const [view, setView] = useState('days');
 
   useEffect(() => {
-    if (open) setCursor(selected || today);
+    if (open) {
+      setCursor(clampCursor(selected || today));
+      setView('days');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -65,9 +68,6 @@ export function DatePopupField({ value, onSelect, invalid, placeholder = 'Select
     if (y < minY || (y === minY && m < minM)) {
       y = minY;
       m = minM;
-    } else if (y > maxY) {
-      y = maxY;
-      m = 11;
     }
     return new Date(y, m, 1);
   };
@@ -76,7 +76,6 @@ export function DatePopupField({ value, onSelect, invalid, placeholder = 'Select
     setCursor((c) => clampCursor(new Date(c.getFullYear(), c.getMonth() + dir, 1)));
 
   const atMin = cursor.getFullYear() === minY && cursor.getMonth() === minM;
-  const atMax = cursor.getFullYear() === maxY && cursor.getMonth() === 11;
 
   const goToday = () => {
     onSelect(todayISO);
@@ -88,7 +87,20 @@ export function DatePopupField({ value, onSelect, invalid, placeholder = 'Select
   const cells = [...Array(firstOffset).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
 
   const monthOptions = cursor.getFullYear() === minY ? MONTHS.slice(minM) : MONTHS;
-  const yearOptions = Array.from({ length: FUTURE_YEARS + 1 }, (_, i) => minY + i);
+
+  // Year panel: decade window and its cells are computed on the fly — no
+  // fixed year array and no upper bound; navigation stops at the current year.
+  const minDecade = Math.floor(minY / 10) * 10;
+  const decade = Math.floor(cursor.getFullYear() / 10) * 10;
+  const decadeYears = Array.from({ length: 10 }, (_, i) => decade + i);
+  const moveDecade = (dir) =>
+    setCursor((c) =>
+      clampCursor(new Date(Math.floor(c.getFullYear() / 10) * 10 + dir * 10 + (c.getFullYear() % 10), c.getMonth(), 1)),
+    );
+  const pickYear = (y) => {
+    setCursor(clampCursor(new Date(y, cursor.getMonth(), 1)));
+    setView('days');
+  };
 
   return (
     <div className="picker-field-wrap" ref={wrapRef}>
@@ -105,88 +117,145 @@ export function DatePopupField({ value, onSelect, invalid, placeholder = 'Select
       {open &&
         createPortal(
           <div className="picker-popup picker-popup--date" ref={popupRef} style={pos}>
-            <div className="picker-popup__head picker-popup__head--date">
-              <button
-                type="button"
-                className="picker-nav"
-                onClick={() => moveMonth(-1)}
-                disabled={atMin}
-                aria-label="Previous month"
-              >
-                <ChevronLeft size={16} />
-              </button>
+            {view === 'days' ? (
+              <div className="picker-popup__head picker-popup__head--date">
+                <button
+                  type="button"
+                  className="picker-nav"
+                  onClick={() => moveMonth(-1)}
+                  disabled={atMin}
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft size={16} />
+                </button>
 
-              <div className="picker-popup__selects">
-                <select
-                  value={cursor.getMonth()}
-                  aria-label="Month"
-                  onChange={(e) =>
-                    setCursor(clampCursor(new Date(cursor.getFullYear(), Number(e.target.value), 1)))
-                  }
+                <div className="picker-popup__selects">
+                  <select
+                    value={cursor.getMonth()}
+                    aria-label="Month"
+                    onChange={(e) =>
+                      setCursor(clampCursor(new Date(cursor.getFullYear(), Number(e.target.value), 1)))
+                    }
+                  >
+                    {monthOptions.map((m, i) => (
+                      <option key={m} value={cursor.getFullYear() === minY ? minM + i : i}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="picker-year-btn"
+                    aria-label="Choose year"
+                    onClick={() => setView('years')}
+                  >
+                    {cursor.getFullYear()}
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  className="picker-nav"
+                  onClick={() => moveMonth(1)}
+                  aria-label="Next month"
                 >
-                  {monthOptions.map((m, i) => (
-                    <option key={m} value={cursor.getFullYear() === minY ? minM + i : i}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={cursor.getFullYear()}
-                  aria-label="Year"
-                  onChange={(e) =>
-                    setCursor(clampCursor(new Date(Number(e.target.value), cursor.getMonth(), 1)))
-                  }
-                >
-                  {yearOptions.map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
+                  <ChevronRight size={16} />
+                </button>
               </div>
+            ) : (
+              <div className="picker-popup__head picker-popup__head--date">
+                <button
+                  type="button"
+                  className="picker-nav"
+                  onClick={() => moveDecade(-1)}
+                  disabled={decade <= minDecade}
+                  aria-label="Previous decade"
+                >
+                  <ChevronLeft size={16} />
+                </button>
 
-              <button
-                type="button"
-                className="picker-nav"
-                onClick={() => moveMonth(1)}
-                disabled={atMax}
-                aria-label="Next month"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+                <button
+                  type="button"
+                  className="picker-year-btn picker-year-btn--decade"
+                  aria-label="Back to calendar"
+                  onClick={() => setView('days')}
+                >
+                  {decade} – {decade + 9}
+                </button>
 
-            <div className="picker-weekdays">
-              {WEEKDAYS.map((w) => <div key={w} className="picker-weekday">{w}</div>)}
-            </div>
+                <button
+                  type="button"
+                  className="picker-nav"
+                  onClick={() => moveDecade(1)}
+                  aria-label="Next decade"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
 
-            <div className="picker-days">
-              {cells.map((d, i) =>
-                d === null ? (
-                  <div key={`blank-${i}`} />
-                ) : (
-                  (() => {
-                    const dayISO = toISODate(new Date(cursor.getFullYear(), cursor.getMonth(), d));
-                    const isPast = dayISO < todayISO;
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        disabled={isPast}
-                        className={`picker-day${dayISO === todayISO ? ' is-today' : ''}${value === dayISO ? ' is-selected' : ''}${isPast ? ' is-muted' : ''}`}
-                        onClick={() => {
-                          onSelect(dayISO);
-                          setOpen(false);
-                        }}
-                      >
-                        {d}
-                      </button>
-                    );
-                  })()
-                )
-              )}
-            </div>
+            {view === 'days' ? (
+              <>
+                <div className="picker-weekdays">
+                  {WEEKDAYS.map((w) => <div key={w} className="picker-weekday">{w}</div>)}
+                </div>
+
+                <div className="picker-days">
+                  {cells.map((d, i) =>
+                    d === null ? (
+                      <div key={`blank-${i}`} />
+                    ) : (
+                      (() => {
+                        const dayISO = toISODate(new Date(cursor.getFullYear(), cursor.getMonth(), d));
+                        const isPast = dayISO < floorISO;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            disabled={isPast}
+                            className={`picker-day${dayISO === todayISO ? ' is-today' : ''}${value === dayISO ? ' is-selected' : ''}${isPast ? ' is-muted' : ''}`}
+                            onClick={() => {
+                              onSelect(dayISO);
+                              setOpen(false);
+                            }}
+                          >
+                            {d}
+                          </button>
+                        );
+                      })()
+                    )
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="picker-years">
+                {decadeYears.map((y) => {
+                  const disabled = y < minY;
+                  const isSelected = y === (selected ? selected.getFullYear() : cursor.getFullYear());
+                  return (
+                    <button
+                      key={y}
+                      type="button"
+                      disabled={disabled}
+                      className={`picker-year${isSelected ? ' is-selected' : ''}`}
+                      onClick={() => pickYear(y)}
+                    >
+                      {y}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="picker-popup__foot">
-              <button type="button" className="picker-ghost" onClick={goToday}>Today</button>
+              <button
+                type="button"
+                className="picker-ghost"
+                onClick={goToday}
+                disabled={floorISO > todayISO}
+              >
+                Today
+              </button>
               {value && (
                 <button
                   type="button"

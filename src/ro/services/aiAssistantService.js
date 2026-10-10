@@ -1,3 +1,4 @@
+import { apiFetch } from '../../services/api.js';
 import { bookingOverlaps } from './bookingService.js';
 import { suggestBestVehicle } from './vehicleService.js';
 
@@ -20,14 +21,21 @@ const hasRequired = (client, trip) =>
   );
 
 const conflictsForVehicle = (bookings, vehicleId, trip) =>
-  bookings.filter((b) => b.vehicleId === vehicleId && b.status !== 'Denied' && overlapsInRange(b, trip));
+  bookings.filter((b) => b.vehicleId === vehicleId && b.status !== 'Denied' && b.status !== 'Cancelled' && overlapsInRange(b, trip));
 
 const isDuplicateBooking = (b, client, trip) =>
   (normalize(b.client.name) === normalize(client.name) || normalize(b.client.email) === normalize(client.email)) &&
   b.status !== 'Denied' &&
+  b.status !== 'Cancelled' &&
   overlapsInRange(b, trip);
 
-export const analyzeTrip = ({ client, bookings, vehicles, passengers = 0, selectedVehicleId = null, trip }) => {
+// ---------------------------------------------------------------------------
+// Local (offline) analysis — kept as a fallback so the assistant still works
+// if the API is unreachable. The trained model lives server-side; this only
+// mirrors the endpoint's response shape with a basic capacity/price pick.
+// ---------------------------------------------------------------------------
+
+export const analyzeTrip = ({ client, bookings = [], vehicles = [], passengers = 0, selectedVehicleId = null, trip }) => {
   const missing = [];
   if (!client.name) missing.push({ field: 'Client Name', message: 'Client name is required.' });
   if (!client.contact) missing.push({ field: 'Contact Number', message: 'Contact number is required.' });
@@ -78,12 +86,50 @@ export const analyzeTrip = ({ client, bookings, vehicles, passengers = 0, select
     warnings,
     duplicates: duplicates.map((d) => ({ id: d.id, clientName: d.client.name, status: d.status })),
     recommendedVehicle: best,
+    alternatives: [],
+    reasons: [],
     recommendation,
     ready,
+    model: { source: 'offline', version: 0, trainedAt: null, accuracy: null },
   };
 };
 
-export const fetchRecommendation = async (payload) => {
-  await delay();
-  return analyzeTrip(payload);
+// ---------------------------------------------------------------------------
+// API-backed recommendation (trained model, live fleet + schedule data)
+// ---------------------------------------------------------------------------
+
+// The endpoint loads fleet/schedule data itself; bookings/vehicles are only
+// used by the local fallback, so they are stripped before the request.
+export const fetchRecommendation = ({ bookings, vehicles, ...payload }) =>
+  apiFetch('ai_assistant.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'recommend', ...payload }),
+  });
+
+// Records which recommended vehicle the operator actually picked (raw behavior;
+// the training gate validates/classifies it before it can influence models).
+// Fire-and-forget: a failed log must never break the booking flow.
+export const logChoice = async ({ logId, vehicleId, pickedFrom = 'assistant' }) => {
+  if (!logId || !vehicleId) return { ok: false };
+  try {
+    return await apiFetch('ai_assistant.php', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'log_choice', logId, vehicleId, pickedFrom }),
+    });
+  } catch {
+    return { ok: false };
+  }
+};
+
+// Calls the endpoint and degrades to the local rules engine on server/network
+// failures, so the assistant never dead-ends. Auth/validation errors surface.
+export const fetchRecommendationWithFallback = async (payload) => {
+  try {
+    return await fetchRecommendation(payload);
+  } catch (err) {
+    const status = err.status;
+    if (status && status >= 400 && status < 500) throw err;
+    await delay(250);
+    return analyzeTrip(payload);
+  }
 };

@@ -10,7 +10,7 @@ if ($method === 'GET') {
     require_role($user, ['superadmin', 'admin', 'driver_management_head', 'reservation_officer', 'customer']);
     $rows = $pdo->query(
         'SELECT v.vehicle_id, v.car_code, v.plate_number, v.model, v.year, v.vehicle_type, v.owner_id, v.status,
-                v.daily_rate, v.seats, v.vehicle_image
+                v.daily_rate, v.seats, v.luggage_capacity, v.vehicle_image
          FROM vehicles v
          ORDER BY v.vehicle_id'
     )->fetchAll();
@@ -36,6 +36,7 @@ if ($method === 'GET') {
             'model' => $v['model'],
             'year' => (int)$v['year'],
             'seats' => (int)$v['seats'],
+            'luggageCapacity' => (int)$v['luggage_capacity'],
             'dailyRate' => (float)$v['daily_rate'],
             'status' => vehicle_gui_status($v['status']),
             'photoUrl' => $v['vehicle_image'],
@@ -58,6 +59,7 @@ if ($method === 'POST') {
     $model = trim((string)($data['model'] ?? ''));
     $year = (int)($data['year'] ?? date('Y'));
     $seats = max(1, (int)($data['seats'] ?? 5));
+    $luggage = max(0, min(99, (int)($data['luggageCapacity'] ?? 0)));
     $dailyRate = max(0, (float)($data['dailyRate'] ?? 0));
 
     if ($plate === '' || $model === '') {
@@ -66,7 +68,7 @@ if ($method === 'POST') {
     if (!preg_match('/^[A-Z0-9\s-]{3,}$/', $plate)) {
         json_error('Invalid plate number format.', 422);
     }
-    $allowedTypes = ['AUV', 'SUV', 'L300'];
+    $allowedTypes = ['AUV', 'SEDAN', 'L300'];
     if (!in_array($type, $allowedTypes)) {
         json_error("Invalid vehicle type. Allowed: " . implode(', ', $allowedTypes), 422);
     }
@@ -80,11 +82,15 @@ if ($method === 'POST') {
     $imageUrls = save_vehicle_images($data);
     $primary = $imageUrls[0] ?? null;
 
+    if ($luggage === 0) {
+        $luggage = $type === 'L300' ? 12 : ($type === 'SEDAN' ? 3 : 4);
+    }
+
     $stmt = $pdo->prepare(
-        'INSERT INTO vehicles (plate_number, model, year, vehicle_type, daily_rate, seats, status, vehicle_image, purchase_date)
-         VALUES (?, ?, ?, ?, ?, ?, "available", ?, CURDATE())'
+        'INSERT INTO vehicles (plate_number, model, year, vehicle_type, daily_rate, seats, luggage_capacity, status, vehicle_image, purchase_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, "available", ?, CURDATE())'
     );
-    $stmt->execute([$plate, $model, $year, $type, $dailyRate, $seats, $primary]);
+    $stmt->execute([$plate, $model, $year, $type, $dailyRate, $seats, $luggage, $primary]);
 
     $id = (int)$pdo->lastInsertId();
 
@@ -95,7 +101,7 @@ if ($method === 'POST') {
         }
     }
 
-    $row = $pdo->query("SELECT v.vehicle_id, v.car_code, v.plate_number, v.model, v.year, v.vehicle_type, v.owner_id, v.status, v.daily_rate, v.seats, v.vehicle_image FROM vehicles v WHERE v.vehicle_id = $id")->fetch();
+    $row = $pdo->query("SELECT v.vehicle_id, v.car_code, v.plate_number, v.model, v.year, v.vehicle_type, v.owner_id, v.status, v.daily_rate, v.seats, v.luggage_capacity, v.vehicle_image FROM vehicles v WHERE v.vehicle_id = $id")->fetch();
 
     json_out([
         'id' => $id,
@@ -105,6 +111,7 @@ if ($method === 'POST') {
         'model' => $row['model'],
         'year' => (int)$row['year'],
         'seats' => (int)$row['seats'],
+        'luggageCapacity' => (int)$row['luggage_capacity'],
         'dailyRate' => (float)$row['daily_rate'],
         'status' => 'Available',
         'photoUrl' => $row['vehicle_image'],

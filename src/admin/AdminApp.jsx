@@ -31,6 +31,7 @@ const NAV = [
   { key: 'overview', label: 'Overview', icon: Icon.dashboard },
   { key: 'accounts', label: 'Accounts', icon: Icon.users },
   { key: 'pricing', label: 'Pricing', icon: Icon.tag },
+  { key: 'training', label: 'Training Data', icon: Icon.sparkles },
   { key: 'archive', label: 'Archive', icon: Icon.trash },
 ]
 
@@ -136,6 +137,7 @@ export default function AdminApp({ user, onLogout, onSwitchModule }) {
     overview: ['Super Admin Console', 'FleetOps / All Dashboards'],
     accounts: ['Accounts', 'FleetOps / Create Account'],
     pricing: ['Pricing Dashboard', 'FleetOps / Dynamic Pricing'],
+    training: ['Training Data Gate', 'FleetOps / AI Training Data'],
     archive: ['Archive Dashboard', 'FleetOps / Archived Records'],
   }
 
@@ -190,6 +192,7 @@ export default function AdminApp({ user, onLogout, onSwitchModule }) {
             />
           )}
           {page === 'pricing' && <PricingPage />}
+          {page === 'training' && <TrainingDataPage />}
           {page === 'archive' && (
             <ArchivesPage
               users={archivedUsers}
@@ -1116,6 +1119,268 @@ function PricingPage() {
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+function TrainingDataPage() {
+  const [tab, setTab] = useState('pending')
+  const [rows, setRows] = useState([])
+  const [summary, setSummary] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [msg, setMsg] = useState('')
+  const [reviewing, setReviewing] = useState(null) // { logId, decision }
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(async () => {
+    const [s, list] = await Promise.all([
+      apiFetch('training_gate.php?status=summary'),
+      apiFetch(`training_gate.php?status=${encodeURIComponent(tab)}`),
+    ])
+    setSummary(s)
+    setRows(list)
+  }, [tab])
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError('')
+    load()
+      .catch((e) => { if (!cancelled) setError(e.message) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [load])
+
+  async function submitReview() {
+    if (!reviewing) return
+    setBusy(true)
+    setError('')
+    setMsg('')
+    try {
+      await apiFetch('training_gate.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'review',
+          logId: reviewing.logId,
+          decision: reviewing.decision,
+          note: note.trim(),
+        }),
+      })
+      setMsg(`Log #${reviewing.logId} ${reviewing.decision === 'approve' ? 'approved — label eligible' : 'rejected'}.`)
+      setReviewing(null)
+      setNote('')
+      await load()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const TABS = [
+    ['pending', 'Pending review'],
+    ['eligible', 'Eligible'],
+    ['rejected', 'Rejected'],
+    ['analysis_only', 'Analysis only'],
+    ['all', 'All'],
+  ]
+  const CONVERTED = ['pending', 'pricing_approved', 'confirmed', 'on_trip', 'completed']
+  const canApprove = (r) => r.reservationStatus && CONVERTED.includes(r.reservationStatus)
+  const reviewable = (r) => r.labelStatus === 'pending' || r.labelStatus === 'eligible'
+
+  const stats = summary
+    ? [
+        { label: 'Raw logs', value: summary.total },
+        { label: 'Pending review', value: summary.pending },
+        { label: 'Eligible', value: summary.byLabelStatus.eligible || 0 },
+        { label: 'Rejected', value: summary.byLabelStatus.rejected || 0 },
+        { label: 'Analysis only', value: summary.byLabelStatus.analysis_only || 0 },
+        { label: 'Interactions (Lane B)', value: summary.byInteraction.eligible || 0 },
+      ]
+    : []
+
+  return (
+    <div>
+      <div className="panel">
+        <div className="panel-head">
+          <div>
+            <h3>Training Data Gate</h3>
+            <div className="meta">
+              Raw AI-assistant behavior is never trusted directly — rows are validated and classified by
+              training/gate.py, then reviewed here before they can influence the ranker. Approval requires a
+              real, live conversion; rejected rows never train, but real bookings still count for CF/CB (Lane B).
+            </div>
+          </div>
+        </div>
+
+        {stats.length > 0 && (
+          <div className="stats" style={{ padding: '0 18px 16px' }}>
+            {stats.map((s) => (
+              <div className="stat" key={s.label}>
+                <div className="label">{s.label}</div>
+                <div className="value">{s.value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {error && <div className="error-msg" style={{ marginBottom: 16 }}>{error}</div>}
+      {msg && <div style={{ marginBottom: 16, color: 'var(--green)', fontSize: 13 }}>{msg}</div>}
+
+      <div className="panel">
+        <div className="panel-head" style={{ borderBottom: '1px solid var(--border)', background: '#fbfdff' }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {TABS.map(([key, label]) => (
+              <button
+                key={key}
+                className={`btn sm${tab === key ? ' btn-primary' : ''}`}
+                onClick={() => { setTab(key); setReviewing(null) }}
+              >
+                {label}
+                {summary && key === 'pending' && summary.pending > 0 ? ` (${summary.pending})` : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {reviewing && (
+          <div
+            style={{
+              display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
+              padding: '12px 18px', borderBottom: '1px solid var(--border)', background: '#f4f9ff',
+            }}
+          >
+            <strong style={{ fontSize: 13 }}>
+              {reviewing.decision === 'approve' ? 'Approve' : 'Reject'} log #{reviewing.logId}
+            </strong>
+            <input
+              style={{ flex: 1, minWidth: 220 }}
+              placeholder="Review note (optional, stored on the row + audit log)"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') submitReview() }}
+            />
+            <button className="btn btn-primary sm" disabled={busy} onClick={submitReview}>
+              {busy ? 'Saving...' : 'Confirm'}
+            </button>
+            <button className="btn sm" disabled={busy} onClick={() => { setReviewing(null); setNote('') }}>
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="empty" style={{ padding: 24 }}>
+            <div className="help">Loading training data...</div>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table className="table-dense">
+              <thead>
+                <tr>
+                  <th>Log #</th>
+                  <th>Created</th>
+                  <th>Client</th>
+                  <th>Request</th>
+                  <th>Shown</th>
+                  <th>Chosen</th>
+                  <th>Conversion</th>
+                  <th>Label / Class</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.logId}>
+                    <td className="mono" style={{ fontSize: 12 }}>{r.logId}</td>
+                    <td className="cell-sub">{r.createdAt?.slice(0, 16).replace('T', ' ')}</td>
+                    <td className="cell-sub">{r.email || '—'}</td>
+                    <td className="cell-sub">
+                      {r.passengers} pax · {r.days}d
+                      {r.budget != null && ` · ₱${Math.round(r.budget)}/day`}
+                      {r.luggageSize && ` · ${r.luggageSize}`}
+                      {r.preferredType && (
+                        <span className="vehicle-chip" style={{ marginLeft: 6 }}>{r.preferredType}</span>
+                      )}
+                    </td>
+                    <td className="cell-sub">{r.shownIds.length} veh</td>
+                    <td>
+                      <div style={{ fontSize: 12.5, fontWeight: 700 }}>{r.chosenLabel || '—'}</div>
+                      {r.chosenRank != null && (
+                        <div className="cell-sub">rank {r.chosenRank} · {r.pickedFrom || 'assistant'}</div>
+                      )}
+                    </td>
+                    <td className="cell-sub">
+                      {r.reservationId ? (
+                        <>
+                          <div>{r.tripCode || `res #${r.reservationId}`}</div>
+                          <span className={`status ${CONVERTED.includes(r.reservationStatus) ? 'available' : 'unavailable'}`}>
+                            {r.reservationStatus}
+                          </span>
+                        </>
+                      ) : 'unconverted'}
+                    </td>
+                    <td>
+                      <span
+                        className={`status ${
+                          r.labelStatus === 'eligible' ? 'available'
+                          : r.labelStatus === 'rejected' ? 'unavailable'
+                          : r.labelStatus === 'pending' ? 'neutral' : 'neutral'
+                        }`}
+                      >
+                        {r.labelStatus}
+                      </span>
+                      <div className="cell-sub">{r.dataClass || '—'}</div>
+                      {r.reasons.length > 0 && (
+                        <div className="cell-sub" style={{ maxWidth: 220 }} title={r.reasons.join('; ')}>
+                          {r.reasons.slice(0, 2).join('; ')}{r.reasons.length > 2 ? '…' : ''}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div className="actions-row">
+                        {reviewable(r) && (
+                          <>
+                            <button
+                              className="btn btn-primary sm"
+                              disabled={Boolean(reviewing) || !canApprove(r)}
+                              title={canApprove(r) ? 'Approve as eligible training label' : 'Approval requires a live, converted booking'}
+                              onClick={() => { setReviewing({ logId: r.logId, decision: 'approve' }); setNote('') }}
+                            >
+                              <Icon.check width={13} height={13} style={{ marginRight: 4, verticalAlign: -2 }} /> Approve
+                            </button>
+                            <button
+                              className="btn sm"
+                              disabled={Boolean(reviewing)}
+                              title='Reject as training label (real bookings still count for CF/CB)'
+                              onClick={() => { setReviewing({ logId: r.logId, decision: 'reject' }); setNote('') }}
+                            >
+                              <Icon.x width={13} height={13} style={{ marginRight: 4, verticalAlign: -2 }} /> Reject
+                            </button>
+                          </>
+                        )}
+                        {!reviewable(r) && r.reviewedAt && (
+                          <span className="cell-sub">reviewed {r.reviewedAt?.slice(0, 10)}</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="cell-sub" style={{ textAlign: 'center', padding: 24 }}>
+                      No rows with status “{tab}”.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

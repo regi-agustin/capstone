@@ -362,7 +362,7 @@ if ($method === 'POST') {
         if ($carCode !== '' && !preg_match('/^[A-Z0-9-]{2,20}$/', $carCode)) {
             json_error('Car code may only contain letters, numbers and hyphens (max 20 characters).', 422);
         }
-        $allowedTypes = ['AUV', 'SUV', 'L300'];
+        $allowedTypes = ['AUV', 'SEDAN', 'L300'];
         if (!in_array($type, $allowedTypes, true)) {
             json_error('Invalid vehicle type. Allowed: ' . implode(', ', $allowedTypes), 422);
         }

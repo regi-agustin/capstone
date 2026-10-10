@@ -261,7 +261,7 @@ function payroll_car_rate_payload(array $data): array
     if (!preg_match('/^[A-Z0-9\s-]{3,}$/', $plate)) json_error('Invalid plate number format.', 422);
 
     // Mirrors api/vehicles.php so both entries produce identical fleet records.
-    $allowedTypes = ['AUV', 'SUV', 'L300'];
+    $allowedTypes = ['AUV', 'SEDAN', 'L300'];
     if (!in_array($type, $allowedTypes, true)) {
         json_error('Invalid vehicle type. Allowed: ' . implode(', ', $allowedTypes), 422);
     }

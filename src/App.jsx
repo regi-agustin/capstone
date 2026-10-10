@@ -115,7 +115,26 @@ export default function App() {
       .finally(() => setRestoring(false))
   }, [])
 
+  // A profile edit anywhere (My Profile, booking wizard) keeps the session
+  // name in sync so the name beside Log out updates immediately.
+  useEffect(() => {
+    const onUserUpdated = (e) => {
+      const fullname = e.detail?.fullname
+      if (!fullname) return
+      setSession((prev) => (prev ? { ...prev, name: fullname } : prev))
+    }
+    window.addEventListener('fleetops:user-updated', onUserUpdated)
+    return () => window.removeEventListener('fleetops:user-updated', onUserUpdated)
+  }, [])
+
   async function handleLogin(user) {
+    // Customers always land on the Dashboard after login; the browser URL
+    // persists across logout, so reset it before the portal router mounts.
+    // Session restore (refresh) does not pass through here, so refreshing
+    // while on any page keeps you on that page.
+    if (user.role === 'customer') {
+      window.history.replaceState(null, '', '/')
+    }
     setSession({ role: user.role, name: user.fullname })
     setModule(null)
   }

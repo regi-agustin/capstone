@@ -19,7 +19,7 @@ export default function AssignModal({ driver, vehicles, assignments, drivers, on
         assignments.some((a) => a.vehicleId === v.id && a.driverId === driver.id))
   )
 
-  const suggestedType = passengers >= 8 ? 'L300' : passengers >= 5 ? 'AUV' : 'SUV'
+  const suggestedType = passengers >= 8 ? 'L300' : passengers >= 5 ? 'AUV' : 'SEDAN'
 
   function confirm() {
     if (!clientName.trim() || !clientContact.trim()) return setError('Client credentials are required.')

@@ -1,0 +1,5 @@
+start_date,end_date,passengers,vehicle,client_name,client_email,client_contact,luggage,total_amount,preferred_type,rating,rating_comment,status,destination
+2026-07-05,2026-07-08,4,HD-AUV-003,Juan Dela Cruz,juan.cruz@example.com,09171234567,small,6000,AUV,5,Smooth trip,completed,Tagaytay
+2026-07-12,2026-07-14,4,HD-SED-004,Ana Reyes,ana.reyes@example.com,09181234568,large,7500,SEDAN,4,Clean vehicle,completed,Baguio
+2026-08-01,2026-08-03,10,HD-L300-008,Acme Corp Logistics,ops@acmecorp.example,09191234569,xlarge,9000,L300,3,Driver was late,completed,Subic
+2026-08-20,2026-08-21,2,ABC 1234,Maricel Santos,maricel@example.com,09201234570,small,2500,,5,Will book again,completed,Paranaque

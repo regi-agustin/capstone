@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FiTruck, FiPlus } from 'react-icons/fi'
+import { FiTruck } from 'react-icons/fi'
+import { Sparkles } from 'lucide-react'
 import { fetchVehicles, fetchMyBookings, fetchProfile, formatPeso } from '../services/customerService.js'
 import SearchBar from '../../ro/components/SearchBar.jsx'
 import StatusBadge from '../../ro/components/StatusBadge.jsx'
 import VehiclePhotos from '../../ro/components/VehiclePhotos.jsx'
 import NewBookingModal from '../components/NewBookingModal.jsx'
+import FindIdealVehicleModal from '../components/FindIdealVehicleModal.jsx'
 import { Icon } from '../../components/Icons.jsx'
 
 export default function BrowseVehicles() {
@@ -17,6 +19,7 @@ export default function BrowseVehicles() {
   const [priceRange, setPriceRange] = useState(6000)
   const [profile, setProfile] = useState(null)
   const [bookingOpen, setBookingOpen] = useState(false)
+  const [idealOpen, setIdealOpen] = useState(false)
   const [initialVehicleId, setInitialVehicleId] = useState(null)
   const [banner, setBanner] = useState('')
 
@@ -65,9 +68,6 @@ export default function BrowseVehicles() {
           <h1>Browse Vehicles</h1>
           <p className="page-head__sub">Find the perfect vehicle for your trip.</p>
         </div>
-        <button className="btn btn--primary" onClick={() => openBooking(null)}>
-          <FiPlus size={16} /> Book a Vehicle
-        </button>
       </div>
 
       {error && <div className="error-banner" style={{ marginBottom: 16 }}>{error}</div>}
@@ -127,6 +127,19 @@ export default function BrowseVehicles() {
                   <span className="muted" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>₱{priceRange.toLocaleString()}</span>
                 </div>
               </div>
+
+              <button
+                type="button"
+                className="btn btn--primary"
+                style={{ width: '100%' }}
+                onClick={() => {
+                  setIdealOpen(true)
+                  setError('')
+                  setBanner('')
+                }}
+              >
+                <Sparkles size={16} /> Find My Ideal Vehicle
+              </button>
 
             </div>
           </section>
@@ -196,6 +209,15 @@ export default function BrowseVehicles() {
         bookings={bookings}
         profile={profile}
         initialVehicleId={initialVehicleId}
+        notify={notify}
+      />
+
+      <FindIdealVehicleModal
+        open={idealOpen}
+        onClose={() => setIdealOpen(false)}
+        vehicles={vehicles}
+        bookings={bookings}
+        profile={profile}
         notify={notify}
       />
 

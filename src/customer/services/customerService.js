@@ -46,6 +46,12 @@ export const submitFeedback = (payload) =>
 
 export const fetchProfile = () => apiFetch('profile.php')
 
+export const updateProfile = (payload) =>
+  apiFetch('profile.php', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'update_profile', ...payload }),
+  })
+
 export const fetchSecurity = () => apiFetch('security.php')
 
 export function formatDate(iso) {

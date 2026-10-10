@@ -59,6 +59,7 @@ if ($method === 'POST') {
 
     $stmt = $pdo->prepare('INSERT INTO feedback (user_id, reservation_id, rating, comment) VALUES (?, ?, ?, ?)');
     $stmt->execute([$user['user_id'], $reservationId > 0 ? $reservationId : null, $rating, $comment]);
+    touch_retrain_flag(); // new explicit signal for the CF trainer
 
     json_out(['id' => (int)$pdo->lastInsertId(), 'rating' => $rating], 201);
 }

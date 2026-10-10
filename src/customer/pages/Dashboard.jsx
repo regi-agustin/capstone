@@ -39,7 +39,7 @@ export default function Dashboard({ user }) {
   const active = bookings.filter((b) => b.status === 'On trip' || b.status === 'Confirmed').length
   const completed = bookings.filter((b) => b.status === 'Completed').length
   const latest = bookings[0] || null
-  const recommended = vehicles.find((v) => v.status === 'Available' && v.type === 'SUV') || vehicles[0] || null
+  const recommended = vehicles.find((v) => v.status === 'Available' && v.type === 'SEDAN') || vehicles[0] || null
 
   const firstName = (user?.name || 'there').split(' ')[0]
 

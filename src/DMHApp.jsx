@@ -60,11 +60,11 @@ export default function DMHApp({ user, onLogout, onSwitchToAdmin }) {
     )
   }
 
-  function addVehicle({ plate, type, model, year, seats, dailyRate, images }) {
+  function addVehicle({ plate, type, model, year, seats, luggageCapacity, dailyRate, images }) {
     return run(() =>
       apiFetch('vehicles.php', {
         method: 'POST',
-        body: JSON.stringify({ plate, type, model, year: Number(year), seats: Number(seats), dailyRate: Number(dailyRate), images: Array.isArray(images) ? images : undefined })
+        body: JSON.stringify({ plate, type, model, year: Number(year), seats: Number(seats), luggageCapacity: Number(luggageCapacity), dailyRate: Number(dailyRate), images: Array.isArray(images) ? images : undefined })
       })
     )
   }

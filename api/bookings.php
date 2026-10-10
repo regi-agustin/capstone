@@ -173,9 +173,15 @@ if ($method === 'POST') {
         $destination = trim((string)($trip['destination'] ?? ''));
         $pickupDate = trim((string)($trip['pickupDate'] ?? ''));
         $returnDate = trim((string)($trip['returnDate'] ?? ''));
+        $pickupTime = trim((string)($trip['pickupTime'] ?? ''));
+        $returnTime = trim((string)($trip['returnTime'] ?? ''));
+        $passengers = isset($trip['passengers']) ? (int)$trip['passengers'] : 0;
 
         if ($clientName === '' || $contact === '' || $email === '') {
             json_error('Client name, contact, and email are required.', 422);
+        }
+        if (!$isCustomer && $company === '') {
+            json_error('Company / organization is required.', 422);
         }
         if ($destination === '' || $pickupDate === '' || $returnDate === '') {
             json_error('Destination and trip dates are required.', 422);
@@ -183,21 +189,39 @@ if ($method === 'POST') {
         if ($returnDate < $pickupDate) {
             json_error('Return date cannot be earlier than pickup date.', 422);
         }
-        $earlyPickupTime = trim((string)(($trip['pickupTime'] ?? '')));
-        $earlyReturnTime = trim((string)(($trip['returnTime'] ?? '')));
-        if ($returnDate === $pickupDate && $earlyPickupTime !== '' && $earlyReturnTime !== '' &&
-            strcmp($earlyReturnTime, $earlyPickupTime) < 0) {
+        if ($pickupTime === '' || $returnTime === '') {
+            json_error('Pickup and return times are required.', 422);
+        }
+        if ($returnDate === $pickupDate && strcmp($returnTime, $pickupTime) < 0) {
             json_error('Drop-off time cannot be earlier than pickup time on the same day.', 422);
         }
+        if ($passengers < 1 || $passengers > 50) {
+            json_error('Passengers must be between 1 and 50.', 422);
+        }
 
-        if ($vehicleId > 0) {
-            $stmt = $pdo->prepare('SELECT vehicle_id FROM vehicles WHERE vehicle_id = ?');
-            $stmt->execute([$vehicleId]);
-            if (!$stmt->fetch()) {
-                json_error('Selected vehicle does not exist.', 422);
-            }
-        } else {
-            $vehicleId = null;
+        if ($vehicleId <= 0) {
+            json_error('Vehicle selection is required.', 422);
+        }
+        $stmt = $pdo->prepare('SELECT vehicle_id FROM vehicles WHERE vehicle_id = ?');
+        $stmt->execute([$vehicleId]);
+        if (!$stmt->fetch()) {
+            json_error('Selected vehicle does not exist.', 422);
+        }
+
+        // Availability: same overlap rule the AI uses — a pending or confirmed
+        // booking on these dates makes the vehicle unbookable (real-time re-check
+        // so a stale recommendation list can never double-book).
+        $overlapStmt = $pdo->prepare(
+            'SELECT reservation_id FROM reservations
+              WHERE vehicle_id = ?
+                AND status NOT IN ("denied", "cancelled")
+                AND start_date < ?
+                AND end_date > ?
+              LIMIT 1'
+        );
+        $overlapStmt->execute([$vehicleId, $returnDate, $pickupDate]);
+        if ($overlapStmt->fetch()) {
+            json_error('This vehicle is no longer available for the selected dates (it has a pending or confirmed booking). Please choose another vehicle.', 409);
         }
 
         $companyName = $company !== '' ? $company : $clientName;
@@ -231,11 +255,8 @@ if ($method === 'POST') {
             $upd->execute([$isCustomer ? $user['user_id'] : null, $clientName, $contact, $email, $clientId]);
         }
 
-        $passengers = isset($trip['passengers']) ? max(0, (int)$trip['passengers']) : 0;
         $needDriver = trim((string)($trip['needDriver'] ?? ''));
         $driverLicenseImage = trim((string)($trip['driverLicenseImage'] ?? ''));
-        $pickupTime = trim((string)($trip['pickupTime'] ?? ''));
-        $returnTime = trim((string)($trip['returnTime'] ?? ''));
         $specialRequests = trim((string)($trip['specialRequests'] ?? ''));
 
         $stmt = $pdo->prepare(
@@ -246,9 +267,9 @@ if ($method === 'POST') {
         );
         $stmt->execute([
             $clientId, $vehicleId, $pickupDate, $returnDate,
-            $pickupTime !== '' ? $pickupTime . ':00' : null,
-            $returnTime !== '' ? $returnTime . ':00' : null,
-            $destination, $passengers > 0 ? $passengers : null,
+            $pickupTime . ':00',
+            $returnTime . ':00',
+            $destination, $passengers,
             $needDriver !== '' ? $needDriver : null,
             $driverLicenseImage !== '' ? $driverLicenseImage : null,
             $specialRequests !== '' ? $specialRequests : null,
@@ -258,6 +279,13 @@ if ($method === 'POST') {
 
         $pdo->prepare('UPDATE reservations SET trip_code = CONCAT("BK-", YEAR(start_date), "-", LPAD(?, 4, "0")) WHERE reservation_id = ?')
             ->execute([$reservationId, $reservationId]);
+
+        // Connect the AI-assistant exposure that led here (raw until gated).
+        link_recommendation_log(
+            $pdo, $reservationId, (int)($data['recommendationLogId'] ?? 0),
+            $vehicleId, (int)$clientId, $email, $pickupDate, $returnDate, $passengers
+        );
+        touch_retrain_flag();
 
         json_out(booking_shape(find_booking($pdo, $reservationId)), 201);
     }
@@ -333,6 +361,7 @@ if ($method === 'POST') {
 
         notify_booking_owner($pdo, $res['client_id'], 'reservation_confirmed', 'Reservation Confirmed',
             'Your booking ' . res_booking_id($res) . ' has been confirmed. A driver will be assigned for your trip.');
+        touch_retrain_flag();
 
         json_out(booking_shape(find_booking($pdo, $id)));
     }
@@ -376,6 +405,7 @@ if ($method === 'POST') {
             'Your booking ' . res_booking_id($res) . ' has been reviewed and approved at ' . number_format($total, 2) .
             ' (rental ' . number_format($rentalFee, 2) . ' + charges ' . number_format($additionalCharges, 2) .
             '). Awaiting driver assignment.');
+        touch_retrain_flag();
 
         json_out(booking_shape(find_booking($pdo, $id)));
     }
@@ -405,6 +435,7 @@ if ($method === 'POST') {
 
         notify_booking_owner($pdo, $res['client_id'], 'system_alert', 'Reservation Denied',
             'Your booking ' . res_booking_id($res) . ' was not approved. Reason: ' . $reason);
+        touch_retrain_flag();
 
         json_out(booking_shape(find_booking($pdo, $id)));
     }
@@ -463,6 +494,7 @@ if ($method === 'POST') {
         }
 
         log_action($pdo, (int)$user['user_id'], 'CANCEL_BOOKING', 'Cancelled reservation ' . $res['reservation_id'] . ' (' . $res['status'] . ')');
+        touch_retrain_flag(); // conversion invalidated -> gate must reclassify
         json_out(booking_shape(find_booking($pdo, $id)));
     }
 

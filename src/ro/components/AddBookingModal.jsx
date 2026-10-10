@@ -16,14 +16,20 @@ const validate = (f) => {
   else if (!/^[0-9+\-()\s]{7,}$/.test(f.contact.trim())) errs.contact = 'Please enter a valid contact number.';
   if (!f.email.trim()) errs.email = 'Email address is required.';
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) errs.email = 'Please enter a valid email address.';
+  if (!f.company.trim()) errs.company = 'Company / organization is required.';
   if (!f.destination.trim()) errs.destination = 'Destination is required.';
   if (!f.pickupDate) errs.pickupDate = 'Pickup date is required.';
+  if (!f.pickupTime) errs.pickupTime = 'Pickup time is required.';
   if (!f.returnDate) errs.returnDate = 'Return date is required.';
+  if (!f.returnTime) errs.returnTime = 'Return time is required.';
   if (f.pickupDate && f.returnDate && f.returnDate < f.pickupDate)
     errs.returnDate = 'Return date cannot be earlier than pickup date.';
   if (f.pickupDate && f.returnDate && f.returnDate === f.pickupDate &&
       f.pickupTime && f.returnTime && f.returnTime < f.pickupTime)
     errs.returnTime = 'Drop-off time cannot be earlier than pickup time on the same day.';
+  const pax = Number(f.passengers);
+  if (!f.passengers || !Number.isInteger(pax) || pax < 1 || pax > 50)
+    errs.passengers = 'Number of passengers must be between 1 and 50.';
   if (!f.vehicleId) errs.vehicleId = 'Please select a vehicle.';
   return errs;
 };
@@ -35,9 +41,9 @@ const EMPTY_FORM = {
   company: '',
   destination: '',
   pickupDate: '',
-  pickupTime: '',
+  pickupTime: '12:00',
   returnDate: '',
-  returnTime: '',
+  returnTime: '18:00',
   passengers: '',
   specialRequests: '',
   vehicleId: '',
@@ -71,6 +77,7 @@ export default function AddBookingModal({ open, onClose }) {
   const [vehicleListOpen, setVehicleListOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
+  const [recommendationLogId, setRecommendationLogId] = useState(null);
 
   const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
 
@@ -139,11 +146,12 @@ export default function AddBookingModal({ open, onClose }) {
         email: form.email.trim(),
         company: form.company.trim(),
       };
-      const id = await createBooking({ client, trip, vehicle: selectedVehicle, additionalCharges: Number(form.additionalCharges) || 0 });
+      const id = await createBooking({ client, trip, vehicle: selectedVehicle, additionalCharges: Number(form.additionalCharges) || 0, recommendationLogId });
       notify('success', `Booking ${id} has been successfully created.`);
       onClose();
       setForm(EMPTY_FORM);
       setErrors({});
+      setRecommendationLogId(null);
       setVehicleSearch('');
     } catch (error) {
       notify('error', error.message || 'Unable to create booking.');
@@ -176,23 +184,24 @@ export default function AddBookingModal({ open, onClose }) {
           <Section step={1} icon={User} title="Client Information" sub="Who is the booking for?">
             <div className="form-grid">
               <div className="form-group">
-                <label className="form-label" htmlFor="add-clientName">Client Name</label>
+                <label className="form-label" htmlFor="add-clientName">Client Name <span className="req">*</span></label>
                 <input id="add-clientName" className={`form-input${errors.clientName ? ' is-invalid' : ''}`} type="text" placeholder="Enter client name" value={form.clientName} onChange={set('clientName')} />
                 {errors.clientName && <div className="form-error">{errors.clientName}</div>}
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="add-contact">Contact Number</label>
+                <label className="form-label" htmlFor="add-contact">Contact Number <span className="req">*</span></label>
                 <input id="add-contact" className={`form-input${errors.contact ? ' is-invalid' : ''}`} type="tel" placeholder="Enter contact number" value={form.contact} onChange={set('contact')} />
                 {errors.contact && <div className="form-error">{errors.contact}</div>}
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="add-email">Email Address</label>
+                <label className="form-label" htmlFor="add-email">Email Address <span className="req">*</span></label>
                 <input id="add-email" className={`form-input${errors.email ? ' is-invalid' : ''}`} type="email" placeholder="Enter email address" value={form.email} onChange={set('email')} />
                 {errors.email && <div className="form-error">{errors.email}</div>}
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="add-company">Company / Organization <span className="req" style={{ color: 'var(--text-faint)' }}>(optional)</span></label>
-                <input id="add-company" className="form-input" type="text" placeholder="Enter company or organization" value={form.company} onChange={set('company')} />
+                <label className="form-label" htmlFor="add-company">Company / Organization <span className="req">*</span></label>
+                <input id="add-company" className={`form-input${errors.company ? ' is-invalid' : ''}`} type="text" placeholder="Enter company or organization" value={form.company} onChange={set('company')} />
+                {errors.company && <div className="form-error">{errors.company}</div>}
               </div>
             </div>
             <div className="form-group" style={{ marginTop: 14 }}>
@@ -204,7 +213,7 @@ export default function AddBookingModal({ open, onClose }) {
           <Section step={2} icon={MapPin} title="Trip Details" sub="Where and when will the client travel?">
             <div className="form-grid">
               <div className="form-group full">
-                <label className="form-label" htmlFor="add-destination">Destination</label>
+                <label className="form-label" htmlFor="add-destination">Destination <span className="req">*</span></label>
                 <div className={`form-input input-with-icon${errors.destination ? ' is-invalid' : ''}`}>
                   <MapPin size={15} className="input-with-icon__icon" />
                   <input
@@ -227,20 +236,27 @@ export default function AddBookingModal({ open, onClose }) {
                 </div>
                 <div className="trip-point__row">
                   <div className="form-group">
-                    <label className="form-label" htmlFor="add-pickupDate">Date</label>
+                    <label className="form-label" htmlFor="add-pickupDate">Date <span className="req">*</span></label>
                     <DatePopupField
                       value={form.pickupDate}
                       invalid={Boolean(errors.pickupDate)}
-                      onSelect={(v) => setForm((p) => ({ ...p, pickupDate: v }))}
+                      onSelect={(v) =>
+                        setForm((p) => ({
+                          ...p,
+                          pickupDate: v,
+                          returnDate: p.returnDate && p.returnDate < v ? v : p.returnDate,
+                        }))
+                      }
                     />
                     {errors.pickupDate && <div className="form-error">{errors.pickupDate}</div>}
                   </div>
                   <div className="form-group">
-                    <label className="form-label" htmlFor="add-pickupTime">Time</label>
+                    <label className="form-label" htmlFor="add-pickupTime">Time <span className="req">*</span></label>
                     <TimePopupField
                       value={form.pickupTime}
                       onSelect={(v) => setForm((p) => ({ ...p, pickupTime: v }))}
                     />
+                    {errors.pickupTime && <div className="form-error">{errors.pickupTime}</div>}
                     <div className="form-hint">Defaults to 12:00 PM</div>
                   </div>
                 </div>
@@ -250,20 +266,20 @@ export default function AddBookingModal({ open, onClose }) {
                 <div className="trip-point__head">
                   <span className="trip-point__badge trip-point__badge--return"><MapPin size={14} /></span>
                   <strong>Return</strong>
-                  <span className="form-hint" style={{ marginLeft: 'auto', fontSize: 11 }}>optional</span>
                 </div>
                 <div className="trip-point__row">
                   <div className="form-group">
-                    <label className="form-label" htmlFor="add-returnDate">Date</label>
+                    <label className="form-label" htmlFor="add-returnDate">Date <span className="req">*</span></label>
                     <DatePopupField
                       value={form.returnDate}
+                      minDate={form.pickupDate || undefined}
                       invalid={Boolean(errors.returnDate)}
                       onSelect={(v) => setForm((p) => ({ ...p, returnDate: v }))}
                     />
                     {errors.returnDate && <div className="form-error">{errors.returnDate}</div>}
                   </div>
                   <div className="form-group">
-                    <label className="form-label" htmlFor="add-returnTime">Time</label>
+                    <label className="form-label" htmlFor="add-returnTime">Time <span className="req">*</span></label>
                     <TimePopupField
                       value={form.returnTime}
                       onSelect={(v) => setForm((p) => ({ ...p, returnTime: v }))}
@@ -277,8 +293,9 @@ export default function AddBookingModal({ open, onClose }) {
 
             <div className="form-grid" style={{ marginTop: 14 }}>
               <div className="form-group">
-                <label className="form-label" htmlFor="add-passengers">Number of Passengers <span className="req" style={{ color: 'var(--text-faint)' }}>(optional)</span></label>
-                <input id="add-passengers" className="form-input" type="number" min="1" max="50" placeholder="e.g. 8" value={form.passengers} onChange={set('passengers')} />
+                <label className="form-label" htmlFor="add-passengers">Number of Passengers <span className="req">*</span></label>
+                <input id="add-passengers" className={`form-input${errors.passengers ? ' is-invalid' : ''}`} type="number" min="1" max="50" placeholder="e.g. 8" value={form.passengers} onChange={set('passengers')} />
+                {errors.passengers && <div className="form-error">{errors.passengers}</div>}
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="add-duration">Trip Duration</label>
@@ -460,8 +477,9 @@ export default function AddBookingModal({ open, onClose }) {
         bookings={bookings}
         vehicles={vehicles}
         notify={notify}
-        onPickVehicle={(id) => {
+        onPickVehicle={(id, logId) => {
           setForm((p) => ({ ...p, vehicleId: id }));
+          setRecommendationLogId(logId ?? null);
         }}
       />
     </>

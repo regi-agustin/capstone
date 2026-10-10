@@ -538,6 +538,47 @@ svg { flex-shrink: 0; }
 }
 .picker-popup select:focus-visible { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
 
+/* Year button in the date header — opens the decade year panel. Years are
+   generated per decade on the fly; there is no fixed year range. */
+.picker-year-btn {
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 8px;
+  cursor: pointer;
+  outline: none;
+}
+.picker-year-btn:hover { border-color: var(--primary); color: var(--primary); }
+.picker-year-btn:focus-visible { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.picker-year-btn--decade { min-width: 104px; }
+
+.picker-years {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  max-height: 216px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.picker-year {
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.picker-year:hover { background: var(--primary-soft); color: var(--primary-dark); }
+.picker-year.is-selected { background: var(--primary); color: #fff; font-weight: 700; }
+.picker-year.is-selected:hover { background: var(--primary); color: #fff; }
+.picker-years .picker-year:disabled { opacity: 0.38; cursor: default; }
+.picker-years .picker-year:disabled:hover { background: transparent; color: var(--ink); }
+
 .picker-nav:disabled { opacity: 0.35; cursor: default; }
 
 .picker-days .picker-day:disabled {
@@ -1224,4 +1265,114 @@ svg { flex-shrink: 0; }
 @media (max-width: 380px) {
 .ro-app .page-head h1 { font-size: 18px; }
 .ro-app .picker-popup--time { width: 290px; }
+}
+/* ---------------- Find My Ideal Vehicle wizard ---------------- */
+
+/* Wide desktop: ~1040px, centered (backdrop padding keeps edge margins).
+   Media-scoped so the <=560px full-screen modal rule stays in charge on mobile. */
+@media (min-width: 561px) {
+  .ro-app .modal.ideal-wizard { width: 100%; max-width: 1040px; }
+}
+
+/* Breathing room inside the modal (header + scrollable body + fixed footer) */
+.ro-app .modal.ideal-wizard .modal__header { padding: 18px 32px; }
+.ro-app .modal.ideal-wizard .modal__body { padding: 26px 32px; overflow-x: hidden; }
+.ro-app .modal.ideal-wizard .modal__footer { padding: 18px 32px; gap: 12px; }
+
+/* No field, label, or control may push content past the modal edges */
+.ro-app .modal.ideal-wizard .form-grid > *,
+.ro-app .modal.ideal-wizard .trip-point,
+.ro-app .modal.ideal-wizard .trip-point__row > *,
+.ro-app .modal.ideal-wizard .form-group,
+.ro-app .modal.ideal-wizard .picker-field-wrap,
+.ro-app .modal.ideal-wizard .ai-summary { min-width: 0; }
+.ro-app .modal.ideal-wizard .form-input,
+.ro-app .modal.ideal-wizard .form-select,
+.ro-app .modal.ideal-wizard .picker-field { max-width: 100%; }
+
+/* Form rhythm */
+.ro-app .modal.ideal-wizard .form-section { padding: 20px 22px; }
+.ro-app .modal.ideal-wizard .form-grid { gap: 18px 20px; }
+.ro-app .modal.ideal-wizard .trip-point__row { gap: 14px; }
+.ro-app .modal.ideal-wizard .vehicle-option__meta { flex-wrap: wrap; }
+.ro-app .modal.ideal-wizard .ai-banner { flex-wrap: wrap; min-width: 0; }
+
+/* Step progress indicator: 1 Trip Details -> 2 AI Recommendations -> 3 Customer Details */
+.ro-app .ideal-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ro-app .ideal-steps__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.ro-app .ideal-steps__item:last-child { flex: 0 0 auto; }
+.ro-app .ideal-steps .step-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border-strong);
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.ro-app .ideal-steps__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ro-app .ideal-steps__item.is-active .step-num {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+.ro-app .ideal-steps__item.is-active .ideal-steps__label { color: var(--ink); font-weight: 700; }
+.ro-app .ideal-steps__item.is-done .step-num {
+  background: var(--success);
+  color: #fff;
+  border-color: var(--success);
+}
+.ro-app .ideal-steps__item.is-done .ideal-steps__label { color: var(--ink); }
+.ro-app .ideal-steps__line {
+  flex: 1 1 auto;
+  min-width: 24px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--border);
+  margin-left: 4px;
+}
+.ro-app .ideal-steps__line.is-done { background: var(--success); }
+
+/* Tablet / smaller desktop: trim horizontal padding */
+@media (max-width: 900px) {
+  .ro-app .modal.ideal-wizard .modal__header,
+  .ro-app .modal.ideal-wizard .modal__body,
+  .ro-app .modal.ideal-wizard .modal__footer { padding-left: 22px; padding-right: 22px; }
+}
+
+/* Mobile: full-screen modal, compact steps, slim padding (fields already stack) */
+@media (max-width: 560px) {
+  .ro-app .modal.ideal-wizard .modal__header { padding: 16px; }
+  .ro-app .modal.ideal-wizard .modal__body { padding: 18px 16px; }
+  .ro-app .modal.ideal-wizard .modal__footer { padding: 14px 16px; gap: 8px; }
+  .ro-app .ideal-steps { gap: 8px; }
+  .ro-app .ideal-steps .step-num { width: 30px; height: 30px; font-size: 13px; }
+  .ro-app .ideal-steps__label { display: none; }
+  .ro-app .ideal-steps__line { min-width: 14px; }
 }

@@ -1,0 +1,597 @@
+{
+  "generated_at": "2026-10-02T03:57:01+00:00",
+  "counts": {
+    "logs_total": 1,
+    "converted_reservations": 29,
+    "log_linked_reservations": 0,
+    "examples": 29,
+    "log_examples": 0,
+    "reservation_examples": 29,
+    "booking_pairs": 27,
+    "ratings": 23,
+    "by_label_status": {
+      "analysis_only": 1
+    },
+    "by_data_class": {
+      "unconverted": 1
+    },
+    "by_interaction_status": {
+      "excluded": 1
+    }
+  },
+  "examples": [
+    {
+      "passengers": 1,
+      "days": 1,
+      "budget": 1765.0,
+      "luggage_size": null,
+      "preferred_type": null,
+      "chosen_vehicle_id": 13,
+      "source": "reservation",
+      "reservation_id": 2,
+      "weight": 1.0
+    },
+    {
+      "passengers": 1,
+      "days": 1,
+      "budget": null,
+      "luggage_size": "medium",
+      "preferred_type": null,
+      "chosen_vehicle_id": 14,
+      "source": "reservation",
+      "reservation_id": 4,
+      "weight": 1.0
+    },
+    {
+      "passengers": 4,
+      "days": 1,
+      "budget": null,
+      "luggage_size": "medium",
+      "preferred_type": null,
+      "chosen_vehicle_id": 3,
+      "source": "reservation",
+      "reservation_id": 5,
+      "weight": 1.0
+    },
+    {
+      "passengers": 4,
+      "days": 3,
+      "budget": 6000.0,
+      "luggage_size": "small",
+      "preferred_type": "AUV",
+      "chosen_vehicle_id": 3,
+      "source": "reservation",
+      "reservation_id": 11,
+      "weight": 1.0
+    },
+    {
+      "passengers": 10,
+      "days": 2,
+      "budget": 9000.0,
+      "luggage_size": "large",
+      "preferred_type": "L300",
+      "chosen_vehicle_id": 8,
+      "source": "reservation",
+      "reservation_id": 13,
+      "weight": 1.0
+    },
+    {
+      "passengers": 2,
+      "days": 1,
+      "budget": 2500.0,
+      "luggage_size": "small",
+      "preferred_type": null,
+      "chosen_vehicle_id": 3,
+      "source": "reservation",
+      "reservation_id": 14,
+      "weight": 1.0
+    },
+    {
+      "passengers": 7,
+      "days": 1,
+      "budget": 8500.0,
+      "luggage_size": "large",
+      "preferred_type": "L300",
+      "chosen_vehicle_id": 8,
+      "source": "reservation",
+      "reservation_id": 20,
+      "weight": 1.0
+    },
+    {
+      "passengers": 4,
+      "days": 4,
+      "budget": 8259.0,
+      "luggage_size": "medium",
+      "preferred_type": "AUV",
+      "chosen_vehicle_id": 3,
+      "source": "reservation",
+      "reservation_id": 21,
+      "weight": 1.0
+    },
+    {
+      "passengers": 2,
+      "days": 2,
+      "budget": 9668.0,
+      "luggage_size": "medium",
+      "preferred_type": "L300",
+      "chosen_vehicle_id": 8,
+      "source": "reservation",
+      "reservation_id": 22,
+      "weight": 1.0
+    },
+    {
+      "passengers": 6,
+      "days": 4,
+      "budget": 12516.0,
+      "luggage_size": "large",
+      "preferred_type": "L300",
+      "chosen_vehicle_id": 9,
+      "source": "reservation",
+      "reservation_id": 23,
+      "weight": 1.0
+    },
+    {
+      "passengers": 4,
+      "days": 1,
+      "budget": 9000.0,
+      "luggage_size": "small",
+      "preferred_type": "L300",
+      "chosen_vehicle_id": 8,
+      "source": "reservation",
+      "reservation_id": 24,
+      "weight": 1.0
+    },
+    {
+      "passengers": 7,
+      "days": 1,
+      "budget": 5850.0,
+      "luggage_size": "large",
+      "preferred_type": "AUV",
+      "chosen_vehicle_id": 3,
+      "source": "reservation",
+      "reservation_id": 26,
+      "weight": 1.0
+    },
+    {
+      "passengers": 3,
+      "days": 2,
+      "budget": 6668.0,
+      "luggage_size": "medium",
+      "preferred_type": "AUV",
+      "chosen_vehicle_id": 3,
+      "source": "reservation",
+      "reservation_id": 28,
+      "weight": 1.0
+    },
+    {
+      "passengers": 1,
+      "days": 1,
+      "budget": 9500.0,
+      "luggage_size": "small",
+      "preferred_type": "L300",
+      "chosen_vehicle_id": 10,
+      "source": "reservation",
+      "reservation_id": 29,
+      "weight": 1.0
+    },
+    {
+      "passengers": 6,
+      "days": 1,
+      "budget": 9500.0,
+      "luggage_size": "large",
+      "preferred_type": "L300",
+      "chosen_vehicle_id": 9,
+      "source": "reservation",
+      "reservation_id": 30,
+      "weight": 1.0
+    },
+    {
+      "passengers": 3,
+      "days": 3,
+      "budget": 6626.01,
+      "luggage_size": null,
+      "preferred_type": "AUV",
+      "chosen_vehicle_id": 3,
+      "source": "reservation",
+      "reservation_id": 31,
+      "weight": 1.0
+    },
+    {
+      "passengers": 2,
+      "days": 2,
+      "budget": 10406.0,
+      "luggage_size": "large",
+      "preferred_type": "L300",
+      "chosen_vehicle_id": 9,
+      "source": "reservation",
+      "reservation_id": 32,
+      "weight": 1.0
+    },
+    {
+      "passengers": 12,
+      "days": 3,
+      "budget": 10380.0,
+      "luggage_size": null,
+      "preferred_type": "L300",
+      "chosen_vehicle_id": 9,
+      "source": "reservation",
+      "reservation_id": 33,
+      "weight": 1.0
+    },
+    {
+      "passengers": 3,
+      "days": 4,
+      "budget": 11971.0,
+      "luggage_size": "medium",
+      "preferred_type": "L300",
+      "chosen_vehicle_id": 9,
+      "source": "reservation",
+      "reservation_id": 34,
+      "weight": 1.0
+    },
+    {
+      "passengers": 6,
+      "days": 2,
+      "budget": 6670.0,
+      "luggage_size": "medium",
+      "preferred_type": "AUV",
+      "chosen_vehicle_id": 19,
+      "source": "reservation",
+      "reservation_id": 36,
+      "weight": 1.0
+    },
+    {
+      "passengers": 2,
+      "days": 4,
+      "budget": 7391.0,
+      "luggage_size": "large",
+      "preferred_type": "SEDAN",
+      "chosen_vehicle_id": 23,
+      "source": "reservation",
+      "reservation_id": 37,
+      "weight": 1.0
+    },
+    {
+      "passengers": 3,
+      "days": 4,
+      "budget": 7234.0,
+      "luggage_size": "small",
+      "preferred_type": "SEDAN",
+      "chosen_vehicle_id": 23,
+      "source": "reservation",
+      "reservation_id": 38,
+      "weight": 1.0
+    },
+    {
+      "passengers": 3,
+      "days": 2,
+      "budget": 4885.0,
+      "luggage_size": "small",
+      "preferred_type": "SEDAN",
+      "chosen_vehicle_id": 23,
+      "source": "reservation",
+      "reservation_id": 39,
+      "weight": 1.0
+    },
+    {
+      "passengers": 4,
+      "days": 3,
+      "budget": 5946.0,
+      "luggage_size": "small",
+      "preferred_type": "SEDAN",
+      "chosen_vehicle_id": 22,
+      "source": "reservation",
+      "reservation_id": 41,
+      "weight": 1.0
+    },
+    {
+      "passengers": 2,
+      "days": 3,
+      "budget": 6434.01,
+      "luggage_size": null,
+      "preferred_type": "SEDAN",
+      "chosen_vehicle_id": 22,
+      "source": "reservation",
+      "reservation_id": 42,
+      "weight": 1.0
+    },
+    {
+      "passengers": 2,
+      "days": 4,
+      "budget": 6964.0,
+      "luggage_size": null,
+      "preferred_type": "SEDAN",
+      "chosen_vehicle_id": 21,
+      "source": "reservation",
+      "reservation_id": 43,
+      "weight": 1.0
+    },
+    {
+      "passengers": 1,
+      "days": 2,
+      "budget": 5008.0,
+      "luggage_size": "medium",
+      "preferred_type": "SEDAN",
+      "chosen_vehicle_id": 21,
+      "source": "reservation",
+      "reservation_id": 44,
+      "weight": 1.0
+    },
+    {
+      "passengers": 4,
+      "days": 2,
+      "budget": 4862.0,
+      "luggage_size": "large",
+      "preferred_type": "SEDAN",
+      "chosen_vehicle_id": 23,
+      "source": "reservation",
+      "reservation_id": 45,
+      "weight": 1.0
+    },
+    {
+      "passengers": 3,
+      "days": 3,
+      "budget": 6078.0,
+      "luggage_size": "large",
+      "preferred_type": "SEDAN",
+      "chosen_vehicle_id": 22,
+      "source": "reservation",
+      "reservation_id": 46,
+      "weight": 1.0
+    }
+  ],
+  "bookings": [
+    [
+      2,
+      13,
+      1
+    ],
+    [
+      4,
+      3,
+      1
+    ],
+    [
+      4,
+      14,
+      1
+    ],
+    [
+      8,
+      3,
+      1
+    ],
+    [
+      10,
+      8,
+      1
+    ],
+    [
+      11,
+      3,
+      1
+    ],
+    [
+      14,
+      3,
+      2
+    ],
+    [
+      14,
+      9,
+      1
+    ],
+    [
+      15,
+      22,
+      1
+    ],
+    [
+      15,
+      23,
+      1
+    ],
+    [
+      17,
+      8,
+      1
+    ],
+    [
+      18,
+      8,
+      1
+    ],
+    [
+      18,
+      9,
+      1
+    ],
+    [
+      19,
+      9,
+      1
+    ],
+    [
+      20,
+      8,
+      1
+    ],
+    [
+      21,
+      23,
+      1
+    ],
+    [
+      22,
+      3,
+      1
+    ],
+    [
+      22,
+      21,
+      1
+    ],
+    [
+      23,
+      10,
+      1
+    ],
+    [
+      24,
+      9,
+      1
+    ],
+    [
+      25,
+      3,
+      1
+    ],
+    [
+      26,
+      9,
+      1
+    ],
+    [
+      27,
+      22,
+      2
+    ],
+    [
+      28,
+      19,
+      1
+    ],
+    [
+      28,
+      23,
+      1
+    ],
+    [
+      29,
+      23,
+      1
+    ],
+    [
+      31,
+      21,
+      1
+    ]
+  ],
+  "ratings": [
+    [
+      8,
+      3,
+      5.0
+    ],
+    [
+      10,
+      8,
+      3.0
+    ],
+    [
+      11,
+      3,
+      5.0
+    ],
+    [
+      14,
+      3,
+      3.0
+    ],
+    [
+      18,
+      8,
+      4.0
+    ],
+    [
+      19,
+      9,
+      5.0
+    ],
+    [
+      20,
+      8,
+      3.0
+    ],
+    [
+      14,
+      3,
+      5.0
+    ],
+    [
+      22,
+      3,
+      5.0
+    ],
+    [
+      23,
+      10,
+      5.0
+    ],
+    [
+      25,
+      3,
+      5.0
+    ],
+    [
+      14,
+      9,
+      3.0
+    ],
+    [
+      18,
+      9,
+      4.0
+    ],
+    [
+      26,
+      9,
+      5.0
+    ],
+    [
+      28,
+      19,
+      5.0
+    ],
+    [
+      21,
+      23,
+      5.0
+    ],
+    [
+      28,
+      23,
+      5.0
+    ],
+    [
+      29,
+      23,
+      5.0
+    ],
+    [
+      27,
+      22,
+      5.0
+    ],
+    [
+      15,
+      22,
+      5.0
+    ],
+    [
+      22,
+      21,
+      5.0
+    ],
+    [
+      15,
+      23,
+      4.0
+    ],
+    [
+      27,
+      22,
+      4.0
+    ]
+  ]
+}

@@ -3,7 +3,7 @@ import { Upload, FileText, X } from 'lucide-react'
 import { Icon } from './Icons.jsx'
 import VehiclePhotos from '../ro/components/VehiclePhotos.jsx'
 
-const VEHICLE_TYPES = ['AUV', 'SUV', 'L300']
+const VEHICLE_TYPES = ['AUV', 'SEDAN', 'L300']
 const MAX_IMAGES = 12
 
 const MAX_IMAGE_DIMENSION = 1280
@@ -42,6 +42,7 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
     model: '',
     year: new Date().getFullYear(),
     seats: 5,
+    luggageCapacity: 4,
     dailyRate: 0
   })
   const [images, setImages] = useState([])
@@ -51,10 +52,10 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
   const [error, setError] = useState('')
 
   const byType = (t) => vehicles.filter((v) => v.type === t)
-  const capacity = { AUV: 'AUV / Van (5-7 pax)', SUV: 'SUV (5-7 pax)', L300: 'L300 (8-18 pax)' }
+  const capacity = { AUV: 'AUV / Van (5-7 pax)', SEDAN: 'Sedan (4-5 pax)', L300: 'Utility Van / L300 (8-18 pax)' }
 
   const openModal = () => {
-    setForm({ plate: '', type: 'AUV', model: '', year: new Date().getFullYear(), seats: 5, dailyRate: 0 })
+    setForm({ plate: '', type: 'AUV', model: '', year: new Date().getFullYear(), seats: 5, luggageCapacity: 4, dailyRate: 0 })
     setImages([])
     setPrimaryIndex(0)
     setError('')
@@ -143,7 +144,7 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
         </div>
       </div>
 
-      {['AUV', 'SUV', 'L300'].map((t) => (
+      {['AUV', 'SEDAN', 'L300'].map((t) => (
         <div className="panel" key={t}>
           <div className="panel-head">
             <div>
@@ -224,6 +225,10 @@ export default function FleetPage({ vehicles, onAddVehicle }) {
               <div className="form-row">
                 <label>Seating Capacity</label>
                 <input type="number" min={1} max={60} value={form.seats} onChange={set('seats')} />
+              </div>
+              <div className="form-row">
+                <label>Luggage Capacity (pieces — used by the AI Assistant)</label>
+                <input type="number" min={0} max={99} value={form.luggageCapacity} onChange={set('luggageCapacity')} />
               </div>
               <div className="form-row">
                 <label>Daily Rate (₱)</label>

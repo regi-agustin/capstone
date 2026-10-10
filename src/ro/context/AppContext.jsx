@@ -65,12 +65,13 @@ export const AppProvider = ({ children, initialUser = null, onLogout = null, onS
 
   const switchToAdmin = onSwitchToAdmin;
 
-  const createBooking = async ({ client, trip, vehicle, additionalCharges }) => {
+  const createBooking = async ({ client, trip, vehicle, additionalCharges, recommendationLogId = null }) => {
     const { id, record } = await createBookingRequest({
       client,
       trip,
       vehicle,
       additionalCharges,
+      recommendationLogId,
     });
     setBookings((prev) => [record, ...prev]);
     return id;

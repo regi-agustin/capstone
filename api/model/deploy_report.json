@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-10-02T03:57:06+00:00",
+  "result": "deployed",
+  "e1": {
+    "pass": true,
+    "skipped": false,
+    "candidate_test": 0.3779,
+    "production_test": 0.3432,
+    "eps": 0.01
+  },
+  "e2_passed": true,
+  "e3a": {
+    "pass": true,
+    "status": "insufficient_data",
+    "note": "invalid means rmse >= baseline; CF stays OFF (fail-safe, not a deploy blocker)"
+  },
+  "cf_status": "insufficient_data",
+  "synced": []
+}

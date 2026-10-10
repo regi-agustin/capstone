@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-10-02T03:57:01+00:00",
+  "rule": "customer choices never train until validated; two-lane eligibility",
+  "counts": {
+    "logs_total": 1,
+    "converted_reservations": 29,
+    "log_linked_reservations": 0,
+    "examples": 29,
+    "log_examples": 0,
+    "reservation_examples": 29,
+    "booking_pairs": 27,
+    "ratings": 23,
+    "by_label_status": {
+      "analysis_only": 1
+    },
+    "by_data_class": {
+      "unconverted": 1
+    },
+    "by_interaction_status": {
+      "excluded": 1
+    }
+  },
+  "reason_histogram": {
+    "no_choice": 1
+  },
+  "rows": [
+    {
+      "log_id": 5,
+      "label_status": "analysis_only",
+      "interaction_status": "excluded",
+      "data_class": "unconverted",
+      "reasons": [
+        "no_choice"
+      ]
+    }
+  ]
+}
