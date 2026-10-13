@@ -156,6 +156,9 @@ if ($method === 'POST') {
         $clientName = trim((string)($client['name'] ?? ''));
         $contact = trim((string)($client['contact'] ?? ''));
         $email = trim((string)($client['email'] ?? ''));
+        // Optional: only name, contact and email are required. The customer
+        // dashboard has no company field, so a blank company falls back to the
+        // client name when the clients row is written (see $companyName below).
         $company = trim((string)($client['company'] ?? ''));
 
         // Customers book under their own account; fall back to session profile when fields are blank.
@@ -179,9 +182,6 @@ if ($method === 'POST') {
 
         if ($clientName === '' || $contact === '' || $email === '') {
             json_error('Client name, contact, and email are required.', 422);
-        }
-        if (!$isCustomer && $company === '') {
-            json_error('Company / organization is required.', 422);
         }
         if ($destination === '' || $pickupDate === '' || $returnDate === '') {
             json_error('Destination and trip dates are required.', 422);

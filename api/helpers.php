@@ -3,15 +3,57 @@ require_once __DIR__ . '/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+// Every API response is JSON (json_out is the only echo in api/). Buffering
+// catches stray PHP notices/warnings — and fatal-error pages — so they can
+// never be prepended to the payload and make an otherwise good response
+// unparseable on the client.
+ob_start();
+
 // Share one session across all API endpoints (cookie-based)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Uncaught errors (PDOException, Error, ...) used to render an HTML fatal page
+// — sometimes with status 200, as with a missing table — which the client then
+// surfaced as "the AI service returned an unreadable response". Anything that
+// escapes an endpoint now leaves as JSON with an honest status code. Details
+// go to the server log; the response body stays generic.
+set_exception_handler(function (Throwable $e): void {
+    error_log('[api] unhandled ' . get_class($e) . ': ' . $e->getMessage()
+        . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    json_out(['error' => 'The server could not complete this request. Please try again.'], 500);
+});
+
+// Safety net for hard failures the exception handler cannot see (E_ERROR and
+// friends). Shutdown functions run while output buffers are still unflushed,
+// so the buffered fatal page is discarded by json_out before it is emitted.
+register_shutdown_function(function (): void {
+    $err = error_get_last();
+    if ($err === null || !in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+        return;
+    }
+    error_log('[api] fatal ' . $err['type'] . ': ' . $err['message'] . ' @ ' . $err['file'] . ':' . $err['line']);
+    json_out(['error' => 'The server could not complete this request. Please try again.'], 500);
+});
+
 function json_out($data, int $status = 200): void
 {
+    // Discard anything buffered up to this point so the body is exactly one
+    // JSON document, then state the real status code.
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json === false) {
+        // Never emit an empty/invalid body with a 2xx status — the client
+        // cannot tell that from a successful response.
+        error_log('[api] json_encode failed: ' . json_last_error_msg());
+        $status = 500;
+        $json = '{"error":"The server produced an unreadable response. Please try again."}';
+    }
     http_response_code($status);
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    echo $json;
     exit;
 }
 

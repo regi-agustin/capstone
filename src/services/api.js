@@ -9,10 +9,12 @@ export async function apiFetch(path, options = {}) {
   })
 
   let data = null
+  let parsed = false
   try {
     data = await res.json()
+    parsed = true
   } catch {
-    /* non-JSON response */
+    /* non-JSON response — handled below */
   }
 
   if (!res.ok) {
@@ -20,5 +22,16 @@ export async function apiFetch(path, options = {}) {
     err.status = res.status
     throw err
   }
+
+  // A 2xx response whose body is not JSON (an HTML error page, an empty body)
+  // is a server failure, not a usable payload: surface it as an error instead
+  // of returning null and letting every caller guess what went wrong.
+  if (!parsed) {
+    const err = new Error('The server returned an unreadable response. Please try again.')
+    err.status = res.status
+    err.unreadable = true
+    throw err
+  }
+
   return data
 }

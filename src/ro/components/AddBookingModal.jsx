@@ -16,7 +16,6 @@ const validate = (f) => {
   else if (!/^[0-9+\-()\s]{7,}$/.test(f.contact.trim())) errs.contact = 'Please enter a valid contact number.';
   if (!f.email.trim()) errs.email = 'Email address is required.';
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) errs.email = 'Please enter a valid email address.';
-  if (!f.company.trim()) errs.company = 'Company / organization is required.';
   if (!f.destination.trim()) errs.destination = 'Destination is required.';
   if (!f.pickupDate) errs.pickupDate = 'Pickup date is required.';
   if (!f.pickupTime) errs.pickupTime = 'Pickup time is required.';
@@ -199,9 +198,8 @@ export default function AddBookingModal({ open, onClose }) {
                 {errors.email && <div className="form-error">{errors.email}</div>}
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="add-company">Company / Organization <span className="req">*</span></label>
-                <input id="add-company" className={`form-input${errors.company ? ' is-invalid' : ''}`} type="text" placeholder="Enter company or organization" value={form.company} onChange={set('company')} />
-                {errors.company && <div className="form-error">{errors.company}</div>}
+                <label className="form-label" htmlFor="add-company">Company / Organization <span className="req" style={{ color: 'var(--text-faint)' }}>(optional)</span></label>
+                <input id="add-company" className="form-input" type="text" placeholder="Enter company or organization" value={form.company} onChange={set('company')} />
               </div>
             </div>
             <div className="form-group" style={{ marginTop: 14 }}>

@@ -21,13 +21,22 @@ An AI-Driven Fleet Operations System for Hollydot Car Rental — React + Vite fr
 
 > **Quick start after `git clone`:** install XAMPP (Apache + MySQL + PHP) and Node.js, then
 > double-click `setup.bat` from the repo root. It copies `api/` into `C:\xampp\htdocs\fleetops\api\`,
-> imports `fleetops_db.sql`, and runs `npm install`. Then start Apache + MySQL in XAMPP and run
+> imports `fleetops_db.sql` (only when the database is new — run `setup.bat reset` to start over),
+> applies `api/migrations/*.sql`, and runs `npm install`. Then start Apache + MySQL in XAMPP and run
 > `npm run dev`. (Manual steps below if you prefer to do it yourself.)
+>
+> **The migrations step matters:** `fleetops_db.sql` does not contain the `recommendation_logs`
+> table that the AI assistant writes to. Without it every "Get Recommendations" request fails with
+> *"The AI service returned an unreadable response."* — so don't skip `api/migrations/`.
 
 ### 1. Database
 
 Open phpMyAdmin (`http://localhost/phpmyadmin`) → **Import** → choose `fleetops_db.sql` → Go.
 The file creates the `fleetops_db` database, all tables, and seed data.
+
+Then import every file in `api/migrations/` (001, 003, 004, `current_car_rates`) the same way —
+they are guarded, so re-running them is safe. `004_training_gate.sql` creates `recommendation_logs`,
+which the AI recommendation endpoint requires.
 
 ### 2. Backend (this is the part that fixes 404s)
 
